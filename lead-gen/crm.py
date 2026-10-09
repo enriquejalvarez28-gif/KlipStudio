@@ -18,7 +18,7 @@ import json
 import os
 import re
 import sys
-from urllib.parse import urlparse
+from urllib.parse import quote_plus, urlparse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DB = os.path.join(HERE, "leads.csv")
@@ -152,25 +152,39 @@ def cmd_import(args):
     print(f"Imported {added} new leads, skipped {skipped} duplicates. Database: {len(rows)} leads.")
 
 
+ACTIVE = {"Ready to Contact", "New Lead"}
+
+
+def ig_lookup(r):
+    """A Google search link for finding the firm's Instagram when it is not yet verified."""
+    if r["Instagram Status"].startswith("Verified"):
+        return r["Instagram URL"]
+    return "https://www.google.com/search?q=" + quote_plus(f'site:instagram.com "{r["Business Name"]}"')
+
+
 def queue_candidates(rows):
+    """Uncontacted, qualified (60+) leads; verified Instagram first, then by score."""
     return sorted(
-        (r for r in rows if r["Outreach Status"] == "Ready to Contact"),
-        key=lambda r: (-int(r["Lead Score"] or 0), r["Lead ID"]),
+        (r for r in rows if r["Outreach Status"] in ACTIVE and int(r["Lead Score"] or 0) >= 60),
+        key=lambda r: (r["Outreach Status"] != "Ready to Contact", -int(r["Lead Score"] or 0), r["Lead ID"]),
     )
 
 
 def cmd_queue(args):
     """Top uncontacted leads. Never changes status: only the user marks a message sent."""
     q = queue_candidates(load())[: args.size]
-    cols = ["Lead ID", "Business Name", "Industry", "City", "Instagram URL", "Content Opportunity",
-            "Recommended Service", "Personalized DM", "Lead Score", "Priority", "Outreach Status"]
+    for r in q:
+        r["Instagram Lookup"] = ig_lookup(r)
+    cols = ["Lead ID", "Business Name", "Industry", "City", "Instagram URL", "Instagram Status",
+            "Instagram Lookup", "Decision Maker", "Content Opportunity", "Recommended Service",
+            "Personalized DM", "Lead Score", "Priority", "Outreach Status"]
     out = args.out or os.path.join(HERE, f"daily_queue_{dt.date.today().isoformat()}.csv")
     with open(out, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")
         w.writeheader()
         w.writerows(q)
     for r in q:
-        print(f'{r["Lead ID"]}  {r["Lead Score"]:>3}  {r["Business Name"]} ({r["City"]})  {r["Instagram URL"]}')
+        print(f'{r["Lead ID"]}  {r["Lead Score"]:>3}  {r["Business Name"]} ({r["City"]})  [{r["Instagram Status"]}]')
     print(f"\n{len(q)} leads written to {out}")
 
 

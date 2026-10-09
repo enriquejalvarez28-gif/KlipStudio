@@ -13,7 +13,7 @@ Nothing here sends messages, logs into Instagram, or scrapes private data.
 | `leads.csv` | The CRM database (one row per business). Open in Excel / Google Sheets or import into Notion. |
 | `crm.py` | Import research, de-duplicate, build the daily queue, update statuses, print the dashboard. |
 | `daily_queue_YYYY-MM-DD.csv` | The day's 10 highest-scoring uncontacted leads, with DMs. |
-| `research/` | Raw research batches (JSON) exactly as collected, with source URLs. |
+| `research/` | Raw research batches (JSON) as collected with source URLs, plus `build_batch.py` (scoring and DMs) and the merged import batch. |
 
 ## Daily workflow
 
