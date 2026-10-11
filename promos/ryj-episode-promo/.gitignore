@@ -1,0 +1,5 @@
+node_modules/
+out/
+qa/
+# RYJ logos are not published in this public repo: copy them in from the template zip / brand kit
+public/ryj-logo*.png
