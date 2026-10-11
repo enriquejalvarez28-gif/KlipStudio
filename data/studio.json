@@ -1,0 +1,119 @@
+{
+  "studio": {
+    "image": "img/studio-main.jpg",
+    "imageAlt": "Podcast set with table, microphones, lighting and crew",
+    "eyebrow": "Klip Studio",
+    "headline": [
+      "Create Here"
+    ],
+    "body": "Podcasts. Video. Photography. Creator content. Courses. Live selling.",
+    "cta": {
+      "label": "Explore The Studio",
+      "href": "#studio"
+    },
+    "tourCta": {
+      "label": "Tour The Studio",
+      "booking": "studioTour"
+    },
+    "rooms": [
+      {
+        "name": "Klip Room",
+        "role": "Podcast + Interview Studio",
+        "image": "img/room1.jpg",
+        "imageAlt": "Klip Room multicam podcast set",
+        "card": "Multicam podcasts and interviews · 3 × Sony FX30, RØDECaster workflow, teleprompter",
+        "summary": "A premium multi-camera room for podcasts, interviews, courses, coaching and professional conversations.",
+        "capabilities": [
+          "3 × Sony FX30 on a multicam switch",
+          "RØDECaster audio workflow, up to four guests",
+          "Teleprompter for scripted segments",
+          "Self-service or with a technician",
+          "Courses: multi-camera lessons, coaching and premium modules"
+        ],
+        "price": "",
+        "booking": "podcastRoom"
+      },
+      {
+        "name": "Kapture Room",
+        "role": "Short-Form + Personal Brand",
+        "image": "img/room2.jpg",
+        "imageAlt": "Kapture Room dark set for talking-head content",
+        "card": "Short-form, talking-head and personal brand · single Sony FX30",
+        "summary": "A focused set for reels, talking-head video, course modules, personal-brand content and UGC.",
+        "capabilities": [
+          "Single Sony FX30, framed and focused",
+          "Vertical and horizontal in the same session",
+          "Lighting preset for on-camera presence",
+          "Fast in, fast out — built for batching",
+          "Courses: direct-to-camera lessons and short modules"
+        ],
+        "price": "",
+        "booking": "blackRoom"
+      },
+      {
+        "name": "Kreator Room",
+        "role": "Green Screen + Flexible Content",
+        "image": "img/room3.jpg",
+        "imageAlt": "Kreator Room green screen setup",
+        "card": "Green screen and flexible content setups",
+        "summary": "A flexible green-screen room for courses, training, product demos and creative content.",
+        "capabilities": [
+          "Full green screen wall, lit for clean keying",
+          "Reconfigurable floor for product and demo setups",
+          "Live streaming and virtual-set ready",
+          "Space for crew, clients or a small audience",
+          "Courses: green-screen training, presentations and virtual backgrounds"
+        ],
+        "price": "",
+        "booking": "greenRoom"
+      },
+      {
+        "name": "Kanvas Room",
+        "role": "Photography + E-Commerce",
+        "image": "img/room4.jpg",
+        "imageAlt": "Kanvas Room white cyc wall photography space",
+        "card": "White cyc wall, backdrops, GVM lighting and a private prep area",
+        "summary": "A clean photo and product-content space for headshots, e-commerce, UGC and campaign work.",
+        "capabilities": [
+          "Seamless white cyc wall",
+          "Interchangeable backdrops",
+          "GVM lighting kit",
+          "Private prep and changing area",
+          "Courses: demonstrations, product education and visual instruction"
+        ],
+        "price": "",
+        "booking": "kanvasRoom"
+      }
+    ],
+    "features": [
+      {
+        "icon": "gear",
+        "label": "Professional Equipment"
+      },
+      {
+        "icon": "sets",
+        "label": "Multiple Sets & Looks"
+      },
+      {
+        "icon": "calendar",
+        "label": "Easy Booking"
+      },
+      {
+        "icon": "car",
+        "label": "Free Parking"
+      },
+      {
+        "icon": "doc",
+        "label": "Courses + Education"
+      },
+      {
+        "icon": "target",
+        "label": "Creators + Live Selling"
+      }
+    ],
+    "featuresCta": {
+      "label": "View All Rooms",
+      "booking": "studioRentals"
+    }
+  }
+}

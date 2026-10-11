@@ -1,0 +1,23 @@
+{
+  "location": {
+    "image": "img/location.jpg",
+    "imageAlt": "Videographer filming a client on location by the water",
+    "headline": [
+      "On Location.",
+      "Same KLIP Quality"
+    ],
+    "body": "Your office. Your practice. Your business. Your event. Our production team comes to you.",
+    "cta": {
+      "label": "Book An On-Location Shoot",
+      "consult": true
+    },
+    "categories": [
+      "Medical + Wellness",
+      "Legal",
+      "Real Estate + Mortgage",
+      "Hospitality",
+      "Fitness + Sports",
+      "Professional Services"
+    ]
+  }
+}

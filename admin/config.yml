@@ -1,0 +1,1408 @@
+# ============================================================
+# KLIP — site editor configuration (Sveltia CMS)
+#
+# Connected to  github.com/enriquejalvarez28-gif/KlipStudio  (branch: main).
+# Anyone with write access to that repository can sign in at /admin
+# with GitHub and edit the site. To let a teammate edit, add them as
+# a collaborator on the repository — nothing here changes.
+#
+# Each screen below writes to its own file in /data, so saving one
+# screen can never disturb another. Nobody needs to open HTML, CSS
+# or JavaScript to change the site.
+# ============================================================
+
+backend:
+  name: github
+  repo: enriquejalvarez28-gif/KlipStudio
+  branch: main
+  commit_messages:
+    update: 'Site edit: {{collection}} “{{slug}}”'
+media_folder: img
+public_folder: img
+collections:
+- name: homepage
+  label: Homepage
+  files:
+  - name: hero
+    label: Hero
+    file: data/hero.json
+    fields:
+    - name: hero
+      label: Hero
+      widget: object
+      fields:
+      - name: eyebrow
+        label: Small line above the headline
+        widget: string
+      - name: headline
+        label: Headline
+        widget: list
+        field:
+          name: line
+          label: Line
+          widget: string
+        hint: One entry per line. The red dot is added to the last line automatically.
+      - name: body
+        label: Supporting sentence
+        widget: text
+      - name: primaryCta
+        label: First button
+        widget: object
+        fields:
+        - name: label
+          label: Button text
+          widget: string
+        - name: href
+          label: Link
+          widget: string
+          required: false
+        - name: booking
+          label: Or open booking for
+          widget: string
+          required: false
+          hint: A booking key such as studioRentals. Leave blank if this button uses a link.
+        - name: consult
+          label: Or open the consultation scheduler
+          widget: boolean
+          required: false
+          default: false
+      - name: secondaryCta
+        label: Second button
+        widget: object
+        fields:
+        - name: label
+          label: Button text
+          widget: string
+        - name: href
+          label: Link
+          widget: string
+          required: false
+        - name: booking
+          label: Or open booking for
+          widget: string
+          required: false
+        - name: consult
+          label: Or open the consultation scheduler
+          widget: boolean
+          required: false
+          default: false
+      - name: image
+        label: Still image
+        widget: image
+        hint: Shown instead of the video for visitors who have asked their device to reduce motion. Also
+          the social-sharing image.
+      - name: videoPoster
+        label: Video poster frame
+        widget: image
+        hint: Shown for the split second before the loop starts. Use the loop's first frame.
+      - name: videoMp4
+        label: Hero loop — desktop (MP4)
+        widget: file
+        media_folder: ../video
+        public_folder: video
+      - name: videoWebm
+        label: Hero loop — desktop (WebM)
+        widget: file
+        media_folder: ../video
+        public_folder: video
+      - name: videoMobile
+        label: Hero loop — phone (MP4)
+        widget: file
+        media_folder: ../video
+        public_folder: video
+      - name: videoMobileWebm
+        label: Hero loop — phone (WebM)
+        widget: file
+        media_folder: ../video
+        public_folder: video
+      - name: proof
+        label: Strip along the bottom
+        widget: list
+        field:
+          name: item
+          label: Item
+          widget: string
+      - name: sideNote
+        label: Vertical note on the right
+        widget: list
+        field:
+          name: line
+          label: Line
+          widget: string
+      - name: imageAlt
+        label: Photo description
+        widget: string
+        required: false
+        hint: Read aloud by screen readers and used by search engines.
+  - name: sections
+    label: Homepage sections
+    file: data/sections.json
+    fields:
+    - name: services
+      label: Services grid
+      widget: object
+      fields:
+      - name: eyebrow
+        label: Eyebrow
+        widget: string
+      - name: headline
+        label: Headline
+        widget: list
+        field:
+          name: line
+          label: Line
+          widget: string
+      - name: body
+        label: Supporting copy
+        widget: text
+      - name: items
+        label: Services
+        widget: list
+        fields:
+        - name: icon
+          label: Icon
+          widget: string
+          hint: target · chart · search · globe · megaphone · badge · window · chip · doc
+        - name: title
+          label: Title
+          widget: string
+        - name: text
+          label: Description
+          widget: text
+        - name: href
+          label: Link
+          widget: string
+      - name: cta
+        label: Section button
+        widget: object
+        collapsed: true
+        fields:
+        - name: label
+          label: Button text
+          widget: string
+        - name: href
+          label: Link
+          widget: string
+          required: false
+        - name: booking
+          label: Or open booking for
+          widget: string
+          required: false
+        - name: consult
+          label: Or open the consultation scheduler
+          widget: boolean
+          required: false
+          default: false
+        - name: photographers
+          label: Or open the photographer list
+          widget: boolean
+          required: false
+          default: false
+    - name: why
+      label: Why KLIP
+      widget: object
+      fields:
+      - name: headline
+        label: Headline
+        widget: list
+        field:
+          name: line
+          label: Line
+          widget: string
+      - name: body
+        label: Copy
+        widget: text
+      - name: points
+        label: Points
+        widget: list
+        fields:
+        - name: title
+          label: Title
+          widget: string
+        - name: text
+          label: Text
+          widget: text
+    - name: work
+      label: Selected work
+      widget: object
+      fields:
+      - name: eyebrow
+        label: Eyebrow
+        widget: string
+      - name: headline
+        label: Headline
+        widget: list
+        field:
+          name: line
+          label: Line
+          widget: string
+      - name: items
+        label: Projects
+        widget: list
+        fields:
+        - name: image
+          label: Image
+          widget: image
+        - name: title
+          label: Title
+          widget: string
+        - name: category
+          label: Category
+          widget: string
+        - name: href
+          label: Link
+          widget: string
+        - name: size
+          label: Tile size
+          widget: select
+          options:
+          - ''
+          - wide
+          - tall
+          - span2
+          required: false
+      - name: cta
+        label: Section button
+        widget: object
+        collapsed: true
+        fields:
+        - name: label
+          label: Button text
+          widget: string
+        - name: href
+          label: Link
+          widget: string
+          required: false
+        - name: booking
+          label: Or open booking for
+          widget: string
+          required: false
+        - name: consult
+          label: Or open the consultation scheduler
+          widget: boolean
+          required: false
+          default: false
+        - name: photographers
+          label: Or open the photographer list
+          widget: boolean
+          required: false
+          default: false
+    - name: industries
+      label: Industries
+      widget: object
+      fields:
+      - name: headline
+        label: Headline
+        widget: list
+        field:
+          name: line
+          label: Line
+          widget: string
+      - name: body
+        label: Copy
+        widget: text
+      - name: items
+        label: Tiles
+        widget: list
+        fields:
+        - name: image
+          label: Image
+          widget: image
+        - name: title
+          label: Title
+          widget: string
+        - name: examples
+          label: Examples
+          widget: string
+        - name: href
+          label: Link
+          widget: string
+    - name: about
+      label: About band
+      widget: object
+      fields:
+      - name: headline
+        label: Headline
+        widget: list
+        field:
+          name: line
+          label: Line
+          widget: string
+      - name: body
+        label: Copy
+        widget: text
+      - name: image
+        label: Image
+        widget: image
+      - name: cta
+        label: Button
+        widget: object
+        collapsed: true
+        fields:
+        - name: label
+          label: Button text
+          widget: string
+        - name: href
+          label: Link
+          widget: string
+          required: false
+        - name: booking
+          label: Or open booking for
+          widget: string
+          required: false
+        - name: consult
+          label: Or open the consultation scheduler
+          widget: boolean
+          required: false
+          default: false
+        - name: photographers
+          label: Or open the photographer list
+          widget: boolean
+          required: false
+          default: false
+      - name: imageAlt
+        label: Photo description
+        widget: string
+        required: false
+        hint: Read aloud by screen readers and used by search engines.
+    - name: finalCta
+      label: Closing banner
+      widget: object
+      fields:
+      - name: eyebrow
+        label: Eyebrow
+        widget: string
+      - name: headline
+        label: Headline
+        widget: string
+      - name: image
+        label: Background image
+        widget: image
+      - name: imageAlt
+        label: Photo description
+        widget: string
+        required: false
+        hint: Read aloud by screen readers and used by search engines.
+      - name: primaryCta
+        label: First button
+        widget: object
+        collapsed: true
+        fields:
+        - name: label
+          label: Button text
+          widget: string
+        - name: href
+          label: Link
+          widget: string
+          required: false
+        - name: booking
+          label: Or open booking for
+          widget: string
+          required: false
+        - name: consult
+          label: Or open the consultation scheduler
+          widget: boolean
+          required: false
+          default: false
+        - name: photographers
+          label: Or open the photographer list
+          widget: boolean
+          required: false
+          default: false
+      - name: secondaryCta
+        label: Second button
+        widget: object
+        collapsed: true
+        fields:
+        - name: label
+          label: Button text
+          widget: string
+        - name: href
+          label: Link
+          widget: string
+          required: false
+        - name: booking
+          label: Or open booking for
+          widget: string
+          required: false
+        - name: consult
+          label: Or open the consultation scheduler
+          widget: boolean
+          required: false
+          default: false
+        - name: photographers
+          label: Or open the photographer list
+          widget: boolean
+          required: false
+          default: false
+- name: studio
+  label: Studio & rooms
+  files:
+  - name: rooms
+    label: The rooms
+    file: data/studio.json
+    fields:
+    - name: studio
+      label: Studio
+      widget: object
+      fields:
+      - name: eyebrow
+        label: Eyebrow
+        widget: string
+      - name: headline
+        label: Headline
+        widget: list
+        field:
+          name: line
+          label: Line
+          widget: string
+      - name: body
+        label: Copy
+        widget: text
+      - name: image
+        label: Main studio photo
+        widget: image
+      - name: rooms
+        label: Rooms
+        widget: list
+        label_singular: Room
+        summary: '{{fields.name}} — {{fields.role}}'
+        fields:
+        - name: name
+          label: Room name
+          widget: string
+        - name: role
+          label: What it is for
+          widget: string
+          hint: Short line above the name, e.g. Podcast + Interview Studio
+        - name: image
+          label: Room photo
+          widget: image
+          hint: Wide crop — 16:9 or 3:2. This is the dominant element of the block.
+        - name: imageAlt
+          label: Photo description
+          widget: string
+          required: false
+          hint: Read aloud by screen readers and used by search engines.
+        - name: card
+          label: One line for the homepage tile
+          widget: text
+        - name: summary
+          label: Positioning sentence for the Studio page
+          widget: text
+        - name: capabilities
+          label: Key capabilities
+          widget: list
+          field:
+            name: item
+            label: Capability
+            widget: string
+          hint: Three to five. They appear as the bulleted list.
+        - name: price
+          label: Price
+          widget: string
+          required: false
+          hint: Leave blank until the rate is confirmed. Blank means nothing is shown.
+        - name: booking
+          label: Booking key
+          widget: string
+          hint: Matches a key under Booking → SimplyBook, e.g. podcastRoom
+      - name: imageAlt
+        label: Photo description
+        widget: string
+        required: false
+        hint: Read aloud by screen readers and used by search engines.
+      - name: cta
+        label: Main button
+        widget: object
+        collapsed: true
+        fields:
+        - name: label
+          label: Button text
+          widget: string
+        - name: href
+          label: Link
+          widget: string
+          required: false
+        - name: booking
+          label: Or open booking for
+          widget: string
+          required: false
+        - name: consult
+          label: Or open the consultation scheduler
+          widget: boolean
+          required: false
+          default: false
+        - name: photographers
+          label: Or open the photographer list
+          widget: boolean
+          required: false
+          default: false
+      - name: tourCta
+        label: Studio tour button
+        widget: object
+        collapsed: true
+        fields:
+        - name: label
+          label: Button text
+          widget: string
+        - name: href
+          label: Link
+          widget: string
+          required: false
+        - name: booking
+          label: Or open booking for
+          widget: string
+          required: false
+        - name: consult
+          label: Or open the consultation scheduler
+          widget: boolean
+          required: false
+          default: false
+        - name: photographers
+          label: Or open the photographer list
+          widget: boolean
+          required: false
+          default: false
+      - name: featuresCta
+        label: Button under the included list
+        widget: object
+        collapsed: true
+        fields:
+        - name: label
+          label: Button text
+          widget: string
+        - name: href
+          label: Link
+          widget: string
+          required: false
+        - name: booking
+          label: Or open booking for
+          widget: string
+          required: false
+        - name: consult
+          label: Or open the consultation scheduler
+          widget: boolean
+          required: false
+          default: false
+        - name: photographers
+          label: Or open the photographer list
+          widget: boolean
+          required: false
+          default: false
+      - name: features
+        label: Included with every booking
+        widget: list
+        fields:
+        - name: icon
+          label: Icon
+          widget: string
+        - name: label
+          label: Text
+          widget: string
+      hint: Edited once here and used twice — the four tiles on the homepage and the large blocks on the
+        Studio page.
+- name: photography
+  label: Photographers
+  files:
+  - name: photographers
+    label: Photographers
+    file: data/photographers.json
+    fields:
+    - name: photographers
+      label: Photographers
+      widget: object
+      fields:
+      - name: title
+        label: Panel title
+        widget: string
+      - name: intro
+        label: Note under the list
+        widget: text
+        required: false
+      - name: cta
+        label: Button text
+        widget: string
+      - name: items
+        label: Photographers
+        widget: list
+        label_singular: Photographer
+        summary: '{{fields.name}}{{#if fields.active}}{{else}} (hidden){{/if}}'
+        fields:
+        - name: name
+          label: Name
+          widget: string
+        - name: active
+          label: Show on the site
+          widget: boolean
+          default: false
+          hint: Leave off until the profile is approved.
+        - name: specialties
+          label: Specialties
+          widget: string
+        - name: bio
+          label: Short bio
+          widget: text
+        - name: headshot
+          label: Headshot
+          widget: image
+          required: false
+        - name: portfolio
+          label: Portfolio images
+          widget: list
+          required: false
+          field:
+            name: image
+            label: Image
+            widget: image
+        - name: providerId
+          label: SimplyBook provider ID
+          widget: string
+          required: false
+          hint: Scopes “Book with …” to this photographer's own availability.
+        - name: booking
+          label: Booking key
+          widget: string
+          hint: Usually photographySessions.
+      - name: firstAvailable
+        label: First-available panel
+        widget: object
+        collapsed: true
+        fields:
+        - name: title
+          label: Title
+          widget: string
+        - name: text
+          label: Text
+          widget: text
+        - name: cta
+          label: Button text
+          widget: string
+        - name: booking
+          label: Booking key
+          widget: string
+      hint: Never publish a photographer’s personal phone, personal email, Instagram, personal website
+        or their own pricing.
+- name: podcasts
+  label: Podcast clips
+  files:
+  - name: podcasts
+    label: Podcast clips
+    file: data/podcasts.json
+    fields:
+    - name: podcasts
+      label: Podcasts
+      widget: object
+      fields:
+      - name: eyebrow
+        label: Eyebrow
+        widget: string
+      - name: headline
+        label: Headline
+        widget: list
+        field:
+          name: line
+          label: Line
+          widget: string
+      - name: items
+        label: Clips
+        widget: list
+        label_singular: Clip
+        summary: '{{fields.show}} — {{fields.title}}'
+        fields:
+        - name: image
+          label: Thumbnail
+          widget: image
+        - name: show
+          label: Show name
+          widget: string
+        - name: title
+          label: Episode title
+          widget: string
+        - name: time
+          label: Length
+          widget: string
+          required: false
+        - name: video
+          label: Video link
+          widget: string
+          required: false
+          hint: A YouTube link makes the card open a player. Blank links it to the podcast page.
+      - name: cta
+        label: Section link
+        widget: object
+        collapsed: true
+        fields:
+        - name: label
+          label: Button text
+          widget: string
+        - name: href
+          label: Link
+          widget: string
+          required: false
+        - name: booking
+          label: Or open booking for
+          widget: string
+          required: false
+        - name: consult
+          label: Or open the consultation scheduler
+          widget: boolean
+          required: false
+          default: false
+        - name: photographers
+          label: Or open the photographer list
+          widget: boolean
+          required: false
+          default: false
+- name: clients
+  label: Client logos
+  files:
+  - name: clients
+    label: Client logos
+    file: data/clients.json
+    fields:
+    - name: clients
+      label: Client logos
+      widget: object
+      fields:
+      - name: enabled
+        label: Show the logo strip
+        widget: boolean
+        default: false
+      - name: eyebrow
+        label: Label above the logos
+        widget: string
+      - name: items
+        label: Logos
+        widget: list
+        required: false
+        fields:
+        - name: name
+          label: Client name
+          widget: string
+        - name: logo
+          label: Logo
+          widget: image
+        - name: href
+          label: Link
+          widget: string
+          required: false
+      hint: The strip stays hidden until “Show the logo strip” is switched on. Do not switch it on until
+        the logos are approved and KLIP has confirmed where the strip sits.
+- name: booking
+  label: Booking & scheduling
+  files:
+  - name: simplybook
+    label: SimplyBook
+    file: data/booking.json
+    fields:
+    - name: booking
+      label: SimplyBook
+      widget: object
+      fields:
+      - name: base
+        label: Booking address
+        widget: string
+      - name: title
+        label: Default window title
+        widget: string
+      - name: note
+        label: Note under the window
+        widget: string
+      - name: fallbackLabel
+        label: Fallback link text
+        widget: string
+      - name: widget
+        label: Official widget
+        widget: object
+        fields:
+        - name: company
+          label: SimplyBook company login
+          widget: string
+          required: false
+        - name: script
+          label: Widget script
+          widget: string
+        - name: theme
+          label: Theme name
+          widget: string
+          required: false
+        - name: themeSettings
+          label: themeSettings
+          widget: hidden
+      - name: config
+        label: Services
+        widget: object
+        collapsed: false
+        fields:
+        - name: studioRentals
+          label: Studio Rentals
+          widget: object
+          fields:
+          - name: title
+            label: Title
+            widget: string
+          - name: categoryId
+            label: Category ID
+            widget: string
+            required: false
+          - name: serviceId
+            label: Service ID
+            widget: string
+            required: false
+        - name: podcastRoom
+          label: Klip Room
+          widget: object
+          fields:
+          - name: title
+            label: Title
+            widget: string
+          - name: serviceId
+            label: Service ID
+            widget: string
+            required: false
+        - name: blackRoom
+          label: Kapture Room
+          widget: object
+          fields:
+          - name: title
+            label: Title
+            widget: string
+          - name: serviceId
+            label: Service ID
+            widget: string
+            required: false
+        - name: greenRoom
+          label: Kreator Room
+          widget: object
+          fields:
+          - name: title
+            label: Title
+            widget: string
+          - name: serviceId
+            label: Service ID
+            widget: string
+            required: false
+        - name: kanvasRoom
+          label: Kanvas Room
+          widget: object
+          fields:
+          - name: title
+            label: Title
+            widget: string
+          - name: serviceId
+            label: Service ID
+            widget: string
+            required: false
+        - name: liveSelling
+          label: Live Selling
+          widget: object
+          fields:
+          - name: title
+            label: Title
+            widget: string
+          - name: serviceId
+            label: Service ID
+            widget: string
+            required: false
+        - name: photoStudioRental
+          label: Photography Studio Rental
+          widget: object
+          fields:
+          - name: title
+            label: Title
+            widget: string
+          - name: serviceId
+            label: Service ID
+            widget: string
+            required: false
+        - name: photographySessions
+          label: Photography Sessions
+          widget: object
+          fields:
+          - name: title
+            label: Title
+            widget: string
+          - name: categoryId
+            label: Category ID
+            widget: string
+            required: false
+        - name: studioTour
+          label: Studio Tour
+          widget: object
+          fields:
+          - name: title
+            label: Title
+            widget: string
+          - name: serviceId
+            label: Service ID
+            widget: string
+            required: false
+      - name: aliases
+        label: aliases
+        widget: hidden
+      hint: 'Service and category IDs: SimplyBook admin → Manage → Services. Widget values: Custom Features
+        → Website widget.'
+  - name: calendly
+    label: Calendly
+    file: data/consultation.json
+    fields:
+    - name: consultation
+      label: Calendly
+      widget: object
+      fields:
+      - name: calendlyUrl
+        label: Main scheduling link
+        widget: string
+        required: false
+      - name: title
+        label: Window title
+        widget: string
+      - name: intro
+        label: Intro line
+        widget: text
+      - name: phone
+        label: Phone
+        widget: string
+      - name: email
+        label: Email
+        widget: string
+      - name: events
+        label: Links per consultation type
+        widget: object
+        collapsed: false
+        fields:
+        - name: marketing
+          label: Digital marketing
+          widget: string
+          required: false
+        - name: seo
+          label: SEO / GEO
+          widget: string
+          required: false
+        - name: website
+          label: Website
+          widget: string
+          required: false
+        - name: branding
+          label: Branding
+          widget: string
+          required: false
+        - name: ai
+          label: AI solutions
+          widget: string
+          required: false
+        - name: strategy
+          label: Strategy / discovery
+          widget: string
+          required: false
+      - name: inlineEmbed
+        label: Use Calendly’s inline embed
+        widget: boolean
+        default: true
+      - name: hideEventDetails
+        label: Hide Calendly’s repeated event header
+        widget: boolean
+        default: true
+      - name: brand
+        label: brand
+        widget: hidden
+      hint: Consultation calls only — never anything that uses a physical room.
+- name: brand
+  label: Brand, nav & footer
+  files:
+  - name: brand
+    label: Brand & logo
+    file: data/brand.json
+    fields:
+    - name: brand
+      label: Brand
+      widget: object
+      fields:
+      - name: parent
+        label: Parent brand
+        widget: string
+      - name: legal
+        label: Legal name
+        widget: string
+      - name: media
+        label: Marketing division
+        widget: string
+      - name: studio
+        label: Studio division
+        widget: string
+      - name: line
+        label: KLIP tagline
+        widget: string
+      - name: mediaLine
+        label: Klip Media tagline
+        widget: string
+      - name: studioLine
+        label: Klip Studio tagline
+        widget: string
+      hint: KLIP is the parent brand. Klip Media and Klip Studio are divisions beneath it.
+    - name: site
+      label: Search listing
+      widget: object
+      fields:
+      - name: title
+        label: Homepage browser title
+        widget: string
+      - name: metaDescription
+        label: Homepage search description
+        widget: text
+    - name: logo
+      label: Logos
+      widget: object
+      hint: Never stretch, rotate, recolour or add effects to the approved logos.
+      fields:
+      - name: mark
+        label: Header mark
+        widget: string
+      - name: light
+        label: Light lockup
+        widget: string
+      - name: dark
+        label: Dark lockup
+        widget: string
+      - name: alt
+        label: Logo description
+        widget: string
+  - name: navigation
+    label: Navigation & footer
+    file: data/navigation.json
+    fields:
+    - name: nav
+      label: Top navigation
+      widget: object
+      fields:
+      - name: links
+        label: Links
+        widget: list
+        fields:
+        - name: label
+          label: Label
+          widget: string
+        - name: href
+          label: Link
+          widget: string
+      - name: cta
+        label: Button
+        widget: object
+        fields:
+        - name: label
+          label: Button text
+          widget: string
+        - name: consult
+          label: Opens the consultation scheduler
+          widget: boolean
+          default: true
+    - name: footer
+      label: Footer
+      widget: object
+      fields:
+      - name: links
+        label: Links
+        widget: list
+        fields:
+        - name: label
+          label: Label
+          widget: string
+        - name: href
+          label: Link
+          widget: string
+      - name: socials
+        label: Social accounts
+        widget: list
+        fields:
+        - name: icon
+          label: Icon
+          widget: select
+          options:
+          - instagram
+          - youtube
+          - linkedin
+          - tiktok
+          - facebook
+          - x
+        - name: label
+          label: Label
+          widget: string
+        - name: href
+          label: Link
+          widget: string
+      - name: legal
+        label: Legal links
+        widget: list
+        fields:
+        - name: label
+          label: Label
+          widget: string
+        - name: href
+          label: Link
+          widget: string
+      - name: copyright
+        label: Copyright line
+        widget: string
+      - name: tagline
+        label: Footer tagline
+        widget: string
+- name: bands
+  label: Photography, location & audit
+  files:
+  - name: photography
+    label: Photography band
+    file: data/photography.json
+    fields:
+    - name: photography
+      label: Photography
+      widget: object
+      fields:
+      - name: eyebrow
+        label: Eyebrow
+        widget: string
+      - name: headline
+        label: Headline
+        widget: list
+        field:
+          name: line
+          label: Line
+          widget: string
+      - name: body
+        label: Copy
+        widget: text
+      - name: primaryCta
+        label: First button
+        widget: object
+        fields:
+        - name: label
+          label: Button text
+          widget: string
+        - name: booking
+          label: Booking key
+          widget: string
+      - name: secondaryCta
+        label: Second button
+        widget: object
+        fields:
+        - name: label
+          label: Button text
+          widget: string
+        - name: booking
+          label: Booking key
+          widget: string
+      - name: smallLink
+        label: Photographers link
+        widget: object
+        fields:
+        - name: label
+          label: Link text
+          widget: string
+        - name: photographers
+          label: Opens the photographer list
+          widget: boolean
+          default: true
+      - name: items
+        label: Photos
+        widget: list
+        fields:
+        - name: image
+          label: Image
+          widget: image
+        - name: label
+          label: Caption
+          widget: string
+        - name: alt
+          label: Photo description
+          widget: string
+          required: false
+  - name: location
+    label: On-location band
+    file: data/location.json
+    fields:
+    - name: location
+      label: On location
+      widget: object
+      fields:
+      - name: image
+        label: Background image
+        widget: image
+      - name: imageAlt
+        label: Photo description
+        widget: string
+        required: false
+      - name: headline
+        label: Headline
+        widget: list
+        field:
+          name: line
+          label: Line
+          widget: string
+      - name: body
+        label: Copy
+        widget: text
+      - name: cta
+        label: Button
+        widget: object
+        fields:
+        - name: label
+          label: Button text
+          widget: string
+        - name: consult
+          label: Opens the consultation scheduler
+          widget: boolean
+          default: true
+      - name: categories
+        label: Categories
+        widget: list
+        field:
+          name: item
+          label: Category
+          widget: string
+  - name: visibility
+    label: Visibility Check
+    file: data/visibility.json
+    fields:
+    - name: visibility
+      label: Visibility Check
+      widget: object
+      fields:
+      - name: headline
+        label: Headline
+        widget: list
+        field:
+          name: line
+          label: Line
+          widget: string
+      - name: sub
+        label: Supporting line
+        widget: text
+      - name: microLabel
+        label: Small label
+        widget: string
+      - name: placeholder
+        label: Field placeholder
+        widget: string
+      - name: button
+        label: Button text
+        widget: string
+      - name: disclaimer
+        label: Disclaimer
+        widget: text
+        required: false
+      - name: endpoint
+        label: Scanner endpoint
+        widget: hidden
+      - name: leadEndpoint
+        label: Lead endpoint
+        widget: hidden
+      - name: areas
+        label: Score areas
+        widget: list
+        fields:
+        - name: key
+          label: Key
+          widget: string
+        - name: label
+          label: Label
+          widget: string
+        - name: note
+          label: Note
+          widget: string
+      - name: leadHeadline
+        label: Lead form headline
+        widget: string
+      - name: leadBody
+        label: Lead form copy
+        widget: text
+      - name: leadCta
+        label: Lead form button
+        widget: string
+      hint: Wording only. Scores come from a real scan of the address the visitor enters; nothing here
+        invents a number.
+- name: pages
+  label: Other pages
+  files:
+  - name: pages
+    label: Page content
+    file: data/pages.json
+    fields:
+    - name: media
+      label: Media page
+      widget: object
+      fields:
+      - name: title
+        label: Browser title
+        widget: string
+      - name: description
+        label: Search description
+        widget: text
+      - name: blocks
+        label: blocks
+        widget: hidden
+      hint: Edit the words and images freely. The block “type” decides the layout — leave it alone.
+    - name: studio
+      label: Studio page
+      widget: object
+      fields:
+      - name: title
+        label: Browser title
+        widget: string
+      - name: description
+        label: Search description
+        widget: text
+      - name: blocks
+        label: blocks
+        widget: hidden
+    - name: photography
+      label: Photography page
+      widget: object
+      fields:
+      - name: title
+        label: Browser title
+        widget: string
+      - name: description
+        label: Search description
+        widget: text
+      - name: blocks
+        label: blocks
+        widget: hidden
+    - name: podcasts
+      label: Podcasts page
+      widget: object
+      fields:
+      - name: title
+        label: Browser title
+        widget: string
+      - name: description
+        label: Search description
+        widget: text
+      - name: blocks
+        label: blocks
+        widget: hidden
+    - name: work
+      label: Work page
+      widget: object
+      fields:
+      - name: title
+        label: Browser title
+        widget: string
+      - name: description
+        label: Search description
+        widget: text
+      - name: blocks
+        label: blocks
+        widget: hidden
+    - name: about
+      label: About page
+      widget: object
+      fields:
+      - name: title
+        label: Browser title
+        widget: string
+      - name: description
+        label: Search description
+        widget: text
+      - name: blocks
+        label: blocks
+        widget: hidden

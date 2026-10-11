@@ -1,0 +1,43 @@
+{
+  "podcasts": {
+    "eyebrow": "Featured Clips",
+    "headline": [
+      "Real Conversations.",
+      "Created Here"
+    ],
+    "cta": {
+      "label": "Watch All Podcasts",
+      "href": "#podcasts"
+    },
+    "items": [
+      {
+        "image": "img/pod1.jpg",
+        "show": "Always Algo",
+        "title": "La Verdad Sobre el Crédito",
+        "time": "1:24",
+        "video": ""
+      },
+      {
+        "image": "img/pod2.jpg",
+        "show": "Respect Your Journey",
+        "title": "Player Development",
+        "time": "1:37",
+        "video": ""
+      },
+      {
+        "image": "img/pod3.jpg",
+        "show": "Business Talk",
+        "title": "Marketing Que Funciona",
+        "time": "1:15",
+        "video": ""
+      },
+      {
+        "image": "img/pod4.jpg",
+        "show": "Health & Lifestyle",
+        "title": "Mindset y Bienestar",
+        "time": "1:42",
+        "video": ""
+      }
+    ]
+  }
+}

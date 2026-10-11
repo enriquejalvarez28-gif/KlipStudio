@@ -1,0 +1,213 @@
+{
+  "services": {
+    "eyebrow": "Klip Media",
+    "headline": [
+      "Turn Visibility",
+      "Into Growth"
+    ],
+    "body": "Strategy, content and technology working together to grow your brand.",
+    "cta": {
+      "label": "Explore Klip Media",
+      "href": "media.html"
+    },
+    "items": [
+      {
+        "icon": "target",
+        "title": "Google Ads",
+        "text": "Capture the people already searching for what you do.",
+        "href": "media.html"
+      },
+      {
+        "icon": "chart",
+        "title": "Meta Ads",
+        "text": "Reach the right audience on Facebook and Instagram.",
+        "href": "media.html"
+      },
+      {
+        "icon": "search",
+        "title": "SEO",
+        "text": "Rank for the searches that bring real customers.",
+        "href": "media.html"
+      },
+      {
+        "icon": "globe",
+        "title": "GEO / AI Search",
+        "text": "Get found inside AI answers, not just search results.",
+        "href": "media.html"
+      },
+      {
+        "icon": "megaphone",
+        "title": "Social Media",
+        "text": "Build visibility. Engage your audience. Stay consistent.",
+        "href": "media.html"
+      },
+      {
+        "icon": "badge",
+        "title": "Branding",
+        "text": "Positioning, identity and a look people remember.",
+        "href": "media.html"
+      },
+      {
+        "icon": "window",
+        "title": "Website Design",
+        "text": "Fast, modern sites built to convert and to be found.",
+        "href": "media.html"
+      },
+      {
+        "icon": "chip",
+        "title": "AI Solutions",
+        "text": "Automation and AI workflows that cut the busywork.",
+        "href": "media.html"
+      },
+      {
+        "icon": "doc",
+        "title": "Content Strategy",
+        "text": "A clear plan for what to create, where to publish and why.",
+        "href": "media.html"
+      }
+    ]
+  },
+  "why": {
+    "headline": [
+      "Content + Marketing.",
+      "Under One Roof"
+    ],
+    "body": "We don't just create content. We build the strategy, produce the work, distribute it and help your business get found.",
+    "points": [
+      {
+        "title": "In-House Production",
+        "text": "Video, photography, podcasts and social content."
+      },
+      {
+        "title": "Digital Growth",
+        "text": "Social, paid media, SEO, GEO and AI-enabled marketing."
+      },
+      {
+        "title": "Studio + On Location",
+        "text": "Create at KLIP or bring our production team to your business."
+      }
+    ]
+  },
+  "work": {
+    "eyebrow": "Selected Work",
+    "headline": [
+      "Real Work. Built For Business"
+    ],
+    "cta": {
+      "label": "View All Work",
+      "href": "#work"
+    },
+    "items": [
+      {
+        "image": "img/work1.jpg",
+        "title": "Branded Podcast Series",
+        "category": "Podcast · Multicam",
+        "href": "#work",
+        "size": "wide"
+      },
+      {
+        "image": "img/work2.jpg",
+        "title": "Business Content Shoot",
+        "category": "Video · Social",
+        "href": "#work"
+      },
+      {
+        "image": "img/work3.jpg",
+        "title": "On-Location Production",
+        "category": "Field Production",
+        "href": "#work"
+      },
+      {
+        "image": "img/work4.jpg",
+        "title": "Short-Form Social",
+        "category": "Reels · Vertical",
+        "href": "#work",
+        "size": "tall"
+      },
+      {
+        "image": "img/work5.jpg",
+        "title": "Portrait & Branding",
+        "category": "Photography",
+        "href": "#work",
+        "size": "tall"
+      },
+      {
+        "image": "img/work6.jpg",
+        "title": "Brand Campaign",
+        "category": "Creative Direction",
+        "href": "#work",
+        "size": "span2"
+      }
+    ]
+  },
+  "industries": {
+    "headline": [
+      "Built For Your Business"
+    ],
+    "body": "Built for small businesses, brands, creators and professionals who want to show up better, create consistently and grow.",
+    "items": [
+      {
+        "image": "img/ind1.jpg",
+        "title": "Medical + Wellness",
+        "examples": "Med spas · Doctors · Dentists · Chiropractors",
+        "href": "#contact"
+      },
+      {
+        "image": "img/ind2.jpg",
+        "title": "Legal",
+        "examples": "Attorneys · Law firms · Legal professionals",
+        "href": "#contact"
+      },
+      {
+        "image": "img/ind3.jpg",
+        "title": "Real Estate + Mortgage",
+        "examples": "Realtors · Brokers · Developers · Lending",
+        "href": "#contact"
+      },
+      {
+        "image": "img/ind-creators.jpg",
+        "title": "Creators + Commerce",
+        "examples": "Creators · Influencers · UGC · TikTok Shop · E-commerce · Product brands",
+        "href": "#contact"
+      },
+      {
+        "image": "img/ind5.jpg",
+        "title": "Fitness + Sports",
+        "examples": "Gyms · Trainers · Teams · Sports businesses",
+        "href": "#contact"
+      },
+      {
+        "image": "img/ind6.jpg",
+        "title": "Professional Services",
+        "examples": "Accountants · Consultants · Financial pros",
+        "href": "#contact"
+      }
+    ]
+  },
+  "about": {
+    "image": "img/about.jpg",
+    "imageAlt": "Behind the scenes on a KLIP production",
+    "headline": [
+      "More Than A Studio"
+    ],
+    "body": "KLIP is a content and digital marketing company built to help businesses become more visible and grow — backed by our own production studio and on-location team.",
+    "cta": {
+      "label": "About KLIP",
+      "href": "#about-klip"
+    }
+  },
+  "finalCta": {
+    "image": "img/cta.jpg",
+    "imageAlt": "Cinema camera on a tripod in a darkened studio",
+    "eyebrow": "Let's Create Together",
+    "headline": "Let’s Create What’s Next",
+    "primaryCta": {
+      "label": "Grow Your Business",
+      "consult": true
+    },
+    "secondaryCta": {
+      "label": "Book The Studio",
+      "booking": "studioRentals"
+    }
+  }
+}

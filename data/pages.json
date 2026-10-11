@@ -1,0 +1,808 @@
+{
+  "media": {
+    "title": "Klip Media — Digital Marketing in South Florida | KLIP",
+    "description": "Klip Media is KLIP's marketing division: Google Ads, Meta Ads, SEO, GEO and AI search, social media, branding, website design, AI solutions and content strategy.",
+    "blocks": [
+      {
+        "type": "pagehero",
+        "image": "img/work2.jpg",
+        "imageAlt": "Klip Media team on a client content shoot",
+        "eyebrow": "Klip Media",
+        "headline": [
+          "Turn Visibility",
+          "Into Growth"
+        ],
+        "body": "Strategy, content and technology working together. We build the plan, produce the work, put it in front of the right people and measure what it returns.",
+        "ctas": [
+          {
+            "label": "Book A Marketing Call",
+            "consult": true
+          },
+          {
+            "label": "See The Work",
+            "href": "work.html"
+          }
+        ]
+      },
+      {
+        "type": "editorial",
+        "id": "services",
+        "eyebrow": "What We Do",
+        "headline": [
+          "Nine Ways We Build",
+          "Your Visibility"
+        ],
+        "body": "Pick one, or let us build the mix around your goals.",
+        "items": [
+          {
+            "icon": "target",
+            "title": "Google Ads",
+            "text": "Capture the people already searching for what you do. Search, Performance Max and local campaigns, managed against cost per lead rather than clicks."
+          },
+          {
+            "icon": "chart",
+            "title": "Meta Ads",
+            "text": "Facebook and Instagram campaigns built around creative that actually stops the scroll — because we shoot it ourselves."
+          },
+          {
+            "icon": "search",
+            "title": "SEO",
+            "text": "Technical fixes, on-page structure, service and location pages, and the content that earns rankings over time."
+          },
+          {
+            "icon": "globe",
+            "title": "GEO / AI Search",
+            "text": "Get found inside AI answers. Entity clarity, structured data, crawler access and answer-ready content. GEO complements SEO — it does not replace it."
+          },
+          {
+            "icon": "megaphone",
+            "title": "Social Media",
+            "text": "Planning, production, publishing and community management. Consistent presence without you running the account."
+          },
+          {
+            "icon": "badge",
+            "title": "Branding",
+            "text": "Positioning, identity, messaging and the visual system that makes you recognisable across every channel."
+          },
+          {
+            "icon": "window",
+            "title": "Website Design",
+            "text": "Fast, modern sites built to convert and to be found, with the technical foundations search and AI both need."
+          },
+          {
+            "icon": "chip",
+            "title": "AI Solutions",
+            "text": "Automation and AI workflows for follow-up, lead routing, reporting and the busywork that eats your week."
+          },
+          {
+            "icon": "doc",
+            "title": "Content Strategy",
+            "text": "A clear plan for what to create, where to publish and why — tied to business goals, not vanity metrics."
+          }
+        ]
+      },
+      {
+        "type": "steps",
+        "eyebrow": "How We Work",
+        "headline": [
+          "Four Steps.",
+          "No Mystery"
+        ],
+        "items": [
+          {
+            "title": "Audit",
+            "text": "We look at where you show up today — search, AI answers, social, paid — and where you do not."
+          },
+          {
+            "title": "Plan",
+            "text": "A written plan with the channels, the content and what each one is meant to do."
+          },
+          {
+            "title": "Produce",
+            "text": "We shoot, edit and build in house. No waiting on a third party."
+          },
+          {
+            "title": "Report",
+            "text": "Plain-language reporting on what moved and what we are changing next."
+          }
+        ]
+      },
+      {
+        "type": "visibility"
+      },
+      {
+        "type": "cta",
+        "eyebrow": "Let's Create Together",
+        "headline": "Let's Create What's Next",
+        "ctas": [
+          {
+            "label": "Book A Marketing Call",
+            "consult": true
+          },
+          {
+            "label": "Book The Studio",
+            "booking": "studioRentals"
+          }
+        ]
+      }
+    ]
+  },
+  "studio": {
+    "title": "Klip Studio — Podcast, Video & Photo Studio in Fort Lauderdale | KLIP",
+    "description": "Klip Studio is KLIP's production space in Fort Lauderdale: multicam podcast room, dark interview room, green screen and a white wall for photo and product. Book by the hour.",
+    "blocks": [
+      {
+        "type": "pagehero",
+        "image": "img/studio-main.jpg",
+        "imageAlt": "Klip Studio podcast set with lighting and crew",
+        "eyebrow": "Klip Studio",
+        "headline": [
+          "Create Here"
+        ],
+        "body": "Four rooms built for podcasts, video, photography, creator content, courses, live selling and branded production.",
+        "ctas": [
+          {
+            "label": "Book The Studio",
+            "booking": "studioRentals"
+          },
+          {
+            "label": "Tour The Studio",
+            "booking": "studioTour"
+          }
+        ]
+      },
+      {
+        "type": "rooms",
+        "id": "rooms",
+        "eyebrow": "The Rooms",
+        "headline": [
+          "Four Spaces.",
+          "One Address"
+        ],
+        "body": "Each room is set up and ready. Self-service, or with a technician. Pick the look, book the hour.",
+        "source": "studio.rooms"
+      },
+      {
+        "type": "editorial",
+        "eyebrow": "Included",
+        "headline": [
+          "Everything Is Already",
+          "Set Up"
+        ],
+        "items": [
+          {
+            "icon": "gear",
+            "title": "Professional Equipment",
+            "text": "Cameras, lighting and audio configured and tested before you arrive."
+          },
+          {
+            "icon": "sets",
+            "title": "Multiple Sets & Looks",
+            "text": "Switch rooms and backgrounds without rebuilding anything."
+          },
+          {
+            "icon": "calendar",
+            "title": "Easy Booking",
+            "text": "Pick your room and your hour online. Confirmation is instant."
+          },
+          {
+            "icon": "car",
+            "title": "Free Parking",
+            "text": "On-site parking for you and your guests. Coffee and water are on us."
+          },
+          {
+            "icon": "badge",
+            "title": "Self or Full Service",
+            "text": "Run the room yourself, add a technician, or hand the whole production to us — planning, coaching, scripts, editing and clips."
+          },
+          {
+            "icon": "target",
+            "title": "Creators + Live Commerce",
+            "text": "Create reels, UGC, product demos, TikTok Shop content and live-selling sessions in a production-ready space."
+          },
+          {
+            "icon": "doc",
+            "title": "Courses + Education",
+            "text": "Record courses, masterclasses, lessons and training content with professional cameras, lighting and audio."
+          }
+        ],
+        "body": "Choose the room and the production style that fits what you are making."
+      },
+      {
+        "type": "split",
+        "reverse": true,
+        "image": "img/location.jpg",
+        "imageAlt": "Klip videographer filming a client on location",
+        "eyebrow": "Beyond The Studio",
+        "headline": [
+          "On Location.",
+          "Same KLIP Quality"
+        ],
+        "body": "Your office. Your practice. Your business. Your event. Our production team comes to you with the same cameras and the same crew.",
+        "ctas": [
+          {
+            "label": "Book An On-Location Shoot",
+            "consult": true
+          }
+        ]
+      },
+      {
+        "type": "facts",
+        "eyebrow": "Find Us",
+        "headline": [
+          "Where To Come"
+        ],
+        "items": [
+          {
+            "title": "Address",
+            "text": "2145 Davie Blvd, Suite 204, Fort Lauderdale, FL"
+          },
+          {
+            "title": "Parking",
+            "text": "Free on-site parking."
+          },
+          {
+            "title": "Contact",
+            "html": "<a href=\"tel:+19545413708\">954-541-3708</a> · <a href=\"mailto:info@theklipstudio.com\">info@theklipstudio.com</a>"
+          },
+          {
+            "title": "Booking",
+            "text": "Rooms are booked by the hour. Studio tours are free."
+          }
+        ]
+      },
+      {
+        "type": "cta",
+        "eyebrow": "Ready When You Are",
+        "headline": "Create Here",
+        "ctas": [
+          {
+            "label": "Book The Studio",
+            "booking": "studioRentals"
+          },
+          {
+            "label": "Tour The Studio",
+            "booking": "studioTour"
+          }
+        ]
+      }
+    ]
+  },
+  "photography": {
+    "title": "Photography — Headshots, Lifestyle, Branding | KLIP",
+    "description": "KLIP photography in Fort Lauderdale: headshots, lifestyle, birthday and branding sessions, plus photo studio rental with the white wall and lighting included.",
+    "blocks": [
+      {
+        "type": "pagehero",
+        "image": "img/photo1.jpg",
+        "imageAlt": "Professional headshot session at Klip Studio",
+        "eyebrow": "Klip Photography",
+        "headline": [
+          "Your Story.",
+          "In Focus"
+        ],
+        "body": "Headshots, lifestyle, celebrations and branding — shot in our studio or at your location.",
+        "ctas": [
+          {
+            "label": "Book A Photo Session",
+            "booking": "photographySessions"
+          },
+          {
+            "label": "Rent The Photo Studio",
+            "booking": "photoStudioRental"
+          }
+        ]
+      },
+      {
+        "type": "cards",
+        "id": "categories",
+        "ratio": "portrait",
+        "eyebrow": "Sessions",
+        "headline": [
+          "What We Shoot"
+        ],
+        "items": [
+          {
+            "image": "img/photo1.jpg",
+            "title": "Headshots",
+            "sub": "Professional portraits for teams and individuals",
+            "booking": "photographySessions"
+          },
+          {
+            "image": "img/photo2.jpg",
+            "title": "Lifestyle & Events",
+            "sub": "Natural sessions, celebrations and milestones",
+            "booking": "photographySessions"
+          },
+          {
+            "image": "img/photo3.jpg",
+            "title": "Personal Branding",
+            "sub": "The library of images your brand runs on",
+            "booking": "photographySessions"
+          },
+          {
+            "image": "img/photo4.jpg",
+            "title": "Product & E-commerce",
+            "sub": "Product, packaging and catalogue photography",
+            "booking": "photographySessions"
+          }
+        ]
+      },
+      {
+        "type": "split",
+        "image": "img/room4.jpg",
+        "imageAlt": "White wall photography studio with lighting",
+        "eyebrow": "Two Ways In",
+        "headline": [
+          "Book A Session.",
+          "Or Rent The Room"
+        ],
+        "body": "Want us to shoot it? Book a session with a KLIP photographer. Shooting it yourself? Rent the photo studio by the hour — white wall, backdrops and lighting included, bring whatever else you need.",
+        "points": [
+          {
+            "title": "Photo Session",
+            "text": "A KLIP photographer, the room, and edited images delivered."
+          },
+          {
+            "title": "Studio Rental",
+            "text": "The space and lighting. You bring the camera and the crew."
+          },
+          {
+            "title": "Same Price",
+            "text": "Session pricing is the same whichever standard photographer you choose."
+          }
+        ],
+        "ctas": [
+          {
+            "label": "Book A Photo Session",
+            "booking": "photographySessions"
+          },
+          {
+            "label": "Rent The Photo Studio",
+            "booking": "photoStudioRental"
+          }
+        ]
+      },
+      {
+        "type": "editorial",
+        "eyebrow": "Our Photographers",
+        "headline": [
+          "Choose Your",
+          "Photographer"
+        ],
+        "body": "Pick the style you want, or let us assign the first available.",
+        "items": [
+          {
+            "icon": "badge",
+            "title": "Meet The Team",
+            "text": "Browse specialties and styles, then book the person you want."
+          },
+          {
+            "icon": "calendar",
+            "title": "First Available",
+            "text": "In a hurry? We will put you with the earliest available KLIP photographer."
+          },
+          {
+            "icon": "gear",
+            "title": "One Clear Price",
+            "text": "The package price does not change based on who shoots it."
+          }
+        ]
+      },
+      {
+        "type": "cta",
+        "eyebrow": "Let's Shoot",
+        "headline": "Your Story. In Focus",
+        "ctas": [
+          {
+            "label": "Book A Photo Session",
+            "booking": "photographySessions"
+          },
+          {
+            "label": "Meet Our Photographers",
+            "photographers": true
+          }
+        ]
+      }
+    ]
+  },
+  "podcasts": {
+    "title": "Podcast Production & Studio — Fort Lauderdale | KLIP",
+    "description": "Record your podcast at KLIP: multicam room, broadcast audio, a technician if you want one, and edited episodes and clips ready to publish.",
+    "blocks": [
+      {
+        "type": "pagehero",
+        "image": "img/pod1.jpg",
+        "imageAlt": "Podcast recording at Klip Studio",
+        "eyebrow": "Podcasts",
+        "headline": [
+          "Real Conversations.",
+          "Created Here"
+        ],
+        "body": "Shows recorded in our multicam room and cut into episodes and clips that keep working after the session ends.",
+        "ctas": [
+          {
+            "label": "Book The Podcast Room",
+            "booking": "podcastRoom"
+          },
+          {
+            "label": "Tour The Studio",
+            "booking": "studioTour"
+          }
+        ]
+      },
+      {
+        "type": "clips",
+        "eyebrow": "Featured Clips",
+        "headline": [
+          "From The Room"
+        ],
+        "items": [
+          {
+            "image": "img/pod1.jpg",
+            "show": "Always Algo",
+            "title": "La Verdad Sobre el Crédito",
+            "time": "1:24",
+            "video": ""
+          },
+          {
+            "image": "img/pod2.jpg",
+            "show": "Respect Your Journey",
+            "title": "Player Development",
+            "time": "1:37",
+            "video": ""
+          },
+          {
+            "image": "img/pod3.jpg",
+            "show": "Business Talk",
+            "title": "Marketing Que Funciona",
+            "time": "1:15",
+            "video": ""
+          },
+          {
+            "image": "img/pod4.jpg",
+            "show": "Health & Lifestyle",
+            "title": "Mindset y Bienestar",
+            "time": "1:42",
+            "video": ""
+          }
+        ]
+      },
+      {
+        "type": "split",
+        "image": "img/studio-main.jpg",
+        "imageAlt": "Multicam podcast set at Klip Studio",
+        "eyebrow": "The Setup",
+        "headline": [
+          "Built For",
+          "Multicam"
+        ],
+        "body": "A room designed around the show, not a conference table with a microphone on it.",
+        "points": [
+          {
+            "title": "Multiple Cameras",
+            "text": "Switched angles so an episode cuts like a show, not a webcam call."
+          },
+          {
+            "title": "Broadcast Audio",
+            "text": "Studio microphones and a proper mixer, set up before you arrive."
+          },
+          {
+            "title": "Teleprompter",
+            "text": "Included in every room at no extra cost."
+          },
+          {
+            "title": "Technician",
+            "text": "Run it yourself, or add an operator switching live in the room."
+          }
+        ],
+        "ctas": [
+          {
+            "label": "Book The Podcast Room",
+            "booking": "podcastRoom"
+          }
+        ]
+      },
+      {
+        "type": "steps",
+        "eyebrow": "How It Works",
+        "headline": [
+          "Walk In.",
+          "Press Record"
+        ],
+        "items": [
+          {
+            "title": "Book",
+            "text": "Pick your room and your hour online."
+          },
+          {
+            "title": "Record",
+            "text": "Everything is set up and tested. Bring your guest and your notes."
+          },
+          {
+            "title": "Deliver",
+            "text": "Footage lands in your folder automatically after the session."
+          },
+          {
+            "title": "Publish",
+            "text": "Add editing and clips and we hand back episodes ready to post."
+          }
+        ]
+      },
+      {
+        "type": "cta",
+        "eyebrow": "Start The Show",
+        "headline": "Real Conversations. Created Here",
+        "ctas": [
+          {
+            "label": "Book The Podcast Room",
+            "booking": "podcastRoom"
+          },
+          {
+            "label": "Book A Marketing Call",
+            "consult": true
+          }
+        ]
+      }
+    ]
+  },
+  "work": {
+    "title": "Selected Work — Content & Campaigns | KLIP",
+    "description": "A look at what KLIP produces: branded podcasts, business content shoots, on-location production, short-form social, photography and brand campaigns.",
+    "blocks": [
+      {
+        "type": "pagehero",
+        "image": "img/work1.jpg",
+        "imageAlt": "Branded podcast production at Klip Studio",
+        "eyebrow": "Selected Work",
+        "headline": [
+          "Real Work.",
+          "Built For Business"
+        ],
+        "body": "Content made to be used — on a website, in an ad, in a feed, in a pitch.",
+        "ctas": [
+          {
+            "label": "Book A Marketing Call",
+            "consult": true
+          }
+        ]
+      },
+      {
+        "type": "cards",
+        "id": "projects",
+        "eyebrow": "Projects",
+        "headline": [
+          "What We Make"
+        ],
+        "cols": 3,
+        "items": [
+          {
+            "image": "img/work1.jpg",
+            "title": "Branded Podcast Series",
+            "sub": "Podcast · Multicam",
+            "href": "podcasts.html"
+          },
+          {
+            "image": "img/work2.jpg",
+            "title": "Business Content Shoot",
+            "sub": "Video · Social",
+            "href": "media.html"
+          },
+          {
+            "image": "img/work3.jpg",
+            "title": "On-Location Production",
+            "sub": "Field Production",
+            "href": "studio.html"
+          },
+          {
+            "image": "img/work4.jpg",
+            "title": "Short-Form Social",
+            "sub": "Reels · Vertical",
+            "href": "media.html"
+          },
+          {
+            "image": "img/work5.jpg",
+            "title": "Portrait & Branding",
+            "sub": "Photography",
+            "href": "photography.html"
+          },
+          {
+            "image": "img/work6.jpg",
+            "title": "Brand Campaign",
+            "sub": "Creative Direction",
+            "href": "media.html"
+          }
+        ]
+      },
+      {
+        "type": "cards",
+        "id": "industries",
+        "ratio": "portrait",
+        "headline": [
+          "Built For Your Business"
+        ],
+        "body": "Content and marketing for businesses that need to be seen, trusted and remembered.",
+        "items": [
+          {
+            "image": "img/ind1.jpg",
+            "title": "Medical + Wellness",
+            "sub": "Med spas · Doctors · Dentists · Chiropractors",
+            "consult": true
+          },
+          {
+            "image": "img/ind2.jpg",
+            "title": "Legal",
+            "sub": "Attorneys · Law firms · Legal professionals",
+            "consult": true
+          },
+          {
+            "image": "img/ind3.jpg",
+            "title": "Real Estate + Mortgage",
+            "sub": "Realtors · Brokers · Developers · Lending",
+            "consult": true
+          },
+          {
+            "image": "img/ind4.jpg",
+            "title": "Hospitality",
+            "sub": "Restaurants · Bars · Hotels",
+            "consult": true
+          },
+          {
+            "image": "img/ind5.jpg",
+            "title": "Fitness + Sports",
+            "sub": "Gyms · Trainers · Teams · Sports businesses",
+            "consult": true
+          },
+          {
+            "image": "img/ind6.jpg",
+            "title": "Professional Services",
+            "sub": "Accountants · Consultants · Financial pros",
+            "consult": true
+          }
+        ]
+      },
+      {
+        "type": "cta",
+        "eyebrow": "Your Turn",
+        "headline": "Let's Create What's Next",
+        "ctas": [
+          {
+            "label": "Book A Marketing Call",
+            "consult": true
+          },
+          {
+            "label": "Book The Studio",
+            "booking": "studioRentals"
+          }
+        ]
+      }
+    ]
+  },
+  "about": {
+    "title": "About KLIP — Content & Marketing in South Florida",
+    "description": "KLIP is a content and digital marketing company in Fort Lauderdale. Klip Media runs the marketing, Klip Studio runs the production, and both sit under one roof.",
+    "blocks": [
+      {
+        "type": "pagehero",
+        "image": "img/about.jpg",
+        "imageAlt": "Behind the scenes on a KLIP production",
+        "eyebrow": "About",
+        "headline": [
+          "More Than",
+          "A Studio"
+        ],
+        "body": "KLIP is a content and digital marketing company built to help businesses become more visible and grow — backed by our own production studio and on-location team.",
+        "ctas": [
+          {
+            "label": "Book A Marketing Call",
+            "consult": true
+          },
+          {
+            "label": "Tour The Studio",
+            "booking": "studioTour"
+          }
+        ]
+      },
+      {
+        "type": "split",
+        "image": "img/studio-main.jpg",
+        "imageAlt": "The Klip Studio team on set",
+        "eyebrow": "One Roof",
+        "headline": [
+          "Two Divisions.",
+          "One Company"
+        ],
+        "body": "Most businesses have to hire an agency for the strategy and a studio for the production, then hope the two talk to each other. We do both.",
+        "points": [
+          {
+            "title": "KLIP Media",
+            "text": "The marketing side — ads, search, social, branding, websites and automation."
+          },
+          {
+            "title": "KLIP Studio",
+            "text": "The production side — podcast, video, photography and on-location shoots."
+          },
+          {
+            "title": "Together",
+            "text": "The people who plan the campaign are the people who shoot it."
+          }
+        ],
+        "ctas": [
+          {
+            "label": "See Klip Media",
+            "href": "media.html"
+          },
+          {
+            "label": "See Klip Studio",
+            "href": "studio.html"
+          }
+        ]
+      },
+      {
+        "type": "editorial",
+        "eyebrow": "What We Believe",
+        "headline": [
+          "Simple. Accessible.",
+          "Repeatable"
+        ],
+        "items": [
+          {
+            "icon": "badge",
+            "title": "Accessibility",
+            "text": "Professional content should be available to everyone. We remove the technical, financial and creative barriers."
+          },
+          {
+            "icon": "sets",
+            "title": "Simplicity",
+            "text": "Clear, streamlined processes that make content creation easy and repeatable rather than stressful."
+          },
+          {
+            "icon": "growth",
+            "title": "Empowerment",
+            "text": "We guide creators and brands so they can focus on the message and show up professionally."
+          }
+        ]
+      },
+      {
+        "type": "facts",
+        "eyebrow": "Details",
+        "headline": [
+          "Find Us"
+        ],
+        "items": [
+          {
+            "title": "Studio",
+            "text": "2145 Davie Blvd, Suite 204, Fort Lauderdale, FL"
+          },
+          {
+            "title": "Serving",
+            "text": "Fort Lauderdale, Broward, Miami-Dade and the rest of South Florida."
+          },
+          {
+            "title": "Contact",
+            "html": "<a href=\"tel:+19545413708\">954-541-3708</a> · <a href=\"mailto:info@theklipstudio.com\">info@theklipstudio.com</a>"
+          },
+          {
+            "title": "Languages",
+            "text": "English and Spanish."
+          }
+        ]
+      },
+      {
+        "type": "cta",
+        "eyebrow": "Let's Talk",
+        "headline": "Let's Create What's Next",
+        "ctas": [
+          {
+            "label": "Book A Marketing Call",
+            "consult": true
+          },
+          {
+            "label": "Book The Studio",
+            "booking": "studioRentals"
+          }
+        ]
+      }
+    ]
+  }
+}

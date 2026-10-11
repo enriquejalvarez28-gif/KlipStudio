@@ -1,0 +1,44 @@
+{
+  "photography": {
+    "eyebrow": "Klip Photography",
+    "headline": [
+      "Your Story.",
+      "In Focus"
+    ],
+    "body": "Headshots. Lifestyle. Branding. Events.",
+    "primaryCta": {
+      "label": "Book A Photo Session",
+      "booking": "photographySessions"
+    },
+    "secondaryCta": {
+      "label": "Rent The Photo Studio",
+      "booking": "photoStudioRental"
+    },
+    "smallLink": {
+      "label": "Meet Our Photographers",
+      "photographers": true
+    },
+    "items": [
+      {
+        "image": "img/photo1.jpg",
+        "label": "Headshots",
+        "alt": "Professional headshot session"
+      },
+      {
+        "image": "img/photo2.jpg",
+        "label": "Lifestyle",
+        "alt": "Couple lifestyle portrait session"
+      },
+      {
+        "image": "img/photo3.jpg",
+        "label": "Birthday",
+        "alt": "Birthday celebration portrait"
+      },
+      {
+        "image": "img/photo4.jpg",
+        "label": "Branding",
+        "alt": "Product photography on dark silk"
+      }
+    ]
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "nav": {
+    "links": [
+      {
+        "label": "Media",
+        "href": "media.html"
+      },
+      {
+        "label": "Studio",
+        "href": "studio.html"
+      },
+      {
+        "label": "Photography",
+        "href": "photography.html"
+      },
+      {
+        "label": "Podcasts",
+        "href": "podcasts.html"
+      },
+      {
+        "label": "Work",
+        "href": "work.html"
+      },
+      {
+        "label": "About",
+        "href": "about.html"
+      }
+    ],
+    "cta": {
+      "label": "Let’s Talk",
+      "consult": true
+    }
+  },
+  "footer": {
+    "links": [
+      {
+        "label": "Media",
+        "href": "media.html"
+      },
+      {
+        "label": "Studio",
+        "href": "studio.html"
+      },
+      {
+        "label": "Photography",
+        "href": "photography.html"
+      },
+      {
+        "label": "Podcasts",
+        "href": "podcasts.html"
+      },
+      {
+        "label": "Work",
+        "href": "work.html"
+      },
+      {
+        "label": "About",
+        "href": "about.html"
+      }
+    ],
+    "socials": [
+      {
+        "icon": "instagram",
+        "label": "Instagram",
+        "href": "https://www.instagram.com/theklipstudio"
+      },
+      {
+        "icon": "youtube",
+        "label": "YouTube",
+        "href": "https://www.youtube.com/@theklipstudio"
+      },
+      {
+        "icon": "linkedin",
+        "label": "LinkedIn",
+        "href": "https://www.linkedin.com/company/theklipstudio"
+      }
+    ],
+    "legal": [
+      {
+        "label": "Privacy",
+        "href": "#"
+      },
+      {
+        "label": "Terms",
+        "href": "#"
+      }
+    ],
+    "copyright": "© 2026 KLIP. All rights reserved.",
+    "tagline": "Be Seen. Be Found. Grow."
+  }
+}

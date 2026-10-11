@@ -1,0 +1,39 @@
+{
+  "visibility": {
+    "headline": [
+      "How Visible Is Your Business"
+    ],
+    "sub": "See how your website is performing across SEO, GEO and AI search.",
+    "microLabel": "SEO · GEO · AI Search · Website Health",
+    "placeholder": "yourbusiness.com",
+    "button": "Analyze My Website",
+    "endpoint": "/api/visibility",
+    "leadEndpoint": "/api/lead",
+    "areas": [
+      {
+        "key": "search",
+        "label": "Search Visibility",
+        "note": "Technical + on-page fundamentals."
+      },
+      {
+        "key": "ai",
+        "label": "AI Readiness",
+        "note": "Entity clarity, structured data, crawler access and answer-ready signals."
+      },
+      {
+        "key": "health",
+        "label": "Website Health",
+        "note": "Technical accessibility, indexability and basic performance."
+      },
+      {
+        "key": "content",
+        "label": "Content Opportunity",
+        "note": "Missing or weak service, location and topic coverage."
+      }
+    ],
+    "leadHeadline": "Want the full plan?",
+    "leadBody": "We'll review the scan by hand and send back what to fix first.",
+    "leadCta": "Get My Full Visibility Plan",
+    "disclaimer": "A lightweight public scan of signals we can read from your site. Not a full professional SEO audit, and not a prediction of rankings or AI citations."
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "consultation": {
+    "calendlyUrl": "",
+    "title": "Book a marketing call",
+    "intro": "Fifteen minutes to talk about what you want to be known for.",
+    "phone": "954-541-3708",
+    "email": "info@theklipstudio.com",
+    "inlineEmbed": true,
+    "hideEventDetails": true,
+    "brand": {
+      "background": "ffffff",
+      "text": "1d1d1c",
+      "primary": "e40e20"
+    },
+    "events": {
+      "marketing": "",
+      "seo": "",
+      "website": "",
+      "branding": "",
+      "ai": "",
+      "strategy": ""
+    }
+  }
+}

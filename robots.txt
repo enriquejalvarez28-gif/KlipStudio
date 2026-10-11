@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+
+# AI crawlers are welcome — being readable to them is the point of GEO.
+User-agent: GPTBot
+Allow: /
+User-agent: ClaudeBot
+Allow: /
+User-agent: PerplexityBot
+Allow: /
+User-agent: Google-Extended
+Allow: /
+
+Sitemap: https://theklipstudio.com/sitemap.xml

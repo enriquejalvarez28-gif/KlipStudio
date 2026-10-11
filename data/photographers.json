@@ -1,0 +1,45 @@
+{
+  "photographers": {
+    "title": "KLIP Photographers",
+    "intro": "Same KLIP package price whatever photographer you choose.",
+    "firstAvailable": {
+      "title": "First Available",
+      "text": "Show me the earliest available KLIP photographer.",
+      "cta": "Find A Time",
+      "booking": "photographySessions"
+    },
+    "cta": "Book With This Photographer",
+    "items": [
+      {
+        "name": "Photographer A — TEMP",
+        "specialties": "Headshots · Branding · Lifestyle",
+        "bio": "Clean, modern portraits and brand photography with a polished, natural look.",
+        "booking": "photographySessions",
+        "providerId": "",
+        "headshot": "",
+        "portfolio": [],
+        "active": true
+      },
+      {
+        "name": "Photographer B — TEMP",
+        "specialties": "Lifestyle · Birthday · Branding",
+        "bio": "Lifestyle and celebration photography with an energetic, editorial feel.",
+        "booking": "photographySessions",
+        "providerId": "",
+        "headshot": "",
+        "portfolio": [],
+        "active": true
+      },
+      {
+        "name": "Photographer C — TEMP",
+        "specialties": "Headshots · Lifestyle · Birthday",
+        "bio": "Versatile portrait photography for professional and personal sessions.",
+        "booking": "photographySessions",
+        "providerId": "",
+        "headshot": "",
+        "portfolio": [],
+        "active": true
+      }
+    ]
+  }
+}

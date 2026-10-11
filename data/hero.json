@@ -1,0 +1,37 @@
+{
+  "hero": {
+    "image": "img/hero.jpg",
+    "imageAlt": "Microphone being set up in a darkened recording studio",
+    "videoMp4": "video/klip-hero.mp4",
+    "videoWebm": "video/klip-hero.webm",
+    "videoMobile": "video/klip-hero-mobile.mp4",
+    "videoMobileWebm": "video/klip-hero-mobile.webm",
+    "videoPoster": "img/hero-poster.jpg",
+    "eyebrow": "Content. Marketing. Real Growth.",
+    "headline": [
+      "Be Seen.",
+      "Be Found.",
+      "Grow"
+    ],
+    "body": "Content, marketing and production working together to move your business forward.",
+    "primaryCta": {
+      "label": "Grow Your Business",
+      "consult": true
+    },
+    "secondaryCta": {
+      "label": "Book The Studio",
+      "booking": "studioRentals"
+    },
+    "sideNote": [
+      "More",
+      "Than",
+      "Content."
+    ],
+    "proof": [
+      "Content Production",
+      "Digital Marketing",
+      "Studio + On Location",
+      "AI + Search"
+    ]
+  }
+}

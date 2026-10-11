@@ -1,0 +1,61 @@
+{
+  "booking": {
+    "base": "https://theklipstudio.simplybook.me/v2",
+    "title": "Book with KLIP",
+    "fallbackLabel": "Open secure booking in a new tab",
+    "note": "Secure booking and payment handled by SimplyBook.me.",
+    "widget": {
+      "company": "",
+      "script": "//widget.simplybook.me/v2/widget/widget.js",
+      "theme": "",
+      "themeSettings": {}
+    },
+    "config": {
+      "studioRentals": {
+        "categoryId": "",
+        "serviceId": "",
+        "title": "Studio Rentals"
+      },
+      "podcastRoom": {
+        "serviceId": "",
+        "title": "Klip Room"
+      },
+      "blackRoom": {
+        "serviceId": "",
+        "title": "Kapture Room"
+      },
+      "greenRoom": {
+        "serviceId": "",
+        "title": "Kreator Room"
+      },
+      "kanvasRoom": {
+        "serviceId": "",
+        "title": "Kanvas Room"
+      },
+      "liveSelling": {
+        "serviceId": "",
+        "title": "Live Selling"
+      },
+      "photoStudioRental": {
+        "serviceId": "",
+        "title": "Photography Studio Rental"
+      },
+      "photographySessions": {
+        "categoryId": "",
+        "title": "Photography Sessions"
+      },
+      "studioTour": {
+        "serviceId": "",
+        "title": "Studio Tour"
+      }
+    },
+    "aliases": {
+      "klipRoom": "podcastRoom",
+      "kaptureRoom": "blackRoom",
+      "kreatorRoom": "greenRoom",
+      "kanvas": "kanvasRoom",
+      "photography": "photographySessions",
+      "podcast": "podcastRoom"
+    }
+  }
+}

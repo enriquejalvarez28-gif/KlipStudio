@@ -1,0 +1,150 @@
+KLIP WEBSITE — HOW TO EDIT
+==========================
+
+THE SITE IS NOW SEVEN PAGES
+  index.html ........ homepage          /
+  media.html ........ Klip Media        /media
+  studio.html ....... Klip Studio       /studio
+  photography.html .. Photography       /photography
+  podcasts.html ..... Podcasts          /podcasts
+  work.html ......... Selected Work     /work
+  about.html ........ About KLIP        /about
+
+  On Cloudflare Pages those files are served at the clean URLs on
+  the right automatically. Each page has its own title, description,
+  canonical URL and share card, which is what search engines and AI
+  answer engines need.
+
+EDITING THE SITE — /admin
+  Go to  theklipstudio.com/admin  and sign in with GitHub. Every
+  screen in the left sidebar edits one part of the site:
+
+    Homepage ................ hero, buttons, hero loop, service grid,
+                              Why KLIP, Selected Work, industries,
+                              About band, closing banner
+    Studio & rooms .......... the four rooms — photo, name, what it is
+                              for, positioning line, capabilities,
+                              price, booking key
+    Photographers ........... profiles, headshots, portfolios,
+                              provider ids, and whether each one is
+                              visible yet
+    Podcast clips ........... thumbnails, show, title, length, link
+    Client logos ............ the strip, and the switch that reveals it
+    Booking & scheduling .... SimplyBook widget values and every
+                              service / category id; Calendly links
+    Brand, nav & footer ..... brand names, taglines, logos, menu,
+                              footer, social links
+    Photography, location
+      & audit ............... those three bands
+    Other pages ............. titles and search descriptions for the
+                              six interior pages
+
+  A room is edited once and changes in both places it appears — the
+  homepage tiles and the big blocks on the Studio page.
+
+  Saving commits to GitHub, and Cloudflare Pages republishes in about
+  a minute. No HTML, CSS, JavaScript or Python is ever involved.
+
+WHERE THE WORDS ACTUALLY LIVE
+  data/*.json ...... one file per editor screen. The admin writes
+                     these. You can also edit them by hand if you
+                     prefer — they are plain text.
+  img/ ............. all photography.
+  video/ ........... the hero loop.
+
+  One file per screen is deliberate: saving one screen can never
+  disturb another.
+
+PREVIEWING ON YOUR OWN MACHINE
+  Opening index.html by double-clicking will NOT work any more — a
+  browser refuses to read the data files that way. In the site folder
+  run:
+
+      npx serve
+
+  and open the address it prints. On the live site this is a
+  non-issue.
+
+ADDING AN IMAGE
+  Upload it in /admin like any other image and it works immediately.
+  To also generate the smaller WebP version (about 45% less to
+  download), run once in the site folder:
+
+      npm install sharp
+      node tools/make-webp.js
+
+THE FILES YOU DO NOT NEED TO TOUCH
+  css/klip.css ....... the whole design system, shared by every page.
+  js/klip-data.js .... loads the content files.
+  js/klip-site.js .... header, footer, menus, booking and Calendly
+                       modals, video lightbox, scroll and motion.
+  js/klip-page.js .... turns the blocks in pages.json into layouts.
+  js/gsap, lenis ..... motion libraries, loaded only on the live site.
+  functions/api/ ..... the server code behind the Visibility Check
+                       and the lead form.
+  admin/ ............. the editor itself.
+
+BRAND HIERARCHY
+  KLIP        = parent brand. Page titles, share cards, schema and
+                the copyright line all say KLIP.
+  Klip Media  = the marketing division. Line: Turn Visibility Into Growth.
+  Klip Studio = the production division. Line: Create Here.
+  The homepage line is Be Seen. Be Found. Grow. and it does not
+  change from section to section.
+
+TYPOGRAPHY
+  Montserrat throughout — ExtraBold for headlines, SemiBold for
+  labels and buttons, Regular for body, exactly as the brand book
+  specifies.
+
+TO SWAP A PHOTO BY HAND (the admin is easier)
+  Save yours into /img with the same file name. Change nothing else.
+    hero.jpg · work1-6.jpg · pod1-4.jpg · studio-main.jpg
+    room1-4.jpg · photo1-4.jpg · location.jpg · ind1-6.jpg
+    about.jpg · cta.jpg · logo-mark.png · logo-dark.png · favicon.png
+
+TO ADD A PAGE
+  Copy about.html, change data-page="about" to your new name, then
+  add a matching entry in data/pages.json. Block types available:
+  pagehero · editorial · split · cards · rooms · steps · facts ·
+  clips · visibility · cta
+
+THE VISIBILITY CHECK
+  Real scanner, runs server-side. Deploy to Cloudflare Pages and the
+  /functions folder goes live automatically — no build step. Add
+  LEAD_WEBHOOK_URL in Settings > Environment variables so the lead
+  form reaches Make / GoHighLevel. In a local preview it says the
+  scanner is unreachable rather than inventing scores.
+
+BOOKING
+  Every booking button opens SimplyBook inside a KLIP modal — the
+  visitor stays on the KLIP site. Nothing loads until they click.
+  Order of preference, automatic:
+    1. the official SimplyBook widget   (Booking screen in /admin)
+    2. the booking page embedded in the modal, if no widget is set
+    3. a new tab, only if the vendor refuses to be framed at all
+  Service ids live in the Booking screen of /admin, and a button
+  reaches one with  booking: "kanvasRoom".  Room names work too —
+  "klipRoom", "kaptureRoom", "kreatorRoom", "kanvas" (booking.aliases).
+  Add  provider: "<SimplyBook provider id>"  to scope a button to one
+  photographer. See LAUNCH-CHECKLIST.txt.
+
+CONSULTATIONS
+  Calendly, consultation calls only — never for anything that uses a
+  physical room. It loads through Calendly's own inline embed inside
+  the KLIP modal, tinted with the KLIP palette and with the repeated
+  event header hidden. A button asks for the general link with
+  consult: true,  or for one topic with  consult: "seo"
+  (marketing · seo · website · branding · ai · strategy).
+
+HERO VIDEO
+  the Homepage screen of /admin.  Four files, all muted and silent:
+    videoMp4 / videoWebm              desktop
+    videoMobile / videoMobileWebm     phones (smaller)
+    videoPoster                       first frame, shown while loading
+    image                             the still shown instead of the
+                                      loop when a visitor has asked
+                                      their system to reduce motion
+  Keep a replacement between 6 and 10 seconds, three to five shots,
+  no audio track. The red dot in the headline pulses once on load;
+  that is the only hero motion besides the loop itself.

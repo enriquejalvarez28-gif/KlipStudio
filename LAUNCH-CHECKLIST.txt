@@ -1,0 +1,105 @@
+KLIP WEBSITE — LAUNCH BLOCKERS
+==============================
+Each item waits on a real value or a real test. Everything here is
+filled in at /admin — no code changes at all.
+
+0A. GITHUB REPOSITORY FOR THE EDITOR  (admin/config.yml)   ⚠ BLOCKER
+   Line 3 of admin/config.yml says  repo: OWNER/REPOSITORY.
+   Replace it with the GitHub repo the site deploys from, e.g.
+   klipstudio/klip-site. Until then /admin loads but cannot sign in.
+   Anyone given write access to that repo can edit the site.
+
+0. SIMPLYBOOK WIDGET  (/admin > Booking & scheduling > SimplyBook)   ⚠ BLOCKER
+   SimplyBook admin → Custom Features → Website widget. Generate the
+   widget and paste into booking.widget:
+       company        your SimplyBook company login
+       theme          the theme name the generator shows
+       themeSettings  the generated settings object
+   With this filled in, the official SimplyBook widget renders
+   inside the KLIP modal — the visitor never leaves the site.
+   While it is empty the modal embeds the booking page instead,
+   which still keeps them on klip but is the fallback, not the plan.
+
+1. SIMPLYBOOK IDS  (/admin > Booking & scheduling > SimplyBook)   ⚠ BLOCKER
+   Paste the real ids into the empty quotes:
+       studioRentals.categoryId      photoStudioRental.serviceId
+       podcastRoom.serviceId   (Klip Room)
+       blackRoom.serviceId     (Kapture Room)
+       greenRoom.serviceId     (Kreator Room)
+       kanvasRoom.serviceId    (Kanvas Room)
+       liveSelling.serviceId         photographySessions.categoryId
+                                     studioTour.serviceId
+   These ids are what preselect the service inside the widget.
+   Until then every booking button opens the general booking page
+   inside the modal — it works, it just does not land on the exact
+   service.
+
+2. PHOTOGRAPHER PROVIDER IDS  (/admin > Photographers)
+   Each photographer has an empty providerId. Paste the SimplyBook
+   provider id and "Book With This Photographer" opens that
+   person's own availability instead of the general category.
+
+3. CALENDLY LINKS  (/admin > Booking & scheduling > Calendly)   ⚠ BLOCKER
+   calendlyUrl  the general consultation link — paste this one first.
+   events       one link per consultation type, all optional:
+                marketing · seo · website · branding · ai · strategy
+                Any left empty falls back to calendlyUrl.
+   The scheduler loads through Calendly's own inline embed inside
+   the KLIP modal, with the duplicate event header hidden and the
+   KLIP colours applied (consultation.brand). While every link is
+   empty the modal shows the phone number and email instead of a
+   broken embed.
+
+4. VERIFIED ROOM PRICES  (/admin > Studio & rooms)
+   Every price is blank on purpose. Type the confirmed rate and it
+   appears under the room name.
+
+5. ROOM / RESOURCE CONFLICT  ⚠ BLOCKER — backend, not website
+   Confirm in SimplyBook that each studio service blocks its own
+   physical room, that a photography session requires BOTH the
+   photographer AND the photography/Kanvas room, and that photo
+   studio rental blocks Headshots / Lifestyle / Birthday /
+   Branding for the same hours. Test by booking a room and then
+   trying to book an overlapping dependent service.
+
+6. PHOTOGRAPHER PROFILES
+   Three TEMP placeholders. Replace with approved photographers.
+   Never publish a personal phone, personal email, Instagram,
+   personal website or outside pricing.
+
+7. LEAD ROUTING  (Cloudflare Pages > Settings > Environment variables)
+   LEAD_WEBHOOK_URL = your Make.com or GoHighLevel webhook.
+   Without it the Visibility Check lead form returns an error.
+
+8. PRIVACY + TERMS
+   Both footer links currently point to "#". They need real pages
+   before launch — legal copy has to come from you, not from me.
+
+9. TIKTOK
+   Removed from the footer because there is no account yet. The
+   account can be added back under /admin > Brand, nav & footer.
+
+10. REAL MEDIA
+    All photography and the hero loop are free stock (Pexels
+    licence) standing in for real KLIP work. Keep the file names
+    and nothing else changes. Podcast cards have empty "video"
+    fields — paste YouTube links to make them play.
+
+11. REAL WORK + PRICING ON INTERIOR PAGES
+    the page copy describes services and rooms truthfully but names no
+    client and quotes no price. Add both once they are confirmed.
+
+END-TO-END TESTS TO RUN ON STAGING
+  [ ] Podcast / Black / Green / Kanvas CTAs each open the right service
+  [ ] Payment completes and the confirmation arrives
+  [ ] Photography: chosen provider availability is correct
+  [ ] First Available assigns a qualified provider
+  [ ] Booked room blocks the overlapping dependent service
+  [ ] A provider's busy calendar slot disappears from availability
+  [ ] KLIP booking lands on the provider calendar
+  [ ] Admin can swap the provider; the client keeps their booking
+  [ ] Studio Tour opens embedded with no payment step if it is free
+  [ ] LET'S TALK opens the embedded KLIP scheduler
+  [ ] Booking + Calendly modals work at 390-430px and on iPad
+  [ ] Nothing from SimplyBook, Calendly or YouTube loads before a click
+  [ ] Every page returns 200 and carries its own title + description

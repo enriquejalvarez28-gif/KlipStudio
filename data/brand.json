@@ -1,0 +1,21 @@
+{
+  "brand": {
+    "parent": "KLIP",
+    "legal": "KLIP",
+    "media": "Klip Media",
+    "studio": "Klip Studio",
+    "line": "Be Seen. Be Found. Grow.",
+    "mediaLine": "Turn Visibility Into Growth.",
+    "studioLine": "Create Here."
+  },
+  "site": {
+    "title": "KLIP — Content, Marketing & Production",
+    "metaDescription": "KLIP is a content and digital marketing company in South Florida. Klip Media runs the marketing; Klip Studio runs the production — podcast, video, photography and on-location."
+  },
+  "logo": {
+    "mark": "img/logo-mark.png?v=2",
+    "light": "img/logo-light.png?v=2",
+    "dark": "img/logo-dark.png?v=2",
+    "alt": "Klip"
+  }
+}
