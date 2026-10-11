@@ -481,7 +481,14 @@
         var fa=PG.firstAvailable||{};
         document.getElementById('pg-body').innerHTML=
           '<div class="pg-list">'+(PG.items||[]).map(function(x){
-            return '<div class="pg"><b>'+esc(x.name)+'</b><span class="sp">'+esc(x.specialties)+'</span>'+
+            /* a face first: the headshot when there is one, the
+               photographer's initials in the KLIP palette until then */
+            var initials=String(x.name||'').replace(/—.*$/,'').trim().split(/\s+/)
+                           .slice(0,2).map(function(w){ return w.charAt(0); }).join('').toUpperCase();
+            var face = x.headshot
+              ? '<div class="pg-face">'+pic(x.headshot, x.name, 'loading="lazy" decoding="async"')+'</div>'
+              : '<div class="pg-face pg-face--empty" aria-hidden="true"><span>'+esc(initials)+'</span></div>';
+            return '<div class="pg">'+face+'<b>'+esc(x.name)+'</b><span class="sp">'+esc(x.specialties)+'</span>'+
               '<p>'+esc(x.bio)+'</p>'+
               '<a class="btn btn--dark" href="'+esc(B.base||'#')+'" data-booking="'+esc(x.booking||'photographySessions')+'"'+
             (x.providerId?' data-provider="'+esc(x.providerId)+'"':'')+'>'+
