@@ -3,11 +3,11 @@ KLIP WEBSITE — LAUNCH BLOCKERS
 Each item waits on a real value or a real test. Everything here is
 filled in at /admin — no code changes at all.
 
-0A. GITHUB REPOSITORY FOR THE EDITOR  (admin/config.yml)   ⚠ BLOCKER
-   Line 3 of admin/config.yml says  repo: OWNER/REPOSITORY.
-   Replace it with the GitHub repo the site deploys from, e.g.
-   klipstudio/klip-site. Until then /admin loads but cannot sign in.
-   Anyone given write access to that repo can edit the site.
+0A. GITHUB REPOSITORY FOR THE EDITOR   ✓ DONE
+   The site lives at github.com/enriquejalvarez28-gif/KlipStudio on
+   the main branch, and admin/config.yml already points at it.
+   To let someone else edit the site, add them as a collaborator on
+   that repository — nothing in the code changes.
 
 0. SIMPLYBOOK WIDGET  (/admin > Booking & scheduling > SimplyBook)   ⚠ BLOCKER
    SimplyBook admin → Custom Features → Website widget. Generate the
