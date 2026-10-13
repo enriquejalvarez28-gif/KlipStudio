@@ -1,0 +1,24 @@
+# systemd unit: keeps Harvey running on a Linux box or VPS and restarts it
+# after crashes and reboots. Harvey sleeps outside its work_schedule shifts
+# on its own, so the service can stay up 24/7.
+#
+# Install (as the user that ran `claude login`):
+#   sudo cp deploy/harvey.service /etc/systemd/system/harvey.service
+#   sudo sed -i "s|__USER__|$USER|; s|__DIR__|$PWD|" /etc/systemd/system/harvey.service
+#   sudo systemctl daemon-reload && sudo systemctl enable --now harvey
+#   journalctl -u harvey -f        # watch it work
+[Unit]
+Description=Harvey sales agent (The Klip Studio)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=__USER__
+WorkingDirectory=__DIR__
+ExecStart=__DIR__/.venv/bin/python -m harvey.main
+Restart=always
+RestartSec=30
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,126 @@
+# Harvey, configured for The Klip Studio / Klip Media (Fort Lauderdale).
+# Edit freely. harvey.local.yaml, if present, overrides this file.
+
+persona:
+  name: "Enrique Alvarez"
+  company: "The Klip Studio"
+  role: "Founder"
+  # The mailbox Harvey sends from. Use a DEDICATED secondary domain for cold
+  # email (e.g. a look-alike of theklipstudio.com), never info@theklipstudio.com.
+  email: "enrique@YOUR-SENDING-DOMAIN.com"
+  linkedin: ""
+  tone: "friendly expert: informal but professional, short sentences, no jargon, local South Florida"
+
+product:
+  name: "The Klip Studio + Klip Media"
+  description: >-
+    Fort Lauderdale's multi-room content studio (podcast, direct-to-camera,
+    green screen, photo/CYC wall) plus Klip Media, the done-for-you marketing
+    arm: social media management, editing, on-location production, websites,
+    SEO/GEO and AI automations. Small businesses and professionals walk in,
+    press record, and get content delivered.
+  pricing: >-
+    Studio rooms from $65/hr (Kanvas) to $199/hr (Klip Room podcast).
+    Headshots $189, Content Day $699 (30 photos + 5 reels + calendar),
+    social media management from $599/mo, on-location from $299/hr,
+    AI automations from $299. Confirm current prices on the booking page.
+  key_benefits:
+    - "Professional content without buying gear or building a set: book online, walk in, press record"
+    - "Raw files in 24 hours, edited content in 3-7 days"
+    - "One roof for studio, editing, social, ads, websites and automations"
+    - "Four rooms: multi-cam podcast, all-black creator room, green screen, CYC photo wall"
+    - "100+ South Florida clients served"
+  objection_responses:
+    "too expensive": "Fair. Most people start with one Content Day and batch a month of posts in four hours. Want me to send what that includes?"
+    "already have someone": "Makes sense. A lot of our clients keep their agency and just use the studio for the filming. Would a studio day help them?"
+    "no time": "That's exactly why we do batching. One afternoon in the studio covers the month. Worth a 15-min call to see if it fits?"
+    "not interested": "No problem at all. Thanks for letting me know, I won't follow up."
+  offer:
+    primary: "Content Day ($699: 30 photos + 5 reels + content calendar) or monthly social media management from $599/mo"
+    entry: "15-minute content strategy call plus a studio walkthrough"
+    goal: "book_call"
+    booking_method: "calendar_link"
+    booking_url: "https://theklipstudio.simplybook.me/v2"
+    meeting_duration: "15 minutes"
+    meeting_owner: "Enrique Alvarez"
+
+icp:
+  industries:
+    - "Medical practice"
+    - "Med spa"
+    - "Dental practice"
+    - "Law firm"
+    - "Real estate brokerage"
+    - "Mortgage broker"
+    - "Financial advisor"
+    - "Business coach"
+    - "Fitness studio"
+  company_size: "1-50 employees"
+  titles:
+    - "Owner"
+    - "Founder"
+    - "Managing Partner"
+    - "Practice Manager"
+    - "Marketing Director"
+    - "Broker"
+  geography:
+    - "Fort Lauderdale, FL"
+    - "Miami, FL"
+    - "Boca Raton, FL"
+    - "West Palm Beach, FL"
+  hiring_signals:
+    - "Social Media Manager"
+    - "Content Creator"
+    - "Marketing Coordinator"
+    - "Videographer"
+  geo_coordinates:
+    "Fort Lauderdale, FL": "26.1224,-80.1373,30"
+    "Miami, FL": "25.7617,-80.1918,25"
+    "Boca Raton, FL": "26.3683,-80.1289,20"
+    "West Palm Beach, FL": "26.7153,-80.0534,20"
+
+channels:
+  email:
+    enabled: true
+    provider: "gmail"            # gmail (recommended) | smtp | instantly
+    # Start low while the sending domain warms up; add ~5/day each week.
+    max_daily_sends: 20
+    require_approval: true       # every email waits for your OK in the Outbox
+    send_to_risky: false
+    max_bounce_rate: 0.03
+    footer: |-
+      Enrique Alvarez, The Klip Studio
+      2145 Davie Blvd, Suite 204, Fort Lauderdale, FL 33312
+      Not for you? Reply "stop" and I won't email again.
+  linkedin:
+    # Off: LinkedIn automation breaks their Terms and risks the account.
+    enabled: false
+    max_daily_connections: 20
+    max_daily_messages: 10
+
+usage:
+  max_daily_claude_percent: 60   # leaves 40% of your Claude plan for you
+  heartbeat_interval_minutes: 20
+  # Never works at night, even if a shift below says otherwise.
+  quiet_hours:
+    start: "20:00"
+    end: "07:00"
+    timezone: "America/New_York"
+  # Harvey only works inside these shifts and sleeps the rest of the time.
+  # Recommended: weekday business hours, when replies get answered fast and
+  # prospects are at their desks. Weekends off. Edit days/times as you like,
+  # or set enabled: false to run around the clock (minus quiet hours).
+  work_schedule:
+    enabled: true
+    timezone: "America/New_York"
+    shifts:
+      - days: [mon, tue, wed, thu, fri]
+        start: "08:00"
+        end: "18:00"
+      # Example: a short Saturday shift just to catch replies.
+      # - days: [sat]
+      #   start: "10:00"
+      #   end: "12:00"
+
+brain:
+  provider: "claude"

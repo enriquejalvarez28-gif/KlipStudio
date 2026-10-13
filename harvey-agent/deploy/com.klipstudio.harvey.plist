@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  launchd agent: starts Harvey when you log in to your Mac and restarts it if
+  it stops. Harvey sleeps outside its work_schedule shifts on its own.
+
+  Install:
+    sed "s|__DIR__|$PWD|g; s|__HOME__|$HOME|g" deploy/com.klipstudio.harvey.plist > ~/Library/LaunchAgents/com.klipstudio.harvey.plist
+    launchctl load ~/Library/LaunchAgents/com.klipstudio.harvey.plist
+    tail -f data/harvey.log
+  Stop:
+    launchctl unload ~/Library/LaunchAgents/com.klipstudio.harvey.plist
+  Keep the Mac from sleeping during shifts (System Settings > Energy).
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.klipstudio.harvey</string>
+  <key>WorkingDirectory</key><string>__DIR__</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>__DIR__/.venv/bin/python</string>
+    <string>-m</string>
+    <string>harvey.main</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:__HOME__/.local/bin</string>
+    <key>PYTHONUNBUFFERED</key><string>1</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>__DIR__/data/harvey.log</string>
+  <key>StandardErrorPath</key><string>__DIR__/data/harvey.log</string>
+</dict>
+</plist>
