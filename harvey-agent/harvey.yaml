@@ -99,28 +99,31 @@ channels:
     max_daily_messages: 10
 
 usage:
-  max_daily_claude_percent: 60   # leaves 40% of your Claude plan for you
-  heartbeat_interval_minutes: 20
+  # A CEILING, not what Harvey uses. Harvey stops for the day if your Claude
+  # plan reaches 20% used, leaving at least 80% for you. Checking in costs
+  # nothing; Claude is only used to write emails and answer replies.
+  max_daily_claude_percent: 20
+  # How often Harvey checks for work during a shift.
+  heartbeat_interval_minutes: 60
   # Never works at night, even if a shift below says otherwise.
   quiet_hours:
     start: "20:00"
     end: "07:00"
     timezone: "America/New_York"
   # Harvey only works inside these shifts and sleeps the rest of the time.
-  # Recommended: weekday business hours, when replies get answered fast and
-  # prospects are at their desks. Weekends off. Edit days/times as you like,
-  # or set enabled: false to run around the clock (minus quiet hours).
+  # Two short blocks on weekdays: about 4 check-ins a day, and anyone who
+  # replies in the morning hears back the same afternoon. Weekends off.
   work_schedule:
     enabled: true
     timezone: "America/New_York"
     shifts:
       - days: [mon, tue, wed, thu, fri]
-        start: "08:00"
-        end: "18:00"
-      # Example: a short Saturday shift just to catch replies.
-      # - days: [sat]
-      #   start: "10:00"
-      #   end: "12:00"
+        start: "09:00"
+        end: "11:00"
+      - days: [mon, tue, wed, thu, fri]
+        start: "14:00"
+        end: "16:00"
+      # Once a day instead: delete the 14:00 shift above.
 
 brain:
   provider: "claude"

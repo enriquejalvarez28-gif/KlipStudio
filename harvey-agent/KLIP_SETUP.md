@@ -28,13 +28,18 @@ Which agent reads which skill is in `harvey/brain.py` (`skill_map`).
 
 Recommended and already set in `harvey.yaml`:
 
-- **Monday to Friday, 08:00 to 18:00 Eastern.** Business hours are when
-  prospects read email and when fast replies matter.
-- **Weekends off.** Uncomment the Saturday example to catch replies.
-- **Quiet hours 20:00 to 07:00** as a hard stop, whatever the shifts say.
-- **Every 20 minutes** during a shift, it wakes, does the most important
-  job (replies first, then sending, writing, prospecting) and sleeps.
-- **At most 60% of your Claude plan** per day, so you keep the rest.
+- **Two short blocks on weekdays: 09:00 to 11:00 and 14:00 to 16:00
+  Eastern.** It checks in once an hour inside each block, so about 4 times
+  a day. Someone who replies in the morning hears back that afternoon.
+- **Weekends off.** Quiet hours from 20:00 to 07:00 are a hard stop.
+- **Claude limit of 20%.** That's a ceiling, not what it uses: if your
+  Claude plan reaches 20% used, Harvey stops for the day. A check-in with
+  nothing to do uses no Claude at all. Claude is only used to write emails
+  and answer replies, so your usage follows how many emails it writes,
+  not how often it checks in.
+- **Once a day instead?** Delete the 14:00 shift. That works fine for
+  finding and writing to prospects, but replies then wait until the next
+  morning, and a slow answer to someone who's interested loses deals.
 
 Change any of it in `harvey.yaml` under `usage:`. Check it any time:
 
