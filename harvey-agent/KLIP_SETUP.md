@@ -9,6 +9,18 @@ replies and works each conversation toward a 15-minute call.
 It thinks with your Claude subscription (no API bill), and **nothing is sent
 until you approve it** in the Outbox.
 
+## The full system (Harvey + GoHighLevel)
+
+- **Harvey** finds, researches, writes and sends cold email from a separate
+  outreach domain, and follows up. **GoHighLevel** takes over the moment
+  someone replies. The details are in [GHL_SETUP.md](GHL_SETUP.md).
+- **Server:** it runs on a small always-on server, not your computer. See
+  [deploy/server/README.md](deploy/server/README.md), which also covers the
+  DNS records (SPF, DKIM, DMARC).
+- **Sending ramp:** 5 emails a day in week 1, then 10, 15 and 20
+  (`channels.email.ramp_start`).
+- **Approvals:** every email, first or follow-up, waits for your approval.
+
 ## What's customized for Klip
 
 | | |

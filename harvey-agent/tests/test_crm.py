@@ -246,6 +246,18 @@ async def test_reply_stops_and_hands_off(state, ghl):
 
 
 @pytest.mark.asyncio
+async def test_webhook_before_reply_still_gets_full_handoff(state, ghl):
+    pid, provider = await _send_first_step(state, ghl)
+    # GHL's "customer replied" workflow fires before Harvey reads the mailbox.
+    await _bridge(state, ghl).apply_webhook({"event": "contacted", "email": "jane@acme.com"})
+    provider.inbound = [InboundMessage(provider_id="in1", from_email="jane@acme.com",
+                                       subject="Re", body="Interested.", message_id="<r1@x>")]
+    await make_handler(state, ghl, provider)._run_native()
+    assert any(n.startswith("HANDOFF FROM HARVEY") for _, n in ghl.notes)
+    assert len(ghl.tasks) == 1
+
+
+@pytest.mark.asyncio
 async def test_later_reply_after_handoff_is_logged_not_reprocessed(state, ghl):
     pid, provider = await _send_first_step(state, ghl)
     provider.inbound = [InboundMessage(provider_id="in1", from_email="jane@acme.com",

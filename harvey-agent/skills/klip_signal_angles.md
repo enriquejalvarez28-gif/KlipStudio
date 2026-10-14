@@ -15,6 +15,10 @@ business today, and which Klip offer it points to. Use ONE signal per email
 | REVIEW_RATING high + REVIEW_COUNT low | Great but invisible | "Clients clearly like you; the profile has few photos or videos." | Headshots / brand portrait, short testimonial reels (with consent) |
 | SITE_PAGE_COUNT small / TECH_STACK basic | Small team, simple site | Keep it simple: one afternoon, one deliverable. | Content Day, Headshot Tuesdays |
 | UNCLAIMED_LISTING | Nobody manages their Google profile | Point out they may not control the listing. | Klip Media local SEO/GEO |
+| NO_VIDEO_ON_SITE | No video on their homepage | "Your homepage tells people about the practice but never shows the doctor talking." | Kapture Room meet-the-doctor / FAQ videos |
+| SOCIAL_PROFILES (no YouTube/TikTok) | Content lives on 1-2 platforms only | Name what they ARE on, ask about short video. Only claim what the links show. | Content Day: reels for the platforms they lack |
+| NO_MOBILE_VIEWPORT | Site renders badly on phones | "Your homepage isn't set up for phones, so it likely shows the desktop layout on mobile." (Never claim you looked on a phone.) | Klip Media website refresh |
+| NO_META_DESCRIPTION | Google writes their snippet | Only for SEO-minded owners; one sentence, no jargon. | Klip Media local SEO/GEO |
 | BLOCKS_AI_CRAWLERS | Invisible in AI answers | Only for prospects who care about search. | Klip Media GEO ("show up in AI answers") |
 
 ## Industry hooks (when no strong signal exists)

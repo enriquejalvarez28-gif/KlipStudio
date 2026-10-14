@@ -150,6 +150,51 @@ SIGNAL_CATALOG: list[dict] = [
         "confidence_floor": 0.0,
     },
     {
+        "code": "SOCIAL_PROFILES",
+        "label": "Social media accounts",
+        "description": (
+            "Which social accounts the website links to (Instagram, Facebook, "
+            "LinkedIn, YouTube, TikTok). A missing YouTube or TikTok link on a "
+            "practice that sells visually is a content opening; the links are "
+            "where a human checks posting frequency."
+        ),
+        "category": "profile",
+        "value_type": "text",
+        "collector": "profile",
+        "cost_note": "free (homepage HTML)",
+        "confidence_floor": 0.0,
+    },
+    {
+        "code": "NO_VIDEO_ON_SITE",
+        "label": "No video on the homepage",
+        "description": "No embedded or hosted video on the homepage: a direct opening for video production.",
+        "category": "profile",
+        "value_type": "bool",
+        "collector": "profile",
+        "cost_note": "free (homepage HTML)",
+        "confidence_floor": 0.0,
+    },
+    {
+        "code": "NO_MOBILE_VIEWPORT",
+        "label": "Not set up for mobile",
+        "description": "The homepage has no mobile viewport tag, so phones render it as a shrunken desktop page.",
+        "category": "profile",
+        "value_type": "bool",
+        "collector": "profile",
+        "cost_note": "free (homepage HTML)",
+        "confidence_floor": 0.0,
+    },
+    {
+        "code": "NO_META_DESCRIPTION",
+        "label": "Missing meta description",
+        "description": "No meta description: Google writes its own snippet. A basic, checkable local-SEO gap.",
+        "category": "profile",
+        "value_type": "bool",
+        "collector": "profile",
+        "cost_note": "free (homepage HTML)",
+        "confidence_floor": 0.0,
+    },
+    {
         "code": "NO_SCHEMA_MARKUP",
         "label": "Missing structured data",
         "description": "No JSON-LD schema markup — a concrete, checkable SEO gap you can name in an email.",

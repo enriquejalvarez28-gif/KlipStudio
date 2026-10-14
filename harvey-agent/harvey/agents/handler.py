@@ -387,7 +387,10 @@ class Handler:
         opted_out = any(p in text_lower for p in OPT_OUT_PATTERNS)
 
         # 2. Already GHL's lead: record the reply, honor opt-outs, nothing else.
-        if prospect.status in (HANDED_OFF, "client", "meeting", "opted_out", "suppressed"):
+        # "Handed off" means Harvey's handoff job exists, not just the status:
+        # a GHL webhook can mark the lead before Harvey reads its first reply.
+        handed = await self.state.get_crm_sync(f"handoff:{prospect.id}") is not None
+        if handed or prospect.status in ("client", "meeting", "opted_out", "suppressed"):
             if opted_out and prospect.status != "opted_out":
                 await self.state.update_prospect_status(prospect.id, "opted_out")
                 await self.crm.queue_opt_out(prospect)
@@ -422,7 +425,8 @@ class Handler:
             logger.info(f"Handler: {lead_email} is out of office; outreach stays stopped.")
             return
 
-        await self.state.update_prospect_status(prospect.id, HANDED_OFF)
+        if prospect.status != HANDED_OFF:
+            await self.state.update_prospect_status(prospect.id, HANDED_OFF)
         await self.state.add_conversation(Conversation(
             id="", prospect_id=prospect.id, channel="email", intent=intent,
             status="handed_off", thread=[Message(sender="prospect", content=reply_text)],

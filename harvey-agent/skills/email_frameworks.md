@@ -60,7 +60,7 @@ Style rules are negotiable. These are not:
 ## What Makes Good Cold Email
 
 ### It's short.
-Under 75 words for email 1. Under 60 for emails 2 and 3. Count them. If you're over, cut.
+Klip standard: 80-130 words for email 1, 60-100 for email 2, under 50 for email 3. Count them. If you're over, cut.
 
 ### It sounds like a person.
 Read it out loud. Does it sound like something you'd actually type to someone? Or does it sound like marketing copy? If it's the latter, rewrite.
@@ -291,7 +291,7 @@ Before finalizing any email, ask:
 
 1. Could a real person have written this? (not "could AI have written this to sound human")
 2. Is there exactly one idea in this email?
-3. Is it under 75 words?
+3. Is it within the word range (email 1: 80-130)?
 4. Would I reply to this if I received it?
 5. Does it contain any em dashes?
 6. Does it contain any of the banned patterns listed above?

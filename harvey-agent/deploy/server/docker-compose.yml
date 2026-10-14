@@ -1,0 +1,53 @@
+# Harvey on an always-on server (any small Linux VPS with Docker).
+#
+#   agent  - the heartbeat loop (works only inside work_schedule shifts)
+#   web    - dashboard + the GoHighLevel webhook endpoint
+#   caddy  - HTTPS. Only /webhooks/ghl is public; the dashboard needs a password.
+#
+# Run from harvey-agent/:  docker compose -f deploy/server/docker-compose.yml up -d --build
+# See deploy/server/README.md.
+services:
+  agent:
+    build: ../..
+    env_file: ../../.env
+    environment:
+      # Long-lived Claude login from `claude setup-token` (in .env).
+      - CLAUDE_CODE_OAUTH_TOKEN
+    volumes:
+      - ../../data:/app/data
+      - ../../harvey.yaml:/app/harvey.yaml:ro
+      - ../../prompts:/app/prompts:ro
+      - ../../skills:/app/skills:ro
+    restart: unless-stopped
+    init: true
+    logging: {driver: json-file, options: {max-size: "10m", max-file: "5"}}
+
+  web:
+    build: ../..
+    env_file: ../../.env
+    command: ["python", "-c", "from harvey.dashboard import start_dashboard; start_dashboard(host='0.0.0.0', port=5555)"]
+    volumes:
+      - ../../data:/app/data
+      - ../../harvey.yaml:/app/harvey.yaml:ro
+      - ../../prompts:/app/prompts:ro
+      - ../../skills:/app/skills:ro
+    restart: unless-stopped
+    init: true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5555/')"]
+      interval: 5m
+      timeout: 10s
+    logging: {driver: json-file, options: {max-size: "10m", max-file: "3"}}
+
+  caddy:
+    image: caddy:2.8
+    env_file: ../../.env
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on: [web]
+    restart: unless-stopped
+
+volumes:
+  caddy_data:

@@ -221,7 +221,7 @@ or anything else:
 {chr(10).join(facts)}
 
 Requirements:
-- Under 75 words. One specific observation from the FACTS above, one
+- 80-130 words. One specific observation from the FACTS above, one
   question. No pitch, no product name.
 - Write the actual text (no merge variables — you know their name/company).
 - Subject: lowercase, 2-5 words.
@@ -281,9 +281,9 @@ Write a 3-email cold outreach sequence for prospects like these:
 {prospect_summary}
 
 Requirements:
-- Email 1: Personalized cold observation + one question. Under 75 words. No pitch.
-- Email 2: Follow-up 3 days later. Different angle, one concrete proof point. Under 75 words.
-- Email 3: Break-up email 4 days after that. Under 40 words. Gracious, not guilt-tripping.
+- Email 1: One verified observation + one relevant opportunity + one question. 80-130 words. No prices, no hard pitch.
+- Email 2: Follow-up 3 days later. Different angle, one concrete proof point. 60-100 words.
+- Email 3: Break-up email 4 days after that. Under 50 words. Gracious, not guilt-tripping.
 - Use {{{{first_name}}}}, {{{{company}}}}, {{{{title}}}} as merge variables — every email
   must use at least one, and email 1 must reference something specific to
   these prospects' industry or role (use the notes above).

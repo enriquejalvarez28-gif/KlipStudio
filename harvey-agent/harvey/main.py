@@ -134,6 +134,25 @@ def seconds_until_back_on(config: HarveyConfig, reason: str) -> int:
     return seconds_until_quiet_hours_end(config)
 
 
+async def _ping_monitor():
+    """Uptime ping (e.g. healthchecks.io) so a dead agent raises an alert.
+
+    Set HEARTBEAT_PING_URL in .env. Pinged at least every few minutes,
+    working or resting; never allowed to break the loop.
+    """
+    import os
+
+    url = os.getenv("HEARTBEAT_PING_URL", "").strip()
+    if not url:
+        return
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=10) as c:
+            await c.get(url)
+    except Exception as e:
+        logger.debug(f"Monitor ping failed: {e}")
+
+
 async def decide_next_action(
     brain: Brain,
     state: StateManager,
@@ -262,6 +281,7 @@ async def heartbeat(stop_event: asyncio.Event | None = None):
     consecutive_errors = 0
 
     while not stop_event.is_set():
+        await _ping_monitor()
         try:
             # 1. Check quiet hours and the work schedule
             reason = resting_reason(config)
@@ -278,6 +298,7 @@ async def heartbeat(stop_event: asyncio.Event | None = None):
                 # of however long the missed timer would have run.
                 shutting_down = False
                 while resting_reason(config):
+                    await _ping_monitor()
                     if await _interruptible_sleep(QUIET_HOURS_POLL_SECONDS, stop_event):
                         shutting_down = True
                         break

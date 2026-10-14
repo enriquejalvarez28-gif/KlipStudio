@@ -89,6 +89,16 @@ TECH_FINGERPRINTS: dict[str, tuple[str, ...]] = {
 
 GOOGLE_ADS = (r"googleadservices\.com", r"gtag/js\?id=AW-", r"google_conversion",
               r"googletagmanager\.com/gtag/js\?id=AW-")
+SOCIAL_PATTERNS = {
+    "instagram": r"https?://(?:www\.)?instagram\.com/[A-Za-z0-9_.]+/?",
+    "facebook": r"https?://(?:www\.)?facebook\.com/[A-Za-z0-9_.\-/]+",
+    "linkedin": r"https?://(?:www\.)?linkedin\.com/(?:company|in)/[A-Za-z0-9_\-]+/?",
+    "youtube": r"https?://(?:www\.)?youtube\.com/(?:@|c/|channel/|user/)[A-Za-z0-9_\-]+",
+    "tiktok": r"https?://(?:www\.)?tiktok\.com/@[A-Za-z0-9_.]+",
+}
+VIDEO_HINTS = (r"<video\b", r"youtube(?:-nocookie)?\.com/embed", r"player\.vimeo\.com",
+               r"wistia", r"\.mp4\b")
+
 META_PIXEL = (r"connect\.facebook\.net/[^\"']*fbevents\.js", r"fbq\s*\(\s*['\"]init")
 
 BOOKING_HINTS = (r"calendly\.com", r"acuityscheduling", r"schedulicity",
@@ -268,6 +278,19 @@ class ProfileCollector:
                 best = (anchor[:80], conf, href)
         return best
 
+    @staticmethod
+    def detect_socials(html: str) -> dict:
+        """First profile link per platform, skipping share/intent widgets."""
+        found = {}
+        for platform, pattern in SOCIAL_PATTERNS.items():
+            for m in re.finditer(pattern, html, re.I):
+                url = m.group(0).rstrip("/\"'")
+                if re.search(r"/(sharer|share|intent|plugins|dialog|tr\b)", url, re.I):
+                    continue
+                found[platform] = url
+                break
+        return found
+
     def detect_tech(self, html: str) -> list[str]:
         found = []
         for name, patterns in TECH_FINGERPRINTS.items():
@@ -373,6 +396,19 @@ class ProfileCollector:
         has_schema = bool(re.search(r'application/ld\+json', home, re.I)
                           and re.search(r'"@type"', home))
         add("NO_SCHEMA_MARKUP", num=0 if has_schema else 1)
+
+        # Social accounts linked from the site (no extra requests)
+        socials = self.detect_socials(home)
+        if socials:
+            add("SOCIAL_PROFILES", text=", ".join(f"{k}: {v}" for k, v in socials.items()))
+
+        # Video, mobile and SEO basics
+        add("NO_VIDEO_ON_SITE", num=0 if self._any(home, VIDEO_HINTS) else 1)
+        add("NO_MOBILE_VIEWPORT",
+            num=0 if re.search(r'<meta[^>]+name=["\']viewport', home, re.I) else 1)
+        add("NO_META_DESCRIPTION",
+            num=0 if re.search(r'<meta[^>]+name=["\']description["\'][^>]+content=["\']\s*\S',
+                               home, re.I) else 1)
 
         # Booking gap
         add("NO_ONLINE_BOOKING", num=0 if self._any(home, BOOKING_HINTS) else 1)

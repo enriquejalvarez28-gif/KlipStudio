@@ -1,0 +1,16 @@
+# HARVEY_HOST (e.g. harvey.growwithklip.com), DASHBOARD_USER and
+# DASHBOARD_PASSWORD_HASH (from: docker run --rm caddy:2.8 caddy hash-password)
+# come from .env. Caddy gets the HTTPS certificate automatically.
+{$HARVEY_HOST} {
+	# GoHighLevel workflows post here; the shared secret is checked by Harvey.
+	handle /webhooks/ghl {
+		reverse_proxy web:5555
+	}
+	# Everything else (dashboard, outbox approvals) is password protected.
+	handle {
+		basic_auth {
+			{$DASHBOARD_USER} {$DASHBOARD_PASSWORD_HASH}
+		}
+		reverse_proxy web:5555
+	}
+}

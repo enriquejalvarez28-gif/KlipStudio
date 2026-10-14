@@ -45,46 +45,73 @@ product:
     meeting_owner: "Enrique Alvarez"
 
 icp:
+  # Ordered by priority (Tier 1 first). The pilot starts with med spas and
+  # cosmetic dentists.
   industries:
-    - "Medical practice"
+    # Tier 1
     - "Med spa"
-    - "Dental practice"
+    - "Aesthetic practice"
+    - "Cosmetic dentist"
+    - "Plastic surgeon"
+    - "Dermatologist"
+    - "Chiropractor"
+    # Tier 2
     - "Law firm"
+    - "Physical therapy"
+    - "Sports medicine"
+    - "Orthodontist"
+    - "Hair restoration clinic"
+    - "Optometrist"
+    - "Ophthalmologist"
+    # Tier 3
+    - "Wellness and longevity clinic"
     - "Real estate brokerage"
     - "Mortgage broker"
-    - "Financial advisor"
-    - "Business coach"
-    - "Fitness studio"
   company_size: "1-50 employees"
   titles:
     - "Owner"
     - "Founder"
+    - "Medical Director"
     - "Managing Partner"
     - "Practice Manager"
+    - "Office Manager"
+    - "Marketing Manager"
     - "Marketing Director"
-    - "Broker"
   geography:
     - "Fort Lauderdale, FL"
+    - "Pembroke Pines, FL"
+    - "Weston, FL"
+    - "Davie, FL"
+    - "Hollywood, FL"
+    - "Plantation, FL"
     - "Miami, FL"
     - "Boca Raton, FL"
-    - "West Palm Beach, FL"
   hiring_signals:
     - "Social Media Manager"
     - "Content Creator"
     - "Marketing Coordinator"
     - "Videographer"
   geo_coordinates:
-    "Fort Lauderdale, FL": "26.1224,-80.1373,30"
-    "Miami, FL": "25.7617,-80.1918,25"
-    "Boca Raton, FL": "26.3683,-80.1289,20"
-    "West Palm Beach, FL": "26.7153,-80.0534,20"
+    "Fort Lauderdale, FL": "26.1224,-80.1373,12"
+    "Pembroke Pines, FL": "26.0078,-80.2963,10"
+    "Weston, FL": "26.1004,-80.3998,8"
+    "Davie, FL": "26.0765,-80.2521,8"
+    "Hollywood, FL": "26.0112,-80.1495,10"
+    "Plantation, FL": "26.1276,-80.2331,8"
+    "Miami, FL": "25.7617,-80.1918,15"
+    "Boca Raton, FL": "26.3683,-80.1289,12"
 
 channels:
   email:
     enabled: true
     provider: "gmail"            # gmail (recommended) | smtp | instantly
-    # Start low while the sending domain warms up; add ~5/day each week.
+    # Ceiling. The ramp below keeps the real cap lower while the new
+    # domain builds a reputation: 5/day in week 1, then 10, 15, 20. Set
+    # ramp_start to the day the first real email goes out (YYYY-MM-DD).
+    # Raise only after reviewing bounces, replies and spam complaints.
     max_daily_sends: 20
+    ramp_start: ""
+    ramp_weekly_caps: [5, 10, 15, 20]
     require_approval: true       # every email waits for your OK in the Outbox
     send_to_risky: false
     max_bounce_rate: 0.03
@@ -127,3 +154,14 @@ usage:
 
 brain:
   provider: "claude"
+
+# GoHighLevel. Credentials go in .env (GHL_API_TOKEN, GHL_LOCATION_ID,
+# GHL_WEBHOOK_SECRET). Turn on once `harvey ghl test` passes.
+crm:
+  enabled: false
+  assigned_user_id: ""          # GHL user id of the salesperson who gets handoffs
+  pipeline_name: "KLIP MEDIA — BUSINESS DEVELOPMENT"
+  engaged_stage_name: "Engaged Lead"
+  opportunity_intents: [interested, question]
+  max_failed_syncs: 3           # hold new outreach while this many syncs fail
+  task_due_hours: 4

@@ -155,3 +155,19 @@ async def test_user_decision_survives_reseeding(state):
     await seed_signal_catalog(state)          # e.g. after an upgrade
     codes = {c["code"]: c["status"] for c in await state.get_signal_codes()}
     assert codes["SERP_RANK"] == "rejected", "re-seeding must not undo a user's choice"
+
+
+def test_klip_homepage_signals():
+    from harvey.collectors.profile import ProfileCollector
+    html = """<html><head><meta name="viewport" content="width=device-width">
+    </head><body>
+    <a href="https://www.instagram.com/glowmedspa/">IG</a>
+    <a href="https://www.facebook.com/sharer/sharer.php?u=x">share</a>
+    <a href="https://facebook.com/GlowMedSpa">FB</a>
+    <a href="https://www.tiktok.com/@glowmedspa">TT</a></body></html>"""
+    socials = ProfileCollector.detect_socials(html)
+    assert socials == {"instagram": "https://www.instagram.com/glowmedspa",
+                       "facebook": "https://facebook.com/GlowMedSpa",
+                       "tiktok": "https://www.tiktok.com/@glowmedspa"}
+    assert not ProfileCollector._any(html, __import__(
+        "harvey.collectors.profile", fromlist=["VIDEO_HINTS"]).VIDEO_HINTS)
