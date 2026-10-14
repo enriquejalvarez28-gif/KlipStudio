@@ -196,6 +196,8 @@ def cmd_status(args):
         print(f"  Draft campaigns:      {summary['draft_campaigns']}")
         print(f"  Active campaigns:     {summary['active_campaigns']}")
         print(f"  Open conversations:   {summary['open_conversations']}")
+        print(f"  CRM syncs failing:    {await state.count_crm_sync('failed')}"
+              f" (pending {await state.count_crm_sync('pending')})")
         by_provider = summary.get("usage_today_by_provider", {})
         print(f"  Claude calls today:   {by_provider.get('claude', summary['usage_today'])}")
         print(f"  Codex calls today:    {by_provider.get('codex', 0)}")
@@ -276,6 +278,59 @@ def cmd_schedule(args):
     if nxt is not None and now != "ON THE CLOCK":
         print(f"  Next shift starts:    {nxt.strftime('%a %b %d, %H:%M %Z')}")
     print()
+
+
+PIPELINE_STAGES = [
+    "Engaged Lead", "Contacted / Follow-Up", "Meeting Scheduled", "Meeting Completed",
+    "Proposal Sent", "Negotiation", "Won", "Lost / Nurture",
+]
+
+
+def cmd_ghl(args):
+    """GoHighLevel: test the connection, create the pipeline, retry syncs."""
+    from harvey.config import load_config, load_env
+    from harvey.crm import CRMBridge, CRMError
+    from harvey.state import StateManager
+
+    async def _run():
+        config, env = load_config(), load_env()
+        state = StateManager()
+        await state.init_db()
+        bridge = CRMBridge(state, config, env)
+        client = bridge.client
+        if not client.configured:
+            print("\n  Set GHL_API_TOKEN and GHL_LOCATION_ID in .env first.\n")
+            return 1
+        try:
+            pipelines = await client.pipelines()
+        except CRMError as e:
+            print(f"\n  GoHighLevel connection FAILED: {e}\n")
+            return 1
+        name = config.crm.pipeline_name
+        match = next((p for p in pipelines
+                      if p.get("name", "").strip().lower() == name.lower()), None)
+        if args.action == "test":
+            print(f"\n  GoHighLevel: connected (location {client.location_id}).")
+            print(f"  Pipelines: {', '.join(p.get('name', '?') for p in pipelines) or 'none'}")
+            print(f"  '{name}': {'found' if match else 'MISSING (run: harvey ghl setup)'}")
+            print(f"  crm.enabled: {config.crm.enabled}")
+            print(f"  Webhook secret set: {'yes' if env.ghl_webhook_secret else 'NO'}\n")
+        elif args.action == "setup":
+            if match:
+                print(f"\n  Pipeline '{name}' already exists; reusing it.\n")
+            else:
+                pid = await client.create_pipeline(name, PIPELINE_STAGES)
+                print(f"\n  Created pipeline '{name}' ({pid}) with stages:")
+                for st in PIPELINE_STAGES:
+                    print(f"    - {st}")
+                print()
+        elif args.action == "sync":
+            done, failed = await bridge.drain(limit=500)
+            print(f"\n  CRM sync: {done} done, {failed} failing, "
+                  f"{await state.count_crm_sync('failed')} total failing.\n")
+        return 0
+
+    raise SystemExit(asyncio.run(_run()))
 
 
 def cmd_usage(args):
@@ -731,6 +786,11 @@ def main():
     # harvey schedule
     sub = subparsers.add_parser("schedule", help="Show work schedule and whether Harvey is on the clock")
     sub.set_defaults(func=cmd_schedule)
+
+    # harvey ghl test|setup|sync
+    sub = subparsers.add_parser("ghl", help="GoHighLevel: test connection, create pipeline, retry syncs")
+    sub.add_argument("action", choices=["test", "setup", "sync"])
+    sub.set_defaults(func=cmd_ghl)
 
     # harvey export
     sub = subparsers.add_parser(

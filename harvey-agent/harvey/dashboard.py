@@ -760,6 +760,55 @@ async def sending_toggle(action: str):
         return JSONResponse({"success": False, "message": str(e)}, status_code=500)
 
 
+@app.post("/webhooks/ghl")
+async def ghl_webhook(request: Request):
+    """GoHighLevel -> Harvey. A GHL workflow "Webhook" action posts here.
+
+    Auth: the shared secret GHL_WEBHOOK_SECRET, sent as the X-Harvey-Secret
+    header or ?secret= query param. Body: JSON with at least "event" and
+    "email" (GHL's standard contact payload includes email). Idempotent.
+    """
+    import hmac
+    from harvey.config import load_config, load_env
+    from harvey.crm import CRMBridge
+
+    env = load_env()
+    expected = env.ghl_webhook_secret
+    given = request.headers.get("x-harvey-secret") or request.query_params.get("secret", "")
+    if not expected or not hmac.compare_digest(expected, given):
+        return JSONResponse({"ok": False, "error": "unauthorized"}, status_code=401)
+    try:
+        payload = await request.json()
+    except Exception:
+        return JSONResponse({"ok": False, "error": "invalid JSON"}, status_code=400)
+    if not isinstance(payload, dict):
+        return JSONResponse({"ok": False, "error": "expected an object"}, status_code=400)
+    # GHL custom-data fields arrive under customData; flatten them.
+    payload = {**payload, **(payload.get("customData") or {})}
+    state = _state()
+    await state.init_db()
+    result = await CRMBridge(state, load_config(), env).apply_webhook(payload)
+    return JSONResponse(result, status_code=200 if result.get("ok") else 422)
+
+
+@app.get("/api/crm/summary")
+async def crm_summary():
+    state = _state()
+    await state.init_db()
+    async with aiosqlite.connect(str(DB_PATH)) as db:
+        async def one(sql):
+            async with db.execute(sql) as c:
+                return (await c.fetchone())[0]
+        return {
+            "handed_off": await one("SELECT COUNT(*) FROM prospects WHERE status='handed_off'"),
+            "suppressed": await one(
+                "SELECT COUNT(*) FROM prospects WHERE status IN ('suppressed','opted_out')"),
+            "sync_done": await one("SELECT COUNT(*) FROM crm_sync WHERE status='done'"),
+            "sync_pending": await one("SELECT COUNT(*) FROM crm_sync WHERE status='pending'"),
+            "sync_failed": await one("SELECT COUNT(*) FROM crm_sync WHERE status='failed'"),
+        }
+
+
 @app.get("/api/export/prospects.csv")
 async def export_prospects(all: bool = False, min_score: int = 0, email_status: str = ""):
     """Sequencer-ready CSV download of the prospect list."""

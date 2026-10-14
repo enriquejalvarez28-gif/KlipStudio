@@ -7,11 +7,13 @@ threshold — flips the global kill switch so a bad list can't torch the
 sending domain while nobody's watching.
 """
 
+import hashlib
 import logging
 from datetime import datetime, timezone
 
 from harvey.brain import Brain, BrainUnavailable
 from harvey.config import HarveyConfig, EnvConfig
+from harvey.crm import HANDED_OFF, CRMBridge
 from harvey.integrations.instantly import InstantlyClient
 from harvey.integrations.mail_provider import NATIVE_PROVIDERS, get_mail_provider
 from harvey.models.conversation import Conversation, Message
@@ -91,6 +93,7 @@ class Handler:
         self.config = config
         self.instantly = InstantlyClient(env.instantly_api_key)
         self.provider = get_mail_provider(config, env)
+        self.crm = CRMBridge(state, config, env)
         self.skills = ""
 
     @property
@@ -206,6 +209,10 @@ class Handler:
         prospect = await self.state.get_prospect_by_email(lead_email)
         if not prospect:
             logger.warning(f"Handler: No prospect found for {lead_email}")
+            return
+
+        if self.crm.enabled:
+            await self._hand_off(prospect, lead_email, reply_text, reply_uuid, reply_meta)
             return
 
         # Update prospect status + stop-on-reply: a human answered, so every
@@ -362,6 +369,71 @@ class Handler:
                         "response_preview": response[:100],
                     },
                 )
+
+    # ── GoHighLevel handoff (crm.enabled) ──
+
+    async def _hand_off(self, prospect, lead_email, reply_text, reply_uuid, reply_meta):
+        """A reply ends Harvey's part. Stop first, then hand the lead to GHL.
+
+        No auto-reply is drafted: after a genuine response the salesperson
+        answers from GoHighLevel, in the same email thread.
+        """
+        meta = reply_meta or {}
+        dedup = reply_uuid or meta.get("message_id") or hashlib.sha1(
+            f"{lead_email}|{reply_text}".encode()).hexdigest()
+        # 1. Stop. Deterministic, before any classification.
+        cancelled = await self.state.cancel_pending_outbox_for_prospect(prospect.id)
+        text_lower = reply_text.lower()
+        opted_out = any(p in text_lower for p in OPT_OUT_PATTERNS)
+
+        # 2. Already GHL's lead: record the reply, honor opt-outs, nothing else.
+        if prospect.status in (HANDED_OFF, "client", "meeting", "opted_out", "suppressed"):
+            if opted_out and prospect.status != "opted_out":
+                await self.state.update_prospect_status(prospect.id, "opted_out")
+                await self.crm.queue_opt_out(prospect)
+            else:
+                await self.crm.queue_reply_logged(prospect, reply_text, dedup)
+            await self.crm.drain()
+            return
+
+        # 3. Opt-out: suppress everywhere, no handoff task.
+        if opted_out:
+            await self.state.update_prospect_status(prospect.id, "opted_out")
+            await self.crm.queue_opt_out(prospect)
+            await self.state.log_action(action_type="opt_out", agent="handler",
+                                        details={"prospect_email": lead_email})
+            logger.info(f"Handler: {lead_email} opted out. Suppressed here and in GoHighLevel.")
+            await self.crm.drain()
+            return
+
+        # 4. Classify (keywords first; the model only for ambiguous text).
+        if any(p in text_lower for p in ESCALATION_PATTERNS):
+            intent = "escalate"
+        else:
+            intent = await self._classify_intent(reply_text, prospect)
+        if intent == "unsubscribe":
+            await self.state.update_prospect_status(prospect.id, "opted_out")
+            await self.crm.queue_opt_out(prospect)
+            await self.crm.drain()
+            return
+        if intent == "ooo":
+            # An auto-responder isn't a human answer: stay stopped, no handoff.
+            await self.state.update_prospect_status(prospect.id, "replied")
+            logger.info(f"Handler: {lead_email} is out of office; outreach stays stopped.")
+            return
+
+        await self.state.update_prospect_status(prospect.id, HANDED_OFF)
+        await self.state.add_conversation(Conversation(
+            id="", prospect_id=prospect.id, channel="email", intent=intent,
+            status="handed_off", thread=[Message(sender="prospect", content=reply_text)],
+        ))
+        await self.crm.queue_handoff(prospect, reply_text, intent, meta)
+        await self.state.log_action(action_type="handoff", agent="handler",
+                                    details={"prospect_email": lead_email, "intent": intent,
+                                             "cancelled": cancelled})
+        logger.info(f"Handler: {lead_email} replied ({intent}); handed to GoHighLevel, "
+                    f"{cancelled} queued email(s) cancelled.")
+        await self.crm.drain()
 
     # ── Native provider path (Gmail / SMTP) ──
 

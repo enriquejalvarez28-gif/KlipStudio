@@ -79,6 +79,12 @@ class EmailChannelConfig(BaseModel):
     # opt-out in each one — put both here. Keep it link-free: the pre-send
     # gate allows one link per email.
     footer: str = ""
+    # Pilot ramp for a new sending domain: the daily cap for week 1, 2, 3...
+    # counted from ramp_start (YYYY-MM-DD). The last value holds after that.
+    # The effective cap is the lower of this and max_daily_sends. Empty
+    # ramp_start = no ramp.
+    ramp_start: str = ""
+    ramp_weekly_caps: list[int] = [5, 10, 15, 20]
     # When True, also send to catch-all ("risky") domains, not just verified
     # mailboxes. Off by default — catch-alls accept everything, so a bad
     # guess still bounces.
@@ -284,6 +290,33 @@ class BrainConfig(BaseModel):
         return v
 
 
+class CRMConfig(BaseModel):
+    """GoHighLevel connection. Credentials live in .env (GHL_API_TOKEN,
+    GHL_LOCATION_ID, GHL_WEBHOOK_SECRET); this is behaviour only."""
+
+    enabled: bool = False
+    provider: str = "gohighlevel"
+    # The user who owns handed-off leads (GHL user id). Empty = unassigned.
+    assigned_user_id: str = ""
+    # Opportunities are only created for replies with one of these intents.
+    pipeline_name: str = "KLIP MEDIA — BUSINESS DEVELOPMENT"
+    engaged_stage_name: str = "Engaged Lead"
+    opportunity_intents: list[str] = ["interested", "question"]
+    # Tags Harvey writes; GHL workflows trigger on them.
+    tag_outreach: str = "harvey-outreach"
+    tag_replied: str = "harvey-replied"
+    tag_handoff: str = "harvey-handoff"
+    tag_opted_out: str = "harvey-opted-out"
+    # Any of these on a GHL contact blocks cold outreach.
+    suppression_tags: list[str] = [
+        "do-not-contact", "dnd", "client", "customer", "harvey-opted-out",
+    ]
+    # Hold all new outreach while this many CRM syncs are failing.
+    max_failed_syncs: int = 3
+    # Hours until the follow-up task created on handoff is due.
+    task_due_hours: int = 4
+
+
 class HarveyConfig(BaseModel):
     persona: PersonaConfig
     product: ProductConfig
@@ -291,6 +324,7 @@ class HarveyConfig(BaseModel):
     channels: ChannelsConfig = ChannelsConfig()
     usage: UsageConfig = UsageConfig()
     brain: BrainConfig = BrainConfig()
+    crm: CRMConfig = CRMConfig()
 
 
 class EnvConfig(BaseModel):
@@ -305,6 +339,10 @@ class EnvConfig(BaseModel):
     serper_api_key: str = ""
     reoon_api_key: str = ""
     zerobounce_api_key: str = ""
+    # GoHighLevel (crm.enabled in harvey.yaml)
+    ghl_api_token: str = ""
+    ghl_location_id: str = ""
+    ghl_webhook_secret: str = ""
     # Native mail providers (channels.email.provider: gmail | smtp)
     gmail_client_id: str = ""
     gmail_client_secret: str = ""
@@ -416,6 +454,9 @@ def load_env() -> EnvConfig:
         serper_api_key=os.getenv("SERPER_API_KEY", "").strip(),
         reoon_api_key=os.getenv("REOON_API_KEY", "").strip(),
         zerobounce_api_key=os.getenv("ZEROBOUNCE_API_KEY", "").strip(),
+        ghl_api_token=os.getenv("GHL_API_TOKEN", "").strip(),
+        ghl_location_id=os.getenv("GHL_LOCATION_ID", "").strip(),
+        ghl_webhook_secret=os.getenv("GHL_WEBHOOK_SECRET", "").strip(),
         gmail_client_id=os.getenv("GMAIL_CLIENT_ID", "").strip(),
         gmail_client_secret=os.getenv("GMAIL_CLIENT_SECRET", "").strip(),
         smtp_host=os.getenv("SMTP_HOST", "").strip(),

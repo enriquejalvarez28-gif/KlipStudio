@@ -18,6 +18,7 @@ from datetime import date, datetime, timedelta, timezone
 
 from harvey.brain import Brain
 from harvey.config import HarveyConfig, EnvConfig
+from harvey.crm import CRMBridge, CRMError
 from harvey.gate import pre_send_check
 from harvey.integrations.instantly import InstantlyClient
 from harvey.integrations.mail_provider import NATIVE_PROVIDERS, get_mail_provider
@@ -31,7 +32,8 @@ MAX_SENDS_PER_CYCLE = 8
 SEND_JITTER_SECONDS = (4, 15)
 
 # Prospect pipeline statuses that mean "stop emailing this person".
-STOP_STATUSES = {"replied", "opted_out", "lost", "meeting", "closed"}
+STOP_STATUSES = {"replied", "opted_out", "lost", "meeting", "closed",
+                 "handed_off", "client", "suppressed"}
 
 KILL_SWITCH_KEY = "sending_paused"
 BOUNCE_COUNT_KEY = "bounce_count"
@@ -62,6 +64,7 @@ class Sender:
         self.config = config
         self.instantly = InstantlyClient(env.instantly_api_key)
         self.provider = get_mail_provider(config, env)
+        self.crm = CRMBridge(state, config, env)
         # Disabled in tests to skip inter-send sleeps.
         self.send_pacing = True
 
@@ -299,6 +302,24 @@ class Sender:
             f"with {len(leads)} leads. Campaign ID: {campaign_id}"
         )
 
+    def daily_cap(self, today: date | None = None) -> int:
+        """max_daily_sends, lowered by the new-domain ramp while it runs."""
+        email = self.config.channels.email
+        cap = email.max_daily_sends
+        start = getattr(email, "ramp_start", "")
+        caps = getattr(email, "ramp_weekly_caps", []) or []
+        if start and caps:
+            try:
+                started = date.fromisoformat(start)
+            except ValueError:
+                logger.error(f"Sender: bad ramp_start '{start}'; sending nothing.")
+                return 0
+            days = ((today or date.today()) - started).days
+            if days < 0:
+                return 0
+            cap = min(cap, caps[min(days // 7, len(caps) - 1)])
+        return cap
+
     async def _count_sends_today(self) -> int:
         """Count how many prospects were contacted today."""
         import aiosqlite
@@ -329,7 +350,9 @@ class Sender:
             except Exception as e:
                 logger.error(f"Sender: staging '{campaign.name}' failed: {e}")
 
+        await self.crm.drain()
         await self._drain_due()
+        await self.crm.drain()
 
     def _render(self, text: str, prospect) -> str:
         """Fill merge variables. The pre-send gate rejects any leftovers."""
@@ -431,7 +454,7 @@ class Sender:
             )
             return
 
-        max_daily = self.config.channels.email.max_daily_sends
+        max_daily = self.daily_cap()
         sent_today = await self.state.count_outbox_sent_today()
         budget = min(MAX_SENDS_PER_CYCLE, max_daily - sent_today)
         if budget <= 0:
@@ -465,6 +488,32 @@ class Sender:
                     error=f"prospect status '{prospect.status}'",
                 )
                 continue
+
+            # GoHighLevel decides whether this person may get cold email at
+            # all. Any doubt (GHL unreachable, sync backlog) holds the email
+            # for the next cycle rather than risk mailing a known contact.
+            if item["kind"] == "sequence" and self.crm.enabled:
+                held = await self.crm.outreach_blocked()
+                if held:
+                    logger.warning(f"Sender: holding cold email ({held}).")
+                    break
+                check = await self.crm.precheck(prospect)
+                if not check.allowed:
+                    if check.transient:
+                        logger.error(f"Sender: holding cold email; {check.reason}")
+                        break
+                    await self.state.update_outbox_item(
+                        item["id"], status="cancelled", error=f"crm: {check.reason}"[:300])
+                    await self.state.cancel_pending_outbox_for_prospect(
+                        prospect.id, reason=f"crm: {check.reason}")
+                    await self.state.update_prospect_status(prospect.id, "suppressed")
+                    logger.info(f"Sender: skipped {item['to_email']}: {check.reason}.")
+                    continue
+                try:
+                    await self.crm.prepare_contact(prospect)
+                except CRMError as e:
+                    logger.error(f"Sender: holding cold email; GoHighLevel contact failed: {e}")
+                    break
 
             gate = pre_send_check(
                 item["to_email"], item["subject"], item["body"],
@@ -500,6 +549,8 @@ class Sender:
             )
             if prospect.status in ("new", "queued"):
                 await self.state.update_prospect_status(prospect.id, "contacted")
+            if item["kind"] == "sequence":
+                await self.crm.queue_outbound(item, prospect)
 
             # A sent reply belongs in its conversation thread.
             if item["kind"] == "reply" and item.get("conversation_id"):

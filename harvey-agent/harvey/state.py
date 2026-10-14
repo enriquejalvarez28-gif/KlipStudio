@@ -413,6 +413,27 @@ MIGRATIONS: list[str] = [
     -- so one subscription's budget never consumes the other's.
     ALTER TABLE usage_log ADD COLUMN codex_calls INTEGER DEFAULT 0;
     """,
+    # ── v12: CRM (GoHighLevel) sync queue ──
+    """
+    -- One row per thing that must reach the CRM. The id IS the idempotency
+    -- key ("outbound:<outbox id>", "handoff:<prospect id>", ...), so a retry
+    -- or a duplicate event can never create a second row. Until a row is
+    -- 'done', the CRM hasn't heard about it; the sender holds new outreach
+    -- while rows keep failing.
+    CREATE TABLE IF NOT EXISTS crm_sync (
+        id TEXT PRIMARY KEY,
+        kind TEXT NOT NULL,
+        prospect_id TEXT DEFAULT '',
+        payload_json TEXT DEFAULT '{}',
+        status TEXT DEFAULT 'pending',
+        attempts INTEGER DEFAULT 0,
+        last_error TEXT DEFAULT '',
+        crm_contact_id TEXT DEFAULT '',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_crm_sync_status ON crm_sync(status);
+    """,
 ]
 
 BRAIN_PROVIDERS = ("claude", "codex")
@@ -1450,6 +1471,68 @@ class StateManager:
             ) as cursor:
                 rows = await cursor.fetchall()
                 return [dict(r) for r in rows]
+
+    # ── CRM sync queue ──
+
+    async def enqueue_crm_sync(
+        self, key: str, kind: str, prospect_id: str = "", payload: dict | None = None
+    ) -> bool:
+        """Queue a CRM job. Returns False if this key was already queued."""
+        async with self._connect() as db:
+            cur = await db.execute(
+                """INSERT OR IGNORE INTO crm_sync (id, kind, prospect_id, payload_json)
+                   VALUES (?, ?, ?, ?)""",
+                (key, kind, prospect_id, json.dumps(payload or {})),
+            )
+            await db.commit()
+            return cur.rowcount > 0
+
+    async def get_crm_sync(self, key: str) -> dict | None:
+        async with self._connect() as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute("SELECT * FROM crm_sync WHERE id = ?", (key,)) as cur:
+                row = await cur.fetchone()
+                return dict(row) if row else None
+
+    async def get_crm_sync_due(self, limit: int = 50) -> list[dict]:
+        async with self._connect() as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute(
+                """SELECT * FROM crm_sync WHERE status IN ('pending', 'failed')
+                   ORDER BY created_at ASC LIMIT ?""",
+                (int(limit),),
+            ) as cur:
+                return [dict(r) for r in await cur.fetchall()]
+
+    async def finish_crm_sync(
+        self, key: str, ok: bool, error: str = "", crm_contact_id: str = ""
+    ):
+        async with self._connect() as db:
+            await db.execute(
+                """UPDATE crm_sync SET status = ?, attempts = attempts + 1,
+                       last_error = ?, crm_contact_id = COALESCE(NULLIF(?, ''), crm_contact_id),
+                       updated_at = CURRENT_TIMESTAMP
+                   WHERE id = ?""",
+                ("done" if ok else "failed", error[:500], crm_contact_id, key),
+            )
+            await db.commit()
+
+    async def count_crm_sync(self, status: str) -> int:
+        async with self._connect() as db:
+            async with db.execute(
+                "SELECT COUNT(*) FROM crm_sync WHERE status = ?", (status,)
+            ) as cur:
+                return (await cur.fetchone())[0]
+
+    async def get_sent_outbox_for_prospect(self, prospect_id: str) -> list[dict]:
+        async with self._connect() as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute(
+                """SELECT * FROM outbox WHERE prospect_id = ? AND status = 'sent'
+                   ORDER BY sent_at ASC""",
+                (prospect_id,),
+            ) as cur:
+                return [dict(r) for r in await cur.fetchall()]
 
     # ── Reply Deduplication ──
 
