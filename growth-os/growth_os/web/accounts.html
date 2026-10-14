@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="csrf" content="__CSRF__">
+<title>Manage Accounts · Growth OS</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<header class="bar">
+  <div class="mark">GROWTH<span>OS</span></div>
+  <label class="brand-pick">
+    <span class="sr">Brand</span>
+    <select id="brand"></select>
+  </label>
+  <button class="ghost" id="new-brand">+ Brand</button>
+</header>
+
+<main>
+  <section class="head">
+    <p class="eyebrow">Manage accounts</p>
+    <h1 id="brand-name">—</h1>
+    <p class="sub">Nothing syncs until you verify the exact platform ID and assign it to this brand.</p>
+  </section>
+
+  <div id="flash" class="flash" hidden></div>
+
+  <section class="tiles" id="tiles" aria-live="polite"></section>
+
+  <details class="panel">
+    <summary>Diagnostics today</summary>
+    <table id="diag"><thead><tr><th>Kind</th><th>Endpoint / model</th><th>Calls</th><th>Cache hits</th><th>Quota units</th><th>Errors</th></tr></thead><tbody></tbody></table>
+  </details>
+  <details class="panel">
+    <summary>Audit log</summary>
+    <ol id="audit" class="audit"></ol>
+  </details>
+</main>
+
+<dialog id="dlg">
+  <form method="dialog" id="dlg-form">
+    <h2 id="dlg-title"></h2>
+    <div id="dlg-body"></div>
+    <div class="row end">
+      <button value="cancel" class="ghost">Cancel</button>
+      <button value="ok" id="dlg-ok" class="gold">Confirm</button>
+    </div>
+  </form>
+</dialog>
+<script src="/app.js"></script>
+</body>
+</html>
