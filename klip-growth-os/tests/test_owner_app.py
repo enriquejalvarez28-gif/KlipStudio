@@ -1,0 +1,366 @@
+"""Owner app acceptance tests (directive §12): scheduler, persistence,
+isolation over HTTP, no invented metrics, evidence on suggestions, trends,
+AI caching/caps, reports, incremental YouTube sync."""
+
+import json
+import os
+import tempfile
+import threading
+import unittest
+import urllib.error
+import urllib.parse
+import urllib.request
+from datetime import date, datetime, timedelta, timezone
+from http.server import ThreadingHTTPServer
+
+import tests  # noqa: F401  (sets GROWTH_OS_DATA before growth_os imports)
+from growth_os import ai, analytics, api, brands, db, reports, scheduler, seed, trends
+from growth_os.connectors import youtube, youtube_sync
+from tests.test_brand_manager import CLIENT, RYJ_CH, FakeGoogle
+
+
+def fresh(path=None):
+    path = path or os.path.join(tempfile.mkdtemp(), "t.db")
+    c = db.connect(path)
+    seed.ensure_ryj(c)
+    return c, path
+
+
+class TestScheduler(unittest.TestCase):
+    def setUp(self):
+        self.c, self.path = fresh()
+        scheduler.ensure_defaults(self.c)
+
+    def test_next_slot(self):
+        tz = datetime.now().astimezone().tzinfo
+        t = datetime(2026, 10, 14, 7, 30, tzinfo=tz)  # a Wednesday
+        self.assertEqual(scheduler.next_slot({"every_hours": 6}, t).hour, 12)
+        self.assertEqual(scheduler.next_slot({"daily_at": "07:00"}, t).day, 15)
+        self.assertEqual(scheduler.next_slot({"daily_at": "08:00"}, t).hour, 8)
+        w = scheduler.next_slot({"weekly": "MON", "at": "08:00"}, t)
+        self.assertEqual((w.weekday(), w.day), (0, 19))
+        m = scheduler.next_slot({"monthly_day": 1, "at": "08:30"}, t)
+        self.assertEqual((m.month, m.day), (11, 1))
+        self.assertEqual(scheduler.next_slot({"monthly_day": 1, "at": "08:30"}, datetime(2026, 12, 5, tzinfo=tz)).year, 2027)
+
+    def test_slot_dedup_and_manual_dedup(self):
+        a = scheduler.enqueue(self.c, "daily_review", schedule_name="daily_review", trigger="schedule", slot="S1")
+        b = scheduler.enqueue(self.c, "daily_review", schedule_name="daily_review", trigger="schedule", slot="S1")
+        self.assertTrue(a[1])
+        self.assertFalse(b[1])
+        m1 = scheduler.enqueue(self.c, "packaging_check", tenant_id="ryj-media")
+        m2 = scheduler.enqueue(self.c, "packaging_check", tenant_id="ryj-media")
+        self.assertEqual(m1[0], m2[0])
+        self.assertFalse(m2[1])
+
+    def test_missed_slots_collapse_and_run(self):
+        past = (scheduler.local_now() - timedelta(days=3)).isoformat()
+        self.c.execute("UPDATE schedules SET next_run_at=? WHERE name='daily_review'", (past,))
+        calls = []
+        reg = {"daily_review": lambda c, t, p: calls.append(1) or {"ok": 1}}
+        scheduler.tick(self.c, reg)
+        scheduler.tick(self.c, reg)
+        self.assertEqual(len(calls), 1)
+        s = self.c.execute("SELECT * FROM schedules WHERE name='daily_review'").fetchone()
+        self.assertEqual(s["last_status"], "succeeded")
+        self.assertGreater(s["next_run_at"], scheduler.local_now().isoformat())
+
+    def test_retry_then_alert(self):
+        def boom(c, t, p):
+            raise RuntimeError("source down")
+        reg = {"daily_review": boom}
+        run_id, _ = scheduler.enqueue(self.c, "daily_review", schedule_name="daily_review", trigger="schedule", slot="X")
+        for _ in range(3):
+            scheduler.tick(self.c, reg)
+            self.c.execute("UPDATE job_runs SET next_retry_at='2000-01-01' WHERE state='retry'")
+        r = self.c.execute("SELECT * FROM job_runs WHERE run_id=?", (run_id,)).fetchone()
+        self.assertEqual((r["state"], r["attempt"]), ("failed", 3))
+        alert = self.c.execute("SELECT * FROM alerts").fetchone()
+        self.assertIn("source down", alert["message"])
+
+    def test_lease_blocks_second_instance(self):
+        self.assertTrue(scheduler._lease(self.c))
+        other = db.connect(self.path)
+        holder = scheduler.HOLDER
+        scheduler.HOLDER = "someone-else"
+        try:
+            self.assertFalse(scheduler._lease(other))
+        finally:
+            scheduler.HOLDER = holder
+
+    def test_interrupted_run_recovers(self):
+        run_id, _ = scheduler.enqueue(self.c, "daily_review")
+        self.c.execute("UPDATE job_runs SET state='running' WHERE run_id=?", (run_id,))
+        scheduler.recover(self.c)
+        self.assertEqual(self.c.execute("SELECT state FROM job_runs WHERE run_id=?", (run_id,)).fetchone()[0], "retry")
+
+    def test_background_thread_executes_and_logs(self):
+        sched = scheduler.Scheduler({"daily_review": lambda c, t, p: {"reviewed": True}}, self.path)
+        run_id, _ = scheduler.enqueue(self.c, "daily_review")
+        sched.start()
+        try:
+            self.assertEqual(scheduler.wait_for(self.c, run_id, 15), "succeeded")
+        finally:
+            sched.stop.set()
+            sched.join(5)
+        res = json.loads(self.c.execute("SELECT result_json FROM job_runs WHERE run_id=?", (run_id,)).fetchone()[0])
+        self.assertEqual(res, {"reviewed": True})
+
+
+class TestPersistenceAndTruth(unittest.TestCase):
+    def test_database_survives_restart(self):
+        c, path = fresh()
+        seed.seed_demo(c)
+        scheduler.ensure_defaults(c)
+        c.execute("INSERT INTO calendar_items VALUES ('cal_1','ryj-media','2026-11-02','NIL episode','episode','idea','',NULL,'t')")
+        nxt = c.execute("SELECT next_run_at FROM schedules WHERE name='weekly_report'").fetchone()[0]
+        c.close()
+        c2 = db.connect(path)
+        scheduler.ensure_defaults(c2)
+        self.assertEqual(c2.execute("SELECT title FROM calendar_items").fetchone()[0], "NIL episode")
+        self.assertEqual(c2.execute("SELECT next_run_at FROM schedules WHERE name='weekly_report'").fetchone()[0], nxt)
+        self.assertGreater(c2.execute("SELECT COUNT(*) FROM metrics WHERE tenant_id='demo-synthetic'").fetchone()[0], 1000)
+
+    def test_no_invented_production_metrics(self):
+        c, _ = fresh()
+        seed.seed_demo(c)
+        analytics.packaging_check(c, "ryj-media")
+        analytics.daily_review(c, "ryj-media")
+        for table in ("metrics", "assets", "recommendations", "thumbnail_features"):
+            self.assertEqual(c.execute(f"SELECT COUNT(*) FROM {table} WHERE tenant_id='ryj-media'").fetchone()[0], 0, table)
+        self.assertEqual({r[0] for r in c.execute("SELECT DISTINCT data_quality FROM metrics")}, {"synthetic"})
+        self.assertEqual({r[0] for r in c.execute("SELECT DISTINCT source FROM metrics")}, {"synthetic:demo-seed"})
+        h = api.home(c, "ryj-media")
+        self.assertEqual((h["kpis"]["28"], h["best"], h["recommendations"]), ([], [], []))
+        self.assertEqual(api.video_list(c, "ryj-media"), [])
+        rep = reports.generate(c, "ryj-media", "manual")
+        with open(rep["path"]) as f:
+            html = f.read()
+        self.assertIn("No platform data yet", html)
+        self.assertNotIn("synthetic", html.lower().replace("synthetic demo", ""))
+
+    def test_suggestions_carry_evidence(self):
+        c, _ = fresh()
+        seed.seed_demo(c)
+        self.assertGreater(analytics.packaging_check(c, "demo-synthetic"), 0)
+        self.assertEqual(analytics.packaging_check(c, "demo-synthetic"), 0)  # fingerprint dedup
+        for r in c.execute("SELECT * FROM recommendations"):
+            ev = json.loads(r["evidence_json"])
+            self.assertEqual(r["basis"], "derived")
+            self.assertTrue(any(e.get("peer_median") is not None and e.get("percentile") is not None for e in ev))
+            self.assertTrue(any("peers" in e for e in ev))
+        th = api.thumbnails(c, "demo-synthetic")
+        self.assertGreaterEqual(th["association_n"], 8)
+        self.assertTrue(th["association"])
+        d = api.video_detail(c, "demo-synthetic", "demo005")
+        self.assertTrue(d["peers"]["basis"])
+        self.assertTrue(d["thumbnail"]["features"]["unavailable"])
+
+
+class TestHttpIsolation(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        from growth_os import server
+        cls.c, cls.path = fresh()
+        seed.seed_demo(cls.c)
+        scheduler.ensure_defaults(cls.c)
+        cls.srv = ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
+        cls.srv.db_path = cls.path
+        cls.port = cls.srv.server_address[1]
+        threading.Thread(target=cls.srv.serve_forever, daemon=True).start()
+        cls.csrf = server.CSRF
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.srv.shutdown()
+
+    def req(self, path, body=None, headers=None, method=None):
+        h = {"Host": f"127.0.0.1:{self.port}", **(headers or {})}
+        data = json.dumps(body).encode() if body is not None else None
+        r = urllib.request.Request(f"http://127.0.0.1:{self.port}{path}", data=data, headers=h, method=method)
+        try:
+            with urllib.request.urlopen(r, timeout=10) as resp:
+                return resp.status, resp.read()
+        except urllib.error.HTTPError as e:
+            return e.code, e.read()
+
+    def test_pages_and_static(self):
+        for p in ("/", "/app.js", "/charts.js", "/app.css", "/manifest.webmanifest", "/sw.js", "/icon-192.png"):
+            self.assertEqual(self.req(p)[0], 200, p)
+        for page in ("home", "overview?days=28", "videos", "thumbnails", "titles", "seo", "trends", "recommendations",
+                     "calendar", "podcasts", "settings", "tiles", "reports"):
+            for t in ("ryj-media", "demo-synthetic"):
+                self.assertEqual(self.req(f"/api/t/{t}/{page}")[0], 200, f"{t}/{page}")
+        self.assertEqual(self.req("/api/jobs")[0], 200)
+
+    def test_cross_tenant_access_is_not_found(self):
+        self.assertEqual(self.req("/api/t/demo-synthetic/video/demo005")[0], 200)
+        self.assertEqual(self.req("/api/t/demo-synthetic/thumb/demo005.jpg")[0], 404)
+        self.assertEqual(self.req("/thumb/demo-synthetic/demo005.jpg")[0], 200)
+        self.assertEqual(self.req("/api/t/ryj-media/video/demo005")[0], 404)
+        self.assertEqual(self.req("/thumb/ryj-media/demo005.jpg")[0], 404)
+        rec = self.c.execute("SELECT id FROM recommendations WHERE tenant_id='demo-synthetic' LIMIT 1").fetchone()
+        if not rec:
+            analytics.packaging_check(self.c, "demo-synthetic")
+            rec = self.c.execute("SELECT id FROM recommendations WHERE tenant_id='demo-synthetic' LIMIT 1").fetchone()
+        code, _ = self.req(f"/api/t/ryj-media/recommendations/{rec[0]}/status", {"status": "dismissed"}, {"X-CSRF": self.csrf})
+        self.assertEqual(code, 404)
+        rid = reports.generate(self.c, "demo-synthetic", "manual")["report_id"]
+        self.assertEqual(self.req(f"/api/t/ryj-media/reports/{rid}.html")[0], 404)
+        self.assertEqual(self.req(f"/api/t/demo-synthetic/reports/{rid}.html")[0], 200)
+        csv_body = self.req("/api/t/ryj-media/export/videos.csv")[1].decode()
+        self.assertNotIn("demo0", csv_body)
+
+    def test_csrf_and_host_checks(self):
+        self.assertEqual(self.req("/api/jobs/daily_review/run", {})[0], 403)
+        self.assertEqual(self.req("/api/app", headers={"Host": "evil.example"})[0], 403)
+        code, body = self.req("/api/jobs/daily_review/run", {"tenant_id": "ryj-media"}, {"X-CSRF": self.csrf})
+        self.assertEqual(code, 200)
+        self.assertIn(b"run_id", body)
+
+    def test_calendar_roundtrip(self):
+        code, body = self.req("/api/t/ryj-media/calendar", {"day": "2026-11-03", "title": "Transfer portal deep dive"}, {"X-CSRF": self.csrf})
+        self.assertEqual(code, 200)
+        cal = json.loads(self.req("/api/t/ryj-media/calendar?month=2026-11")[1])
+        self.assertEqual([i["title"] for i in cal["items"]], ["Transfer portal deep dive"])
+        self.assertEqual(json.loads(self.req("/api/t/demo-synthetic/calendar?month=2026-11")[1])["items"], [])
+
+
+NEWS = b"""<?xml version="1.0"?><rss><channel>
+<item><title>NIL collectives reshape college athletes recruiting</title><link>https://ex.com/a</link>
+<pubDate>Tue, 13 Oct 2026 12:00:00 GMT</pubDate><source url="https://ex.com">Example Sports</source></item>
+<item><title>NIL collectives reshape recruiting for college athletes, report says</title><link>https://ex2.com/b</link>
+<pubDate>Tue, 13 Oct 2026 15:00:00 GMT</pubDate><source url="https://ex2.com">Other Wire</source></item>
+<item><title>Stock market closes higher</title><link>https://ex.com/c</link><pubDate>Tue, 13 Oct 2026 12:00:00 GMT</pubDate></item>
+</channel></rss>"""
+TRENDS = b"""<?xml version="1.0"?><rss xmlns:ht="https://trends.google.com/trending/rss"><channel>
+<item><title>transfer portal</title><link>https://trends.google.com/x</link><ht:approx_traffic>20000+</ht:approx_traffic>
+<pubDate>Wed, 14 Oct 2026 08:00:00 GMT</pubDate></item>
+<item><title>celebrity wedding</title><link>https://trends.google.com/y</link><pubDate>Wed, 14 Oct 2026 08:00:00 GMT</pubDate></item>
+</channel></rss>"""
+
+
+class TestTrends(unittest.TestCase):
+    def transport(self, method, url, headers, body):
+        if url.startswith(trends.NEWS_RSS):
+            return 200, NEWS
+        if url.startswith(trends.TRENDS_RSS):
+            return 200, TRENDS
+        return 404, b""
+
+    def test_research_scores_with_sources_and_filters_unrelated(self):
+        c, _ = fresh()
+        now = datetime(2026, 10, 14, 12, tzinfo=timezone.utc)
+        res = trends.research(c, "ryj-media", transport=self.transport, now=now)
+        self.assertFalse(res["errors"])
+        rows = {r["title"]: r for r in c.execute("SELECT * FROM trends WHERE tenant_id='ryj-media'")}
+        self.assertIn("transfer portal", rows)
+        self.assertNotIn("celebrity wedding", rows)
+        self.assertNotIn("Stock market closes higher", rows)
+        a = rows["NIL collectives reshape college athletes recruiting"]
+        parts = json.loads(a["score_json"])
+        self.assertEqual(set(trends.WEIGHTS) - set(parts), set())
+        self.assertTrue(a["url"].startswith("https://") and a["published_at"] and a["source"] == "Example Sports")
+        self.assertTrue(a["uncertainty"].startswith("medium"), a["uncertainty"])  # 2 outlets, counted once each
+        self.assertEqual(parts["sources_in_cluster"], 2)
+        self.assertEqual(json.loads(rows["transfer portal"]["score_json"])["google_trends_approx_traffic"], "20000+")
+        self.assertEqual(c.execute("SELECT COUNT(*) FROM trends WHERE tenant_id='demo-synthetic'").fetchone()[0], 0)
+
+    def test_no_topics_skips(self):
+        c, _ = fresh()
+        brands.create_brand(c, "Empty", "owner", tenant_id="empty")
+        self.assertIn("skipped", trends.research(c, "empty", transport=self.transport))
+
+
+class TestAI(unittest.TestCase):
+    def runner(self, prompt, model):
+        self.calls += 1
+        return {"result": '```json\n{"titles":[{"strategy":"curiosity","title":"X","why":"y"}]}\n```',
+                "usage": {"input_tokens": 100, "output_tokens": 20}, "total_cost_usd": 0.001,
+                "modelUsage": {"claude-haiku-5-5": {}}}
+
+    def test_cache_cap_and_disable(self):
+        self.calls = 0
+        c, _ = fresh()
+        out, meta = ai.ask(c, "ryj-media", "titles:v1", {"title": "a"}, "inst", runner=self.runner)
+        self.assertEqual(out["titles"][0]["title"], "X")
+        self.assertFalse(meta["cached"])
+        _, meta2 = ai.ask(c, "ryj-media", "titles:v1", {"title": "a"}, "inst", runner=self.runner)
+        self.assertTrue(meta2["cached"])
+        self.assertEqual(self.calls, 1)
+        with self.assertRaises(Exception):  # cache never crosses tenants: other tenant must call again
+            db.set_setting(c, "ai.daily_calls", 1)
+            ai.ask(c, "demo-synthetic", "titles:v1", {"title": "a"}, "inst", runner=self.runner)
+        db.set_setting(c, "ai.enabled", False)
+        with self.assertRaises(ai.AIUnavailable):
+            ai.ask(c, "ryj-media", "titles:v2", {"title": "b"}, "inst", runner=self.runner)
+        row = c.execute("SELECT * FROM usage_log WHERE kind='llm' AND cache_hit=0").fetchone()
+        self.assertEqual((row["tokens_in"], row["tokens_out"]), (100, 20))
+
+
+class SyncGoogle(FakeGoogle):
+    def __init__(self):
+        super().__init__([(RYJ_CH, "Respect Your Journey")])
+        self.title = "Ep 12 | Talking NIL"
+        self.etag = "e1"
+
+    def __call__(self, method, url, headers, body):
+        q = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(url).query))
+        if "/videos" in url and "status" in q.get("part", ""):
+            return 200, json.dumps({"items": [{"id": "vLong", "etag": self.etag,
+                                               "snippet": {"title": self.title, "publishedAt": "2026-09-01T00:00:00Z", "description": "00:00 Intro"},
+                                               "contentDetails": {"duration": "PT48M", "caption": "true"}}]}).encode()
+        if url.startswith(youtube.ANALYTICS_API) and q.get("dimensions") == "video":
+            return 200, json.dumps({"columnHeaders": [{"name": n} for n in ("video", "views", "averageViewPercentage")],
+                                    "rows": [["vLong", 900, 41.0]]}).encode()
+        if url.startswith(youtube.ANALYTICS_API) and q.get("dimensions") == "insightTrafficSourceType":
+            return 200, json.dumps({"rows": [["YT_SEARCH", 500], ["SUGGESTED", 400]]}).encode()
+        if url.startswith(youtube.ANALYTICS_API) and q.get("dimensions") == "insightTrafficSourceDetail":
+            return 200, json.dumps({"rows": [["nil podcast", 120]]}).encode()
+        return super().__call__(method, url, headers, body)
+
+
+class TestIncrementalSync(unittest.TestCase):
+    def test_sync_history_and_delta(self):
+        c, _ = fresh()
+        g = SyncGoogle()
+        url = youtube.begin_auth(c, "ryj-media", "http://127.0.0.1/cb", CLIENT)
+        st = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(url).query))["state"]
+        [row] = youtube.finish_auth(c, state=st, code="x", client=CLIENT, transport=g)[1]
+        brands.verify_identity(c, "ryj-media", row, confirmed_platform_account_id=RYJ_CH, owner="owner")
+        brands.assign(c, "ryj-media", row, owner="owner")
+        r1 = youtube_sync.sync(c, "ryj-media", row, client=CLIENT, transport=g, today=date(2026, 10, 14))
+        self.assertEqual((r1["metadata_changed"], r1["breakdowns_for"]), (1, ["vLong"]))
+        r2 = youtube_sync.sync(c, "ryj-media", row, client=CLIENT, transport=g, today=date(2026, 10, 14))
+        self.assertEqual((r2["metadata_changed"], r2["breakdowns_for"]), (0, []))  # etag + unchanged views skipped
+        g.title, g.etag = "How NIL deals really work for athletes", "e2"
+        youtube_sync.sync(c, "ryj-media", row, client=CLIENT, transport=g, today=date(2026, 10, 14))
+        titles = [r[0] for r in c.execute("SELECT value FROM asset_history WHERE field='title' ORDER BY observed_at")]
+        self.assertEqual(titles, ["Ep 12 | Talking NIL", "How NIL deals really work for athletes"])
+        cur = c.execute("SELECT value FROM sync_cursors WHERE name='daily_through'").fetchone()[0]
+        self.assertEqual(cur, "2026-10-11")
+        d = api.video_detail(c, "ryj-media", "vLong")
+        self.assertEqual(d["search_terms"], [{"term": "nil podcast", "views": 120.0}])
+        self.assertEqual(d["video"]["quality"], "verified")
+
+
+class TestReports(unittest.TestCase):
+    def test_reuse_and_csv(self):
+        c, _ = fresh()
+        seed.seed_demo(c)
+        a = reports.generate(c, "demo-synthetic", "weekly")
+        b = reports.generate(c, "demo-synthetic", "weekly")
+        self.assertTrue(b["reused"])
+        self.assertEqual(a["report_id"], b["report_id"])
+        with open(a["path"]) as f:
+            html = f.read()
+        self.assertIn("Synthetic demo data", html)
+        self.assertIn("<svg", html)
+        self.assertIn("data:image/jpeg;base64", html)
+        self.assertTrue(reports.csv_export(c, "demo-synthetic", "videos").startswith("asset_id,title"))
+        s, e = reports.period_for("weekly", date(2026, 10, 14))
+        self.assertEqual((s.isoformat(), e.isoformat()), ("2026-10-05", "2026-10-11"))
+
+
+if __name__ == "__main__":
+    unittest.main()

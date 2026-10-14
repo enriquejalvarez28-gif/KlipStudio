@@ -11,9 +11,9 @@ from pathlib import Path
 
 from cryptography.fernet import Fernet, InvalidToken
 
-from growth_os.db import ROOT
+from growth_os.db import DATA_DIR
 
-KEY_FILE = ROOT / "data" / ".secret.key"
+KEY_FILE = DATA_DIR / ".secret.key"
 
 
 def _fernet() -> Fernet:
@@ -61,7 +61,7 @@ def load_client(platform: str) -> dict | None:
     }.get(platform)
     if env and os.environ.get(env[0]):
         return {"client_id": os.environ[env[0]], "client_secret": os.environ.get(env[1], "")}
-    path = ROOT / "data" / f"{platform}_client.json"
+    path = DATA_DIR / f"{platform}_client.json"
     if path.exists():
         raw = json.loads(path.read_text())
         raw = raw.get("installed") or raw.get("web") or raw  # Google's download format

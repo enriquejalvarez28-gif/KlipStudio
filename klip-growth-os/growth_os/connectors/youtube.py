@@ -224,10 +224,12 @@ def sync_sample(conn, tenant_id: str, row_id: str, *, client: dict, transport=No
                     dur = parse_duration(v["contentDetails"].get("duration", ""))
                     fmt = "short_heuristic" if dur is not None and dur <= SHORTS_MAX_SECONDS else "long_form"
                     sn = v["snippet"]
+                    # Sample never overwrites a known asset and stores no etag, so the
+                    # full sync still records first-seen title/thumbnail history.
                     conn.execute(
-                        """INSERT OR REPLACE INTO assets VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                        """INSERT OR IGNORE INTO assets VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
                         (tenant_id, "youtube", channel_id, v["id"], sn.get("title"), sn.get("publishedAt"),
-                         dur, fmt, sn.get("thumbnails", {}).get("medium", {}).get("url"), v.get("etag"), fetched),
+                         dur, fmt, sn.get("thumbnails", {}).get("medium", {}).get("url"), None, fetched),
                     )
                     for name in ("viewCount", "likeCount", "commentCount"):
                         if name in v.get("statistics", {}):

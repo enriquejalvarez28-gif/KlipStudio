@@ -13,7 +13,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_DB = ROOT / "data" / "growth_os.db"
+# All local state (DB, key, thumbnails, reports) lives under one folder.
+DATA_DIR = Path(os.environ.get("GROWTH_OS_DATA", ROOT / "data"))
+DEFAULT_DB = DATA_DIR / "growth_os.db"
 
 MIGRATIONS = [
     """
@@ -168,6 +170,84 @@ MIGRATIONS = [
     );
     CREATE INDEX usage_by_day ON usage_log (tenant_id, kind, at);
     """,
+    # ── v2: owner app — scheduler, labs, trends, calendar, reports ──
+    """
+    ALTER TABLE tenants ADD COLUMN kind TEXT NOT NULL DEFAULT 'client';  -- 'client' | 'demo'
+
+    -- What the brand is about; drives trend relevance and keyword coverage.
+    CREATE TABLE tenant_topics (
+        tenant_id TEXT NOT NULL, keyword TEXT NOT NULL, weight REAL NOT NULL DEFAULT 1,
+        PRIMARY KEY (tenant_id, keyword)
+    );
+    -- Public competitor channels whose RSS feeds we read (no auth, no scraping).
+    CREATE TABLE competitors (
+        tenant_id TEXT NOT NULL, platform TEXT NOT NULL, ref TEXT NOT NULL, name TEXT DEFAULT '',
+        PRIMARY KEY (tenant_id, platform, ref)
+    );
+
+    -- Every observed title / thumbnail / description value, so revisions and
+    -- their later performance can be shown without claiming causality.
+    CREATE TABLE asset_history (
+        tenant_id TEXT NOT NULL, platform TEXT NOT NULL, asset_id TEXT NOT NULL,
+        field TEXT NOT NULL, value TEXT, value_hash TEXT NOT NULL,
+        observed_at TEXT NOT NULL, source TEXT NOT NULL,
+        PRIMARY KEY (tenant_id, platform, asset_id, field, value_hash)
+    );
+    CREATE TABLE thumbnail_features (
+        tenant_id TEXT NOT NULL, asset_id TEXT NOT NULL, image_hash TEXT NOT NULL,
+        features_json TEXT NOT NULL, computed_at TEXT NOT NULL,
+        PRIMARY KEY (tenant_id, asset_id, image_hash)
+    );
+
+    CREATE TABLE schedules (
+        name TEXT PRIMARY KEY, kind TEXT NOT NULL, spec_json TEXT NOT NULL, enabled INTEGER NOT NULL DEFAULT 1,
+        retry_max INTEGER NOT NULL DEFAULT 3, next_run_at TEXT, last_run_at TEXT, last_success_at TEXT,
+        last_status TEXT, last_error TEXT
+    );
+    CREATE TABLE job_runs (
+        run_id TEXT PRIMARY KEY, schedule_name TEXT, kind TEXT NOT NULL, tenant_id TEXT,
+        trigger TEXT NOT NULL, dedup_key TEXT NOT NULL UNIQUE, state TEXT NOT NULL,
+        attempt INTEGER NOT NULL DEFAULT 0, progress INTEGER NOT NULL DEFAULT 0, message TEXT DEFAULT '',
+        queued_at TEXT NOT NULL, started_at TEXT, finished_at TEXT, next_retry_at TEXT, result_json TEXT
+    );
+    CREATE INDEX job_runs_recent ON job_runs (queued_at);
+    CREATE TABLE locks (name TEXT PRIMARY KEY, holder TEXT NOT NULL, expires_at TEXT NOT NULL);
+    CREATE TABLE alerts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, tenant_id TEXT, level TEXT NOT NULL, source TEXT NOT NULL,
+        message TEXT NOT NULL, created_at TEXT NOT NULL, acked_at TEXT
+    );
+
+    CREATE TABLE trends (
+        id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, cluster_key TEXT NOT NULL, title TEXT NOT NULL,
+        url TEXT, source TEXT NOT NULL, source_type TEXT NOT NULL, published_at TEXT, fetched_at TEXT NOT NULL,
+        matched_keywords TEXT DEFAULT '', score REAL, score_json TEXT DEFAULT '{}', uncertainty TEXT,
+        status TEXT NOT NULL DEFAULT 'new', ai_json TEXT,
+        UNIQUE (tenant_id, url)
+    );
+    CREATE TABLE recommendations (
+        id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, asset_id TEXT, kind TEXT NOT NULL,
+        priority INTEGER NOT NULL DEFAULT 2, basis TEXT NOT NULL CHECK (basis IN ('measured','derived','ai')),
+        title TEXT NOT NULL, detail TEXT DEFAULT '', evidence_json TEXT NOT NULL DEFAULT '[]',
+        fingerprint TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'open', created_at TEXT NOT NULL,
+        UNIQUE (tenant_id, fingerprint)
+    );
+    CREATE TABLE calendar_items (
+        id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, day TEXT NOT NULL, title TEXT NOT NULL,
+        kind TEXT NOT NULL DEFAULT 'episode', status TEXT NOT NULL DEFAULT 'idea', notes TEXT DEFAULT '',
+        trend_id TEXT, created_at TEXT NOT NULL
+    );
+    CREATE TABLE reports (
+        id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, kind TEXT NOT NULL, period_start TEXT NOT NULL,
+        period_end TEXT NOT NULL, title TEXT NOT NULL, html_path TEXT NOT NULL, input_hash TEXT NOT NULL,
+        created_at TEXT NOT NULL
+    );
+    CREATE TABLE ai_cache (
+        key TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, purpose TEXT NOT NULL, model TEXT NOT NULL,
+        output_json TEXT NOT NULL, tokens_in INTEGER DEFAULT 0, tokens_out INTEGER DEFAULT 0,
+        cost_usd REAL DEFAULT 0, created_at TEXT NOT NULL
+    );
+    CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+    """,
 ]
 
 
@@ -190,6 +270,19 @@ def connect(path: str | Path | None = None) -> sqlite3.Connection:
         conn.execute("PRAGMA journal_mode = WAL")
     migrate(conn)
     return conn
+
+
+def get_setting(conn, key, default=None):
+    import json
+
+    row = conn.execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone()
+    return json.loads(row[0]) if row else default
+
+
+def set_setting(conn, key, value):
+    import json
+
+    conn.execute("INSERT OR REPLACE INTO settings VALUES (?,?)", (key, json.dumps(value)))
 
 
 def migrate(conn: sqlite3.Connection) -> None:

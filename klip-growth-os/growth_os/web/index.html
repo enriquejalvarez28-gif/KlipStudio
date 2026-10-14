@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="csrf" content="__CSRF__">
+<meta name="theme-color" content="#0b0b0b">
+<title>Klip Growth OS</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="shell">
+  <aside class="side" id="side" aria-label="Main navigation">
+    <div class="logo"><span class="logo-k">K</span><span>Klip <b>Growth OS</b></span></div>
+    <nav id="nav"></nav>
+    <div class="side-foot" id="side-foot"></div>
+  </aside>
+  <div class="scrim" id="scrim" hidden></div>
+  <div class="main-col">
+    <header class="top">
+      <button class="icon-btn menu" id="menu" aria-label="Open menu" aria-expanded="false">☰</button>
+      <label class="brand-pick"><span class="sr">Brand</span><select id="brand"></select></label>
+      <div class="top-r">
+        <span class="runpill" id="runpill" hidden></span>
+        <button class="icon-btn" id="theme" aria-label="Toggle light/dark theme" title="Theme">◐</button>
+      </div>
+    </header>
+    <div class="demo-banner" id="demo-banner" hidden>
+      <b>Synthetic demo data.</b> This brand exists to test the software. None of these numbers are real platform measurements.
+    </div>
+    <main id="main" tabindex="-1"></main>
+  </div>
+</div>
+<dialog id="dlg"><form method="dialog" id="dlg-form"><h2 id="dlg-title"></h2><div id="dlg-body"></div>
+  <div class="row end"><button value="cancel" class="btn ghost">Cancel</button><button value="ok" id="dlg-ok" class="btn gold">Confirm</button></div></form></dialog>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<script src="/charts.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

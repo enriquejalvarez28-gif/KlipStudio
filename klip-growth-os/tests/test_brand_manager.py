@@ -14,7 +14,7 @@ from datetime import date
 
 from cryptography.fernet import Fernet
 
-os.environ["GROWTH_OS_SECRET_KEY"] = Fernet.generate_key().decode()
+os.environ.setdefault("GROWTH_OS_SECRET_KEY", Fernet.generate_key().decode())
 
 from growth_os import brands, db  # noqa: E402
 from growth_os.brands import BrandError  # noqa: E402

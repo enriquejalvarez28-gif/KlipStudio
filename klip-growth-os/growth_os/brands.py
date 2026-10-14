@@ -75,7 +75,8 @@ def create_brand(conn, display_name: str, owner: str, *, tenant_id: str | None =
     if conn.execute("SELECT 1 FROM tenants WHERE tenant_id=?", (tenant_id,)).fetchone():
         raise BrandError("brand_exists", f"brand {tenant_id!r} already exists")
     conn.execute(
-        "INSERT INTO tenants VALUES (?,?,?,?,?,?,?,?)",
+        """INSERT INTO tenants (tenant_id, display_name, logo_url, timezone, owner, contact, theme_json, created_at)
+           VALUES (?,?,?,?,?,?,?,?)""",
         (tenant_id, display_name, logo_url, timezone, owner, contact, theme_json, utcnow()),
     )
     audit(conn, tenant_id, owner, "brand.created", {"display_name": display_name})
