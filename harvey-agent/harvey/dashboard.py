@@ -1372,6 +1372,65 @@ async def static_file(path: str):
     )
 
 
+@app.get("/leads", response_class=HTMLResponse)
+async def leads_page():
+    return (WEB_DIR / "leads.html").read_text(encoding="utf-8")
+
+
+@app.get("/api/leads")
+async def leads_api():
+    """Everything the KLIP — Lead Generation page shows, in one read."""
+    state = _state()
+    await state.init_db()
+    rows = await state.list_research_records()
+    async with aiosqlite.connect(str(DB_PATH)) as db:
+        async def one(sql, *a):
+            async with db.execute(sql, a) as c:
+                r = await c.fetchone()
+                return (r[0] or 0) if r else 0
+        outbox = {st: await one("SELECT COUNT(*) FROM outbox WHERE status = ?", st)
+                  for st in ("pending_review", "approved", "sent", "failed", "cancelled")}
+        usage = {
+            "calls": await one("SELECT COUNT(*) FROM usage_events"),
+            "input_tokens": await one("SELECT SUM(input_tokens) FROM usage_events"),
+            "output_tokens": await one("SELECT SUM(output_tokens) FROM usage_events"),
+            "cost_usd": await one("SELECT SUM(cost_usd) FROM usage_events"),
+        }
+        replies = await one("SELECT COUNT(*) FROM prospects WHERE status IN "
+                            "('replied','handed_off','meeting','client')")
+        handoffs = await one("SELECT COUNT(*) FROM crm_sync WHERE kind='handoff' AND status='done'")
+        handoff_failing = await one("SELECT COUNT(*) FROM crm_sync WHERE status='failed'")
+        companies = await one("SELECT COUNT(*) FROM companies")
+    qualified = [r for r in rows if r["qualified"]]
+    summary = {
+        "discovered": max(companies, len(rows)),
+        "researched": len(rows),
+        "qualified": len(qualified),
+        "rejected": len(rows) - len(qualified),
+        "eligible": sum(r["outreach_eligible"] for r in rows),
+        "drafted": sum(1 for r in rows if r["draft_body"]),
+    }
+    lead_list = [{k: r[k] for k in (
+        "id", "business_name", "industry", "city", "website", "phone", "email",
+        "email_status", "recommended_service", "opportunity", "priority", "score",
+        "qualified", "draft_status", "crm_status", "researched_at")} for r in rows]
+    return {"summary": summary, "outbox": outbox, "replies": replies,
+            "handoffs": handoffs, "sync_failing": handoff_failing, "usage": usage,
+            "leads": lead_list}
+
+
+@app.get("/api/leads/{lead_id:path}")
+async def lead_detail(lead_id: str):
+    state = _state()
+    await state.init_db()
+    row = await state.get_research_record(lead_id)
+    if not row:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    row["record"] = json.loads(row.pop("record_json") or "{}")
+    row["history"] = json.loads(row.pop("history_json") or "[]")
+    return row
+
+
 @app.get("/", response_class=HTMLResponse)
 async def dashboard():
     return (WEB_DIR / "index.html").read_text(encoding="utf-8")

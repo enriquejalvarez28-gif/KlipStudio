@@ -434,6 +434,44 @@ MIGRATIONS: list[str] = [
     );
     CREATE INDEX IF NOT EXISTS idx_crm_sync_status ON crm_sync(status);
     """,
+    # ── v13: lead research records (evidence-backed, human-reviewed) ──
+    """
+    -- One row per researched business. Every fact carries its status
+    -- (VERIFIED / INFERRED / UNKNOWN) and source inside the JSON columns;
+    -- the flat columns hold the verified value for listing and dedup.
+    -- Re-imports update the row and push the previous version to history.
+    CREATE TABLE IF NOT EXISTS research_records (
+        id TEXT PRIMARY KEY,
+        company_id TEXT DEFAULT '',
+        business_name TEXT NOT NULL,
+        industry TEXT DEFAULT '',
+        specialty TEXT DEFAULT '',
+        city TEXT DEFAULT '',
+        website TEXT DEFAULT '',
+        phone TEXT DEFAULT '',
+        email TEXT DEFAULT '',
+        email_status TEXT DEFAULT 'unknown',
+        opportunity TEXT DEFAULT '',
+        recommended_service TEXT DEFAULT '',
+        outreach_angle TEXT DEFAULT '',
+        priority TEXT DEFAULT 'medium',
+        score INTEGER DEFAULT 0,
+        qualified INTEGER DEFAULT 0,
+        skip_reason TEXT DEFAULT '',
+        outreach_eligible INTEGER DEFAULT 0,
+        draft_subject TEXT DEFAULT '',
+        draft_body TEXT DEFAULT '',
+        draft_status TEXT DEFAULT 'none',
+        crm_status TEXT DEFAULT 'not_synced',
+        record_json TEXT DEFAULT '{}',
+        history_json TEXT DEFAULT '[]',
+        researched_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_research_industry ON research_records(industry);
+    CREATE INDEX IF NOT EXISTS idx_research_qualified ON research_records(qualified);
+    """,
 ]
 
 BRAIN_PROVIDERS = ("claude", "codex")
@@ -1532,6 +1570,51 @@ class StateManager:
                    ORDER BY sent_at ASC""",
                 (prospect_id,),
             ) as cur:
+                return [dict(r) for r in await cur.fetchall()]
+
+    # ── Lead research records ──
+
+    _RESEARCH_COLUMNS = frozenset({
+        "company_id", "business_name", "industry", "specialty", "city", "website",
+        "phone", "email", "email_status", "opportunity", "recommended_service",
+        "outreach_angle", "priority", "score", "qualified", "skip_reason",
+        "outreach_eligible", "draft_subject", "draft_body", "draft_status",
+        "crm_status", "record_json", "history_json", "researched_at",
+    })
+
+    async def get_research_record(self, key: str) -> dict | None:
+        async with self._connect() as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute("SELECT * FROM research_records WHERE id = ?", (key,)) as cur:
+                row = await cur.fetchone()
+                return dict(row) if row else None
+
+    async def insert_research_record(self, key: str, cols: dict):
+        cols = {k: v for k, v in cols.items() if k in self._RESEARCH_COLUMNS}
+        names = ", ".join(["id", *cols])
+        marks = ", ".join("?" * (len(cols) + 1))
+        async with self._connect() as db:
+            await db.execute(f"INSERT INTO research_records ({names}) VALUES ({marks})",
+                             (key, *cols.values()))
+            await db.commit()
+
+    async def update_research_record(self, key: str, cols: dict):
+        cols = {k: v for k, v in cols.items() if k in self._RESEARCH_COLUMNS}
+        if not cols:
+            return
+        sets = ", ".join(f"{k} = ?" for k in cols)
+        async with self._connect() as db:
+            await db.execute(
+                f"UPDATE research_records SET {sets}, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (*cols.values(), key))
+            await db.commit()
+
+    async def list_research_records(self) -> list[dict]:
+        async with self._connect() as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute(
+                """SELECT * FROM research_records
+                   ORDER BY qualified DESC, score DESC, business_name ASC""") as cur:
                 return [dict(r) for r in await cur.fetchall()]
 
     # ── Reply Deduplication ──

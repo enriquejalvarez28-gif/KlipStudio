@@ -333,6 +333,55 @@ def cmd_ghl(args):
     raise SystemExit(asyncio.run(_run()))
 
 
+def cmd_research(args):
+    """Lead research records: import JSON, list, export CSV."""
+    import csv
+    import json as _json
+    from harvey.research import import_records
+    from harvey.state import StateManager
+
+    async def _run():
+        state = StateManager()
+        await state.init_db()
+        if args.action == "import":
+            if not args.file:
+                print("\n  Usage: harvey research import <file.json> [more.json ...]\n")
+                return 1
+            total = {"inserted": 0, "updated": 0, "rejected": 0}
+            for path in args.file:
+                with open(path, encoding="utf-8") as f:
+                    data = _json.load(f)
+                res = await import_records(state, data if isinstance(data, list) else [data])
+                for k in total:
+                    total[k] += res[k]
+                for name, probs in res["problems"].items():
+                    print(f"  REJECTED {name}: {'; '.join(probs)}")
+            print(f"\n  Research import: {total['inserted']} new, {total['updated']} updated, "
+                  f"{total['rejected']} rejected.\n  See them: harvey dashboard → /leads\n")
+            return 0
+        rows = await state.list_research_records()
+        if args.action == "list":
+            print(f"\n  {'Business':34} {'City':16} {'Industry':18} Q  Pri    Service")
+            for r in rows:
+                print(f"  {r['business_name'][:34]:34} {r['city'][:16]:16} {r['industry'][:18]:18} "
+                      f"{'Y' if r['qualified'] else '-'}  {r['priority'][:6]:6} {r['recommended_service'][:40]}")
+            print(f"\n  {len(rows)} records, {sum(r['qualified'] for r in rows)} qualified.\n")
+            return 0
+        out = args.out or "research.csv"
+        fields = ["business_name", "industry", "specialty", "city", "website", "phone", "email",
+                  "email_status", "priority", "score", "qualified", "opportunity",
+                  "recommended_service", "outreach_angle", "draft_subject", "draft_body",
+                  "researched_at"]
+        with open(out, "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")
+            w.writeheader()
+            w.writerows(rows)
+        print(f"\n  Wrote {len(rows)} records to {out}\n")
+        return 0
+
+    raise SystemExit(asyncio.run(_run()))
+
+
 def cmd_usage(args):
     """Show brain usage: active provider's quota, totals, breakdowns."""
     from harvey.state import StateManager
@@ -786,6 +835,13 @@ def main():
     # harvey schedule
     sub = subparsers.add_parser("schedule", help="Show work schedule and whether Harvey is on the clock")
     sub.set_defaults(func=cmd_schedule)
+
+    # harvey research import|list|export
+    sub = subparsers.add_parser("research", help="Lead research records: import, list, export")
+    sub.add_argument("action", choices=["import", "list", "export"])
+    sub.add_argument("file", nargs="*", help="JSON file(s) to import")
+    sub.add_argument("--out", default="", help="CSV path for export")
+    sub.set_defaults(func=cmd_research)
 
     # harvey ghl test|setup|sync
     sub = subparsers.add_parser("ghl", help="GoHighLevel: test connection, create pipeline, retry syncs")

@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KLIP — Lead Generation</title>
+<link rel="stylesheet" href="/static/app.css">
+<style>
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); margin: 0; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 28px 20px 60px; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+           border-bottom: 2px solid var(--rule); padding-bottom: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+  h1 { font-family: var(--serif); font-weight: 500; font-size: 30px; margin: 0; }
+  h1 b { color: #E40E20; font-weight: 600; }
+  h2 { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3);
+       margin: 28px 0 10px; font-weight: 600; }
+  .muted { color: var(--text-3); font-size: 13px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+  .tile { background: var(--panel); border: 1px solid var(--border); border-radius: var(--r-md); padding: 12px 14px; }
+  .tile .n { font-family: var(--mono); font-size: 26px; font-variant-numeric: tabular-nums; }
+  .tile .l { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .filters button, .filters select { font: inherit; font-size: 13px; padding: 5px 10px; border-radius: var(--r-sm);
+       border: 1px solid var(--border-strong); background: var(--panel); color: var(--text); cursor: pointer; }
+  .filters button.on { background: var(--ink); color: var(--ink-contrast); border-color: var(--ink); }
+  .tablewrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--panel); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-weight: 600; color: var(--text-2); background: var(--panel-raised);
+       padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr.row { cursor: pointer; }
+  tr.row:hover td { background: var(--panel-raised); }
+  td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; border: 1px solid; white-space: nowrap; }
+  .p-good { color: var(--s-good); background: var(--s-good-bg); border-color: var(--s-good-line); }
+  .p-wait { color: var(--s-wait); background: var(--s-wait-bg); border-color: var(--s-wait-line); }
+  .p-mute { color: var(--text-3); background: var(--panel-raised); border-color: var(--border); }
+  a { color: inherit; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+  /* detail drawer */
+  #drawer { position: fixed; inset: 0 0 0 auto; width: min(560px, 100%); background: var(--panel);
+            border-left: 1px solid var(--border-strong); box-shadow: -8px 0 30px rgba(0,0,0,.12);
+            transform: translateX(105%); transition: transform .2s ease; overflow-y: auto; z-index: 10; }
+  #drawer.open { transform: none; }
+  #drawer .in { padding: 22px 22px 60px; }
+  #drawer h3 { font-family: var(--serif); font-weight: 500; font-size: 24px; margin: 0 0 4px; }
+  #drawer dl { display: grid; grid-template-columns: 120px 1fr; gap: 6px 10px; font-size: 13px; margin: 0; }
+  #drawer dt { color: var(--text-3); }
+  #drawer dd { margin: 0; word-break: break-word; }
+  .st { font-size: 10px; letter-spacing: .05em; margin-left: 6px; }
+  .obs { font-size: 13px; margin: 6px 0; padding-left: 10px; border-left: 2px solid var(--border-strong); }
+  .email { white-space: pre-wrap; font-size: 13px; background: var(--panel-raised); border: 1px solid var(--border);
+           border-radius: var(--r-md); padding: 12px; }
+  .x { float: right; font: inherit; background: none; border: 1px solid var(--border-strong); border-radius: var(--r-sm);
+       padding: 3px 9px; cursor: pointer; color: var(--text); }
+  .note { font-size: 12px; color: var(--text-3); margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><b>KLIP</b> — Lead Generation</h1>
+    <span class="muted" id="updated">Loading…</span>
+  </header>
+
+  <h2>Research progress</h2>
+  <div class="tiles" id="progress"></div>
+
+  <h2>Prospects</h2>
+  <div class="filters" id="filters">
+    <button data-f="all" class="on">All</button>
+    <button data-f="qualified">Qualified</button>
+    <button data-f="rejected">Rejected</button>
+    <button data-f="Med spa">Med spas</button>
+    <button data-f="Cosmetic dentist">Cosmetic dentists</button>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Business</th><th>Industry</th><th>City</th><th>Website</th><th>Phone</th>
+        <th>Email</th><th>Opportunity</th><th>Priority</th><th>Status</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <div class="grid2">
+    <div>
+      <h2>Outreach queue</h2>
+      <div class="tiles" id="queue"></div>
+      <p class="note">Sending is off until the outreach domain and mailbox are approved. Drafts are not sent.</p>
+    </div>
+    <div>
+      <h2>Cost</h2>
+      <div class="tiles" id="cost"></div>
+      <p class="note">AI runs on the Claude subscription, so there is no per-token bill. Research used web search (no paid data).</p>
+    </div>
+  </div>
+</div>
+
+<aside id="drawer" aria-hidden="true"><div class="in" id="detail"></div></aside>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = v => String(v ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const tile = (n, l) => `<div class="tile"><div class="n">${esc(n)}</div><div class="l">${esc(l)}</div></div>`;
+const pri = p => `<span class="pill ${p === "high" ? "p-good" : p === "medium" ? "p-wait" : "p-mute"}">${esc(p)}</span>`;
+let data = null, filter = "all";
+
+function statusOf(r) {
+  if (!r.qualified) return '<span class="pill p-mute">rejected</span>';
+  if (r.draft_status === "drafted") return '<span class="pill p-wait">draft ready</span>';
+  return '<span class="pill p-good">qualified</span>';
+}
+
+function render() {
+  const s = data.summary;
+  $("#progress").innerHTML = tile(s.discovered, "Businesses discovered") + tile(s.researched, "Researched") +
+    tile(s.qualified, "Qualified") + tile(s.rejected, "Rejected") + tile(s.eligible, "Outreach-eligible (email found)") +
+    tile(data.sync_failing, "Sync failures");
+  const leads = data.leads.filter(r => filter === "all" ? true : filter === "qualified" ? r.qualified :
+    filter === "rejected" ? !r.qualified : r.industry === filter);
+  $("#rows").innerHTML = leads.map(r => `<tr class="row" data-id="${esc(r.id)}">
+      <td><b>${esc(r.business_name)}</b></td><td>${esc(r.industry)}</td><td>${esc(r.city)}</td>
+      <td>${r.website ? `<a href="${esc(r.website)}" target="_blank" rel="noopener">${esc(r.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""))}</a>` : "—"}</td>
+      <td class="num">${esc(r.phone) || "—"}</td>
+      <td>${r.email ? esc(r.email) : '<span class="muted">not found</span>'}</td>
+      <td>${esc(r.recommended_service) || "—"}</td><td>${r.qualified ? pri(r.priority) : "—"}</td><td>${statusOf(r)}</td></tr>`).join("")
+    || '<tr><td colspan="9" class="muted">No research records yet. Import: harvey research import file.json</td></tr>';
+  document.querySelectorAll("tr.row").forEach(tr => tr.onclick = () => open(tr.dataset.id));
+  const o = data.outbox;
+  $("#queue").innerHTML = tile(s.drafted, "Emails drafted") + tile(o.pending_review, "Awaiting approval") +
+    tile(o.approved, "Approved") + tile(o.sent, "Sent") + tile(data.replies, "Replies") + tile(data.handoffs, "Handed to GoHighLevel");
+  const u = data.usage, tokens = (u.input_tokens || 0) + (u.output_tokens || 0);
+  $("#cost").innerHTML = tile(u.calls, "AI calls (Harvey)") + tile(tokens.toLocaleString(), "Tokens") +
+    tile("$" + (u.cost_usd || 0).toFixed(2), "Est. AI cost") + tile("$0.00", "Research / API spend") +
+    tile(s.qualified ? "$" + ((u.cost_usd || 0) / s.qualified).toFixed(2) : "—", "Cost per qualified lead");
+  $("#updated").textContent = "Updated " + new Date().toLocaleTimeString();
+}
+
+function fact(label, f) {
+  if (!f || typeof f !== "object") return "";
+  const st = (f.status || "UNKNOWN").toUpperCase();
+  const cls = st === "VERIFIED" ? "p-good" : st === "INFERRED" ? "p-wait" : "p-mute";
+  let v = f.value ? esc(f.value) : '<span class="muted">—</span>';
+  if (f.value && /^https?:/.test(f.value)) v = `<a href="${esc(f.value)}" target="_blank" rel="noopener">${esc(f.value)}</a>`;
+  const src = f.source ? ` <a class="muted" href="${esc(f.source)}" target="_blank" rel="noopener">source</a>` : "";
+  return `<dt>${label}</dt><dd>${v}<span class="pill st ${cls}">${st}</span>${src}</dd>`;
+}
+
+async function open(id) {
+  const r = await (await fetch("/api/leads/" + encodeURIComponent(id))).json();
+  const rec = r.record || {}, soc = rec.social || {};
+  const obs = (rec.observations || []).map(o => `<div class="obs">${esc(o.text)}
+      <span class="pill st ${(o.status||"").toUpperCase()==="VERIFIED"?"p-good":"p-wait"}">${esc((o.status||"").toUpperCase())}</span>
+      ${o.source ? `<a class="muted" href="${esc(o.source)}" target="_blank" rel="noopener">source</a>` : ""}</div>`).join("");
+  const sources = (rec.sources || []).map(u => `<li><a href="${esc(u)}" target="_blank" rel="noopener">${esc(u)}</a></li>`).join("");
+  $("#detail").innerHTML = `<button class="x" onclick="closeD()">Close</button>
+    <h3>${esc(r.business_name)}</h3>
+    <div class="muted">${esc(r.industry)}${rec.specialty ? " · " + esc(rec.specialty) : ""} · ${esc(r.city)} · researched ${esc((r.researched_at||"").slice(0,10))}</div>
+    <h2>Overview</h2><p style="font-size:14px">${esc(r.opportunity) || "—"}</p>
+    <p style="font-size:14px"><b>Recommended Klip service:</b> ${esc(r.recommended_service) || "—"} ${pri(r.priority)} <span class="muted">score ${esc(r.score)}/10</span></p>
+    ${r.qualified ? "" : `<p class="muted">Not qualified: ${esc(r.skip_reason)}</p>`}
+    <h2>Contact</h2><dl>${fact("Website", rec.website)}${fact("Phone", rec.phone)}${fact("Email", rec.email)}${fact("Address", rec.address)}${fact("Decision-maker", rec.decision_maker)}${fact("Reviews", rec.google_reviews)}</dl>
+    <h2>Social</h2><dl>${fact("Instagram", soc.instagram)}${fact("Facebook", soc.facebook)}${fact("YouTube", soc.youtube)}${fact("TikTok", soc.tiktok)}${fact("LinkedIn", soc.linkedin)}</dl>
+    <h2>Findings</h2>${obs || '<p class="muted">None recorded.</p>'}
+    <h2>Outreach angle</h2><p style="font-size:14px">${esc(r.outreach_angle) || "—"}</p>
+    <h2>Suggested email ${r.draft_body ? '<span class="pill p-wait">not sent</span>' : ""}</h2>
+    ${r.draft_body ? `<div class="email"><b>Subject:</b> ${esc(r.draft_subject)}\n\n${esc(r.draft_body)}</div>` : '<p class="muted">No draft yet.</p>'}
+    <h2>Sources</h2><ul style="font-size:12px;padding-left:18px">${sources || "<li class='muted'>none</li>"}</ul>
+    <p class="note">GoHighLevel: ${esc(r.crm_status)}. Email status: ${esc(r.email_status)}.</p>`;
+  $("#drawer").classList.add("open");
+}
+function closeD() { $("#drawer").classList.remove("open"); }
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeD(); });
+$("#filters").onclick = e => { const b = e.target.closest("button"); if (!b) return;
+  filter = b.dataset.f; document.querySelectorAll("#filters button").forEach(x => x.classList.toggle("on", x === b)); render(); };
+
+async function load() { data = await (await fetch("/api/leads")).json(); render(); }
+load(); setInterval(load, 30000);
+</script>
+</body>
+</html>

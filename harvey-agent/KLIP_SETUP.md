@@ -9,6 +9,14 @@ replies and works each conversation toward a 15-minute call.
 It thinks with your Claude subscription (no API bill), and **nothing is sent
 until you approve it** in the Outbox.
 
+## Lead research (works now, no email or CRM needed)
+
+- **Knowledge base:** `knowledge/` holds Klip's company profile, services, voice, target industries, sales strategy, outreach rules, integrations and project status.
+- **Research records:** each record stores every fact with its status (VERIFIED, INFERRED or UNKNOWN) and its source. Load a file with `harvey research import <file.json>`; `harvey research list` and `harvey research export` show and save them.
+- **Dashboard:** `harvey dashboard`, then open http://127.0.0.1:5555/leads. It shows progress, the prospect list, each prospect's detail, the outreach queue and cost.
+- **Windows:** run `deploy/windows/setup-klip-lead-os.ps1` to create `C:\KlipCreativeOS\KLIP-LEAD-OS`, then use `Start-Harvey.bat` and `Stop-Harvey.bat`.
+- **Running on your PC (no public webhooks):** Harvey polls GoHighLevel each cycle for DND, client, meeting and lost status instead.
+
 ## The full system (Harvey + GoHighLevel)
 
 - **Harvey** finds, researches, writes and sends cold email from a separate

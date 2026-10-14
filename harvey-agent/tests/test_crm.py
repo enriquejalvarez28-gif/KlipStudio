@@ -357,3 +357,16 @@ def test_ramp_caps_by_week(state):
         email.max_daily_sends = saved
         del email.ramp_start
         del email.ramp_weekly_caps
+
+
+@pytest.mark.asyncio
+async def test_poll_pulls_ghl_status_without_webhooks(state, ghl):
+    pid, provider = await _send_first_step(state, ghl)
+    c = ghl.by_email("jane@acme.com")
+    ghl.opps.append({"contactId": c["id"], "status": "open", "pipelineStageName": "Meeting Scheduled"})
+    assert await _bridge(state, ghl).poll_status() == 1
+    assert (await state.get_prospect(pid)).status == "meeting"
+    assert await state.get_outbox(status="approved") == []  # follow-up cancelled
+    c["dnd"] = True
+    await _bridge(state, ghl).poll_status()
+    assert (await state.get_prospect(pid)).status == "opted_out"

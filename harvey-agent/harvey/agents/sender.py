@@ -351,6 +351,7 @@ class Sender:
                 logger.error(f"Sender: staging '{campaign.name}' failed: {e}")
 
         await self.crm.drain()
+        await self.crm.poll_status()
         await self._drain_due()
         await self.crm.drain()
 

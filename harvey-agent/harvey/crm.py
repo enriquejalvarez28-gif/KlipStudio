@@ -110,6 +110,14 @@ class GHLClient:
             return full.get("contact") or contact
         return None
 
+    async def opportunities(self, contact_id: str) -> list:
+        """All of a contact's opportunities (any status)."""
+        data = await self._request(
+            "GET", "/opportunities/search",
+            params={"location_id": self.location_id, "contact_id": contact_id},
+        )
+        return data.get("opportunities") or []
+
     async def open_opportunities(self, contact_id: str) -> list:
         data = await self._request(
             "GET", "/opportunities/search",
@@ -424,6 +432,50 @@ class CRMBridge:
                                              self.cfg.assigned_user_id)
 
     # ── GHL -> Harvey ──
+
+    async def poll_status(self, limit: int = 25) -> int:
+        """Pull GoHighLevel's view of Harvey's active leads (no webhooks needed).
+
+        For running on a laptop with no public URL: each cycle, look up a
+        few contacted / handed-off prospects and apply the stricter status.
+        Read-only against GHL. Returns how many prospects changed.
+        """
+        if not self.enabled or not self.client.configured:
+            return 0
+        changed = 0
+        candidates = []
+        for st in ("contacted", "queued", HANDED_OFF, "replied", MEETING):
+            candidates += await self.state.get_prospects_by_status(st)
+        for prospect in candidates[:limit]:
+            try:
+                contact = await self.client.find_contact(prospect.email)
+                if not contact:
+                    continue
+                event = self._event_from_contact(contact, await self.client.opportunities(contact["id"]))
+            except CRMError as e:
+                logger.warning(f"CRM poll stopped: {e}")
+                break
+            if event:
+                res = await self.apply_webhook({"event": event, "email": prospect.email,
+                                                "event_id": f"poll:{prospect.id}:{event}"})
+                changed += 1 if res.get("matched") else 0
+        return changed
+
+    def _event_from_contact(self, contact: dict, opps: list) -> str:
+        tags = {str(t).lower() for t in contact.get("tags") or []}
+        email_dnd = ((contact.get("dndSettings") or {}).get("Email") or {}).get("status")
+        if contact.get("dnd") or email_dnd == "active" or self.cfg.tag_opted_out in tags \
+                or "do-not-contact" in tags:
+            return "opt_out"
+        if str(contact.get("type", "")).lower() == "customer" or tags & {"client", "customer"} \
+                or any(str(o.get("status", "")).lower() == "won" for o in opps):
+            return "client"
+        if any("meeting" in str(o.get("pipelineStageName") or o.get("stageName") or "").lower()
+               for o in opps):
+            return "meeting_booked"
+        if any(str(o.get("status", "")).lower() == "lost" for o in opps):
+            return "lost"
+        return ""
 
     async def apply_webhook(self, payload: dict) -> dict:
         """Apply a GoHighLevel workflow webhook. Local-only; never writes to GHL."""
