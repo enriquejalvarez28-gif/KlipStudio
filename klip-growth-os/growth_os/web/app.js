@@ -350,7 +350,7 @@ PAGES.episode = async (id) => {
         kk("Impressions", nf(v.impressions), pm.impressions ? `p${pm.impressions.percentile} vs peers` : null),
         kk("Impressions CTR", pct(v.ctr), peerTxt(pm.ctr, pct)),
         kk("Avg % viewed", pct(v.avg_pct_viewed), peerTxt(pm.avg_pct_viewed, pct)),
-        kk("Watch time", v.watch_minutes != null ? `${nf(v.watch_hours)} h (${nf(v.watch_minutes)} min)` : "—", null),
+        kk("Watch time", v.watch_minutes != null ? `${nf(v.watch_hours)} h` : "—", v.watch_minutes != null ? `${nf(v.watch_minutes)} min` : null),
         kk("Avg view duration", v.avg_view_s != null ? dur(Math.round(v.avg_view_s)) : "—", v.duration_s && v.avg_view_s != null ? `of ${dur(v.duration_s)}` : null)),
       el("p", { class: "faint", style: "font-size:12px;margin:8px 0 0" }, `Peer set: ${d.peers.basis} (n=${d.peers.n}).`))));
 
