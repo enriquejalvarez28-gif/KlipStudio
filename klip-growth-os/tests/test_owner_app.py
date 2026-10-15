@@ -481,6 +481,10 @@ class TestGrowthEngine(unittest.TestCase):
     def test_review_ranks_caps_and_workflow(self):
         c, _ = fresh()
         seed.seed_demo(c)
+        # Regression (2026-10-15 07:00 run): a video with no CTR among peers that have one
+        # produced percentile=None and crashed the daily review.
+        vid = c.execute("SELECT asset_id FROM assets WHERE tenant_id='demo-synthetic' LIMIT 1").fetchone()[0]
+        c.execute("DELETE FROM metrics WHERE tenant_id='demo-synthetic' AND asset_id=? AND metric_name LIKE 'videoThumbnail%'", (vid,))
         r = analytics.growth_review(c, "demo-synthetic")
         self.assertGreater(r["candidates"], 0)
         self.assertLessEqual(r["new"], analytics.DAILY_NEW_LIMIT)

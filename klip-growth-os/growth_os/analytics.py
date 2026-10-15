@@ -621,7 +621,9 @@ def growth_review(conn, tenant_id, limit=DAILY_NEW_LIMIT):
             continue  # insufficient evidence: observe, don't change
         conf = "low" if views < 500 else "medium" if views < 5000 else "high"
         fmt = "Short" if v["format"] == "short_heuristic" else "long-form episode"
-        ret, ctr, vpd, imp = (pm.get(k) for k in ("avg_pct_viewed", "ctr", "views_per_day", "impressions"))
+        # Keep only comparisons that actually have a percentile (peer metrics can exist with value None).
+        ret, ctr, vpd, imp = (pm.get(k) if pm.get(k) and pm[k].get("percentile") is not None and pm[k].get("value") is not None
+                              else None for k in ("avg_pct_viewed", "ctr", "views_per_day", "impressions"))
         base_ev = [{"metric": "Views", "value": views, "basis": "measured"},
                    {"metric": "Age (days)", "value": v["age_days"], "basis": "measured"},
                    {"metric": "Peer set", "value": f"{ps['basis']} (n={ps['n']})", "basis": "derived"}]
