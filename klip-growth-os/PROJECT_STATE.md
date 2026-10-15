@@ -58,6 +58,12 @@ Specs: Master Spec v3 (Oct 2026) + Owner App & Visual Intelligence directive (Oc
 5. Operator: approved YouTube metadata writes (`youtube.force-ssl`, dry-run → approve → write → re-fetch → log).
 6. Report refinements; secure sharing later (`docs/DEPLOYMENT.md`).
 
+## Spec v4 progress (2026-10-15)
+
+- Done: self-update (code watcher relaunches the app; Restart app button), retention explorer (drop/replay/weak/strong markers, peer median overlay, YouTube deep links), recommendation engine v2 (diagnosis classes, evidence, hypotheses, steps, test plan, daily cap 5, dedup) with approval workflow + action_ledger (migration v3), home 5 KPI cards, Shorts vs long-form table, subscribers by video, weekly traffic sources over time, audience (age/gender/country/device/subscribed), monetization tracker.
+- Pending: transcript mapping (needs local transcripts; caption download needs a write-class scope), episode cohort comparison (first 7/28 days), CTR x impressions scatter + thumbnail gallery once reach CSVs land, PDF report refresh, Instagram (Meta access), Operator writes (off until approved), secure share links (needs hosted auth; PDF export is the sharing path now).
+- Owner action still needed: one manual restart via Desktop "Klip Growth OS - restart" so the self-update code loads.
+
 ## Decisions log
 
 - 2026-10-15: Impressions/CTR come from the YouTube Reporting API reach report, not the Analytics API (which rejects them). Network timeouts are retried as 504; a failing per-video breakdown no longer fails the sync.

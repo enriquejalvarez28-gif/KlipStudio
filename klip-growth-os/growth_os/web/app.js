@@ -263,7 +263,7 @@ function recItem(r, compact) {
   return el("div", { class: "li" }, el("div", { class: "body" },
     el("div", { class: "row" }, el("span", { class: "t" }, r.title)),
     compact ? null : el("div", { class: "d" }, r.detail),
-    el("div", { class: "ev" }, basisTag(r.basis), ev.slice(0, 3).map((e) => { const f = /CTR|%/.test(e.metric) ? pct : (x) => nf(x, 2);
+    el("div", { class: "ev" }, basisTag(r.basis), (ev.some((e) => e.peer_median != null) ? ev.filter((e) => e.peer_median != null || /drop/i.test(e.metric)) : ev).slice(-2).map((e) => { const f = /CTR|%/.test(e.metric) ? pct : (x) => nf(x, 2);
       return el("span", {}, `${e.metric}: ${typeof e.value === "number" ? f(e.value) : e.value}${e.peer_median != null ? ` · peers ${f(e.peer_median)}` : ""}${e.percentile != null ? ` · percentile ${e.percentile}` : ""}`); }),
       r.asset_id ? el("a", { class: "btn sm ghost", href: `#/episode/${r.asset_id}` }, "Open") : null)));
 }
