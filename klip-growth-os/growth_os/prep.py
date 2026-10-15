@@ -156,7 +156,7 @@ def prepare_rec(conn, tenant_id, rec_id, runner=None):
     brand = conn.execute("SELECT display_name FROM tenants WHERE tenant_id=?", (tenant_id,)).fetchone()
     show = brand[0] if brand else ""
     base = (v["title"] or "").split("|")[0].strip()
-    lead = f"{base}." if base else ""
+    lead = base + ("" if not base or base[-1] in ".?!" else ".")
     if guest:
         lead += f" {guest} joins {show} to talk {keyword or 'sports'}." if show else f" With {guest}."
     pack["seo"] = {
