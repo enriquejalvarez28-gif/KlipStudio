@@ -52,6 +52,8 @@ def _vid_card(v, extra=None):
     d["impressions"] = v["metrics"].get("videoThumbnailImpressions")
     d["avg_pct_viewed"] = v["metrics"].get("averageViewPercentage")
     d["watch_minutes"] = v["metrics"].get("estimatedMinutesWatched")
+    d["watch_hours"] = round(d["watch_minutes"] / 60, 1) if d["watch_minutes"] is not None else None
+    d["avg_view_s"] = v["metrics"].get("averageViewDuration")
     d["quality"] = v["metrics"].get("_quality")
     d["thumb"] = f"/thumb/{v['tenant_id']}/{v['asset_id']}.jpg"
     if extra:
@@ -136,10 +138,14 @@ def video_list(conn, t):
     vids = analytics.videos(conn, t)
     hist = {r["asset_id"]: r["n"] for r in conn.execute(
         "SELECT asset_id, COUNT(*) n FROM asset_history WHERE tenant_id=? AND field='title' GROUP BY asset_id", (t,))}
+    peaks = {r[0]: r[1] for r in conn.execute(
+        """SELECT asset_id, MAX(value) FROM metrics WHERE tenant_id=? AND grain='retention_bucket'
+           AND metric_name='audienceWatchRatio' GROUP BY asset_id""", (t,))}
     out = []
     for v in vids:
         ps = analytics.peer_stats(vids, v)
         out.append(_vid_card(v, {"title_versions": hist.get(v["asset_id"], 1),
+                                 "rewatch_peak": round(peaks[v["asset_id"]], 2) if v["asset_id"] in peaks else None,
                                  "ctr_pctile": (ps["metrics"].get("ctr") or {}).get("percentile"),
                                  "ret_pctile": (ps["metrics"].get("avg_pct_viewed") or {}).get("percentile"),
                                  "vpd_pctile": (ps["metrics"].get("views_per_day") or {}).get("percentile")}))
@@ -183,7 +189,8 @@ def video_detail(conn, t, asset_id):
                                           (t, asset_id))]
     return {
         "video": _vid_card(v), "metrics": v["metrics"], "peers": analytics.peer_stats(vids, v),
-        "retention": ret, "retention_note": "Aggregate audience retention (share of viewers still watching at each point). "
+        "retention": ret, "rewatch": analytics.rewatch_summary(ret, v["metrics"].get("averageViewPercentage"), v["format"]),
+        "retention_note": "Aggregate audience retention (share of viewers still watching at each point). "
                                             "It does not show individual viewers.",
         "traffic_sources": ts, "search_terms": terms,
         "thumbnail": {"features": json.loads(feat["features_json"]) if feat else None,

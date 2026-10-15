@@ -401,6 +401,57 @@ class TestReachReports(unittest.TestCase):
         self.assertFalse(any(u.startswith("impressions/CTR not returned") for u in r2["unavailable"]))
 
 
+class MoneyGoogle(ReachGoogle):
+    """Adds the Shorts/long-form split and retention curves."""
+
+    def __call__(self, method, url, headers, body):
+        q = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(url).query))
+        if url.startswith(youtube.ANALYTICS_API) and q.get("dimensions") == "day,creatorContentType":
+            rows = []
+            for i in range(30):
+                d = (date(2026, 10, 11) - timedelta(days=i)).isoformat()
+                rows += [[d, "VIDEO_ON_DEMAND", 100, 600], [d, "SHORTS", 1000, 300]]
+            return 200, json.dumps({"columnHeaders": [{"name": n} for n in ("day", "creatorContentType", "views", "estimatedMinutesWatched")],
+                                    "rows": rows}).encode()
+        if url.startswith(youtube.ANALYTICS_API) and q.get("dimensions") == "elapsedVideoTimeRatio":
+            return 200, json.dumps({"columnHeaders": [{"name": n} for n in ("elapsedVideoTimeRatio", "audienceWatchRatio", "relativeRetentionPerformance")],
+                                    "rows": [[0.0, 1.0, 0.5], [0.1, 0.7, 0.5], [0.5, 1.2, 0.6], [1.0, 0.3, 0.5]]}).encode()
+        return super().__call__(method, url, headers, body)
+
+
+class TestMonetizationAndRewatch(unittest.TestCase):
+    def test_sync_feeds_monetization_and_retention(self):
+        c, _ = fresh()
+        g = MoneyGoogle()
+        url = youtube.begin_auth(c, "ryj-media", "http://127.0.0.1/cb", CLIENT)
+        st = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(url).query))["state"]
+        [row] = youtube.finish_auth(c, state=st, code="x", client=CLIENT, transport=g)[1]
+        brands.verify_identity(c, "ryj-media", row, confirmed_platform_account_id=RYJ_CH, owner="owner")
+        brands.assign(c, "ryj-media", row, owner="owner")
+        r = youtube_sync.sync(c, "ryj-media", row, client=CLIENT, transport=g, today=date(2026, 10, 14))
+        self.assertEqual(r["content_type_days"], 60)
+        self.assertIn("vLong", r["retention_fetched"])
+        m = analytics.monetization(c, "ryj-media")
+        self.assertEqual(m["long_form_watch_hours_365d"], 300.0)  # 30 days x 600 min / 60
+        self.assertEqual(m["shorts_views_90d"], 30000)
+        self.assertEqual(m["subscribers"], 1200)
+        full = next(t for t in m["tiers"] if t["id"] == "full")
+        self.assertTrue(full["subs_ok"])
+        self.assertEqual(full["watch_hours_gap"], 3700.0)
+        self.assertEqual(full["days_to_watch_hours_at_pace"], 370)  # 10 h/day pace
+        self.assertFalse(full["eligible_by_numbers"])
+        d = api.video_detail(c, "ryj-media", "vLong")
+        self.assertEqual((d["rewatch"]["peak_ratio"], d["rewatch"]["peak_at_pct"]), (1.2, 50))
+        self.assertEqual(d["rewatch"]["biggest_drop_at_pct"], 50)
+        vl = {v["asset_id"]: v for v in api.video_list(c, "ryj-media")}
+        self.assertEqual(vl["vLong"]["rewatch_peak"], 1.2)
+
+    def test_short_loops_and_no_data(self):
+        self.assertEqual(analytics.rewatch_summary([], 117.5, "short_heuristic")["loops_pct"], 17.5)
+        c, _ = fresh()
+        self.assertFalse(analytics.monetization(c, "ryj-media")["available"])
+
+
 class TestReports(unittest.TestCase):
     def test_reuse_and_csv(self):
         c, _ = fresh()

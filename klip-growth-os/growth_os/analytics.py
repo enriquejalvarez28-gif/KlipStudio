@@ -331,3 +331,117 @@ def daily_review(conn, tenant_id):
             evidence=[{"metric": "Daily views", "value": last["v"], "baseline_median": med, "robust_z": round(z, 2),
                        "basis": "derived"}])
     return out
+
+
+# ── Monetization (YouTube Partner Program) ─────────────────────────────
+# Thresholds from YouTube Help (checked 2026-10-14):
+#   https://support.google.com/youtube/answer/72851 (full YPP)
+#   https://support.google.com/youtube/answer/13429240 (expanded YPP, fan funding + Shopping)
+YPP_TIERS = [
+    {"id": "expanded", "name": "Fan funding + Shopping (expanded YPP)",
+     "unlocks": "Channel memberships, Super Chat/Stickers, Super Thanks, Shopping",
+     "subs": 500, "uploads_90d": 3, "watch_hours_365d": 3000, "shorts_views_90d": 3_000_000},
+    {"id": "full", "name": "Ad revenue sharing (full YPP)",
+     "unlocks": "Ad revenue on long-form and Shorts, YouTube Premium revenue, plus everything above",
+     "subs": 1000, "uploads_90d": None, "watch_hours_365d": 4000, "shorts_views_90d": 10_000_000},
+]
+LONG_FORM_TYPES = ("VIDEO_ON_DEMAND", "LIVE_STREAM")
+
+
+def _ctype_sum(conn, tenant_id, metric, types, start, end):
+    q = ",".join("?" * len(types))
+    r = conn.execute(
+        f"""SELECT COALESCE(SUM(value),0), COUNT(DISTINCT period_start) FROM metrics WHERE tenant_id=? AND platform='youtube'
+            AND grain='day_ctype' AND metric_name=? AND asset_id IN ({q}) AND period_start BETWEEN ? AND ?""",
+        (tenant_id, metric, *[f"ctype:{t}" for t in types], start, end)).fetchone()
+    return float(r[0]), int(r[1])
+
+
+def monetization(conn, tenant_id):
+    end_row = conn.execute("SELECT MAX(period_start) FROM metrics WHERE tenant_id=? AND grain='day_ctype'",
+                           (tenant_id,)).fetchone()[0]
+    subs_row = conn.execute(
+        """SELECT value, period_start FROM metrics WHERE tenant_id=? AND platform='youtube' AND metric_name='subscriberCount'
+           AND grain='lifetime_snapshot' ORDER BY period_start DESC LIMIT 1""", (tenant_id,)).fetchone()
+    subs = subs_row[0] if subs_row else None
+    # Public uploads in the last 90 days: latest known privacy per video (unknown counts as public, flagged).
+    priv = {}
+    for r in conn.execute("SELECT asset_id, value FROM asset_history WHERE tenant_id=? AND field='privacy' ORDER BY observed_at",
+                          (tenant_id,)):
+        priv[r[0]] = r[1]
+    cutoff = (date.today() - timedelta(days=90)).isoformat()
+    recent = [r for r in conn.execute("SELECT asset_id, published_at FROM assets WHERE tenant_id=? AND platform='youtube' "
+                                      "AND published_at>=?", (tenant_id, cutoff))]
+    uploads_90 = sum(1 for r in recent if priv.get(r[0], "public") == "public")
+    out = {"available": bool(end_row), "as_of": end_row, "subscribers": subs,
+           "subscribers_as_of": subs_row[1] if subs_row else None, "uploads_90d": uploads_90,
+           "tiers": [], "sources": ["https://support.google.com/youtube/answer/72851",
+                                    "https://support.google.com/youtube/answer/13429240"],
+           "notes": ["Watch hours and Shorts views here come from YouTube Analytics. YouTube's official count only includes "
+                     "public long-form videos and public Shorts in the Shorts feed, so YouTube Studio → Earn is the final word.",
+                     "Shorts watch hours never count toward the watch-hour goal.",
+                     "Also required: 2-Step Verification on the Google account, no active Community Guidelines strikes, "
+                     "an AdSense account linked to the channel, and a channel based in an eligible country."]}
+    if not end_row:
+        return out
+    end = date.fromisoformat(end_row)
+    s365, s90, s28 = ((end - timedelta(days=d - 1)).isoformat() for d in (365, 90, 28))
+    lf_min, lf_days = _ctype_sum(conn, tenant_id, "estimatedMinutesWatched", LONG_FORM_TYPES, s365, end_row)
+    sh_views, sh_days = _ctype_sum(conn, tenant_id, "views", ("SHORTS",), s90, end_row)
+    lf28, _ = _ctype_sum(conn, tenant_id, "estimatedMinutesWatched", LONG_FORM_TYPES, s28, end_row)
+    sh28, _ = _ctype_sum(conn, tenant_id, "views", ("SHORTS",), s28, end_row)
+    sh_min90, _ = _ctype_sum(conn, tenant_id, "estimatedMinutesWatched", ("SHORTS",), s90, end_row)
+    watch_h = lf_min / 60
+    out.update(long_form_watch_hours_365d=round(watch_h, 1), shorts_views_90d=int(sh_views),
+               shorts_watch_hours_90d=round(sh_min90 / 60, 1),
+               pace={"long_form_hours_per_day": round(lf28 / 60 / 28, 2), "shorts_views_per_day": round(sh28 / 28)},
+               window_days={"watch_hours": lf_days, "shorts_views": sh_days})
+
+    def eta(gap, per_day):
+        return None if gap <= 0 else (round(gap / per_day) if per_day > 0 else None)
+
+    for t in YPP_TIERS:
+        subs_ok = subs is not None and subs >= t["subs"]
+        up_ok = t["uploads_90d"] is None or uploads_90 >= t["uploads_90d"]
+        wh_gap, sv_gap = t["watch_hours_365d"] - watch_h, t["shorts_views_90d"] - sh_views
+        path = "watch_hours" if watch_h / t["watch_hours_365d"] >= sh_views / t["shorts_views_90d"] else "shorts_views"
+        out["tiers"].append({
+            **t, "subs_ok": subs_ok, "uploads_ok": up_ok,
+            "subs_pct": round(min(100, 100 * (subs or 0) / t["subs"]), 1),
+            "watch_hours_pct": round(min(100, 100 * watch_h / t["watch_hours_365d"]), 1),
+            "shorts_views_pct": round(min(100, 100 * sh_views / t["shorts_views_90d"]), 1),
+            "watch_hours_gap": round(max(0, wh_gap), 1), "shorts_views_gap": int(max(0, sv_gap)),
+            "subs_gap": int(max(0, t["subs"] - (subs or 0))),
+            "closest_path": path,
+            "days_to_watch_hours_at_pace": eta(wh_gap, lf28 / 60 / 28),
+            "days_to_shorts_views_at_pace": eta(sv_gap, sh28 / 28),
+            "eligible_by_numbers": subs_ok and up_ok and (wh_gap <= 0 or sv_gap <= 0),
+        })
+    return out
+
+
+def rewatch_summary(curve, avg_pct_viewed=None, fmt=None):
+    """From an aggregate retention curve [{x, v}] (v = audienceWatchRatio).
+
+    v > 1 at a point means that moment was watched more times than there were
+    views: people scrubbed back or replayed it. For Shorts, an average % viewed
+    over 100% means the Short looped. Neither identifies individual viewers.
+    """
+    out = {"has_curve": bool(curve)}
+    if fmt == "short_heuristic" and avg_pct_viewed is not None:
+        out["loops_pct"] = round(max(0.0, avg_pct_viewed - 100), 1)
+    if not curve:
+        return out
+    peak = max(curve, key=lambda p: p["v"])
+    rewatched = [p for p in curve if p["v"] > 1.0]
+    drops = [(curve[i - 1]["x"], curve[i - 1]["v"] - curve[i]["v"]) for i in range(1, len(curve))]
+    big = max(drops, key=lambda d: d[1]) if drops else None
+    early = next((p["v"] for p in curve if p["x"] >= 0.1), None)
+    half = next((p["v"] for p in curve if p["x"] >= 0.5), None)
+    out.update(peak_ratio=round(peak["v"], 2), peak_at_pct=round(peak["x"] * 100),
+               rewatched_share_pct=round(100 * len(rewatched) / len(curve)),
+               biggest_drop_at_pct=round(big[0] * 100) if big else None,
+               biggest_drop_pts=round(big[1] * 100, 1) if big else None,
+               still_watching_at_10pct=round(early * 100, 1) if early is not None else None,
+               still_watching_at_50pct=round(half * 100, 1) if half is not None else None)
+    return out

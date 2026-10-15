@@ -18,7 +18,7 @@ from datetime import date
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from growth_os import ai, api, brands, db, reports, scheduler, vault
+from growth_os import ai, analytics, api, brands, db, reports, scheduler, vault
 from growth_os.connectors import podcast, youtube
 from growth_os.db import DATA_DIR, new_id, set_setting, utcnow
 from growth_os.http import BudgetExceeded, HttpError
@@ -195,6 +195,7 @@ class Handler(BaseHTTPRequestHandler):
             "seo": lambda: api.seo(c, t),
             "recommendations": lambda: api.recommendations(c, t),
             "podcasts": lambda: api.podcasts(c, t),
+            "monetization": lambda: analytics.monetization(c, t),
             "settings": lambda: api.settings(c, t),
             "tiles": lambda: tiles(c, t),
             "accounts": lambda: api.accounts_summary(c, t),

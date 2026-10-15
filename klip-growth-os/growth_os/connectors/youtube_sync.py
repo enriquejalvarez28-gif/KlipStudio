@@ -21,6 +21,8 @@ LAG_DAYS = 3
 BACKFILL_START = "2005-02-14"
 MAX_VIDEOS = 250
 BREAKDOWN_TOP_N = 10
+RETENTION_PER_SYNC = 15   # retention curves fetched per sync (new/changed first), 1 quota unit each
+CTYPE_BACKFILL_DAYS = 400  # monetization windows need 365 days of long-form watch time
 
 
 def _cursor(conn, tenant_id, row_id, name):
@@ -134,6 +136,8 @@ def sync(conn, tenant_id, row_id, *, client, transport=None, today=None, progres
             record_history(conn, tenant_id, "youtube", v["id"], "title", sn.get("title"), "youtube.data.videos")
             record_history(conn, tenant_id, "youtube", v["id"], "description", sn.get("description", ""), "youtube.data.videos")
             record_history(conn, tenant_id, "youtube", v["id"], "tags", json.dumps(sn.get("tags", [])), "youtube.data.videos")
+            record_history(conn, tenant_id, "youtube", v["id"], "privacy",
+                           v.get("status", {}).get("privacyStatus", ""), "youtube.data.videos")
             record_history(conn, tenant_id, "youtube", v["id"], "captions",
                            v["contentDetails"].get("caption", "false"), "youtube.data.videos")
             try:
@@ -200,9 +204,75 @@ def sync(conn, tenant_id, row_id, *, client, transport=None, today=None, progres
         except Exception as e:  # one slow video must not lose the whole sync
             out["unavailable"].append(f"traffic sources {vid}: {str(e)[:80]}")
     out["breakdowns_for"] = done_breakdowns
+
+    # 5. Views + watch time split by content type (Shorts vs long-form vs live),
+    # daily, for the monetization tracker (YPP counts long-form watch hours and
+    # Shorts-feed views separately).
+    progress(88, "Shorts vs long-form watch time")
+    try:
+        out["content_type_days"] = sync_content_types(conn, g, tenant_id, row_id, ch_id, today, fetched)
+    except Exception as e:
+        out["unavailable"].append(f"Shorts vs long-form split: {str(e)[:100]}")
+
+    # 6. Retention curves (incl. rewatch peaks) for every video, a few per sync.
+    progress(94, "retention curves")
+    have = {r[0] for r in conn.execute(
+        "SELECT DISTINCT asset_id FROM metrics WHERE tenant_id=? AND grain='retention_bucket'", (tenant_id,))}
+    queue = [v for v in changed if v not in have] + [v for v in ids if v not in have and v not in changed] \
+        + [v for v in changed if v in have]
+    got = []
+    for vid in queue[:RETENTION_PER_SYNC]:
+        try:
+            if fetch_retention(conn, g, tenant_id, ch_id, vid, today, fetched, through):
+                got.append(vid)
+        except Exception as e:
+            out["unavailable"].append(f"retention {vid}: {str(e)[:80]}")
+    out["retention_fetched"] = got
     out["available_through"] = through
     progress(100, "done")
     return out
+
+
+def sync_content_types(conn, g, tenant_id, row_id, ch_id, today, fetched):
+    cur = _cursor(conn, tenant_id, row_id, "ctype_through")
+    start = (today - timedelta(days=CTYPE_BACKFILL_DAYS)) if not cur else (date.fromisoformat(cur) - timedelta(days=LAG_DAYS))
+    rep = g(ANALYTICS_API, {"ids": "channel==MINE", "startDate": start.isoformat(), "endDate": today.isoformat(),
+                            "metrics": "views,estimatedMinutesWatched", "dimensions": "day,creatorContentType",
+                            "sort": "day"})
+    cols = [h["name"] for h in rep.get("columnHeaders", [])]
+    last = None
+    n = 0
+    for r in rep.get("rows", []):
+        rec = dict(zip(cols, r))
+        ct = (rec.get("creatorContentType") or "UNSPECIFIED").upper()
+        last = rec["day"]
+        for m in ("views", "estimatedMinutesWatched"):
+            if m in rec:
+                youtube._put_metric(conn, tenant_id, ch_id, f"ctype:{ct}", m, float(rec[m]), "", "day_ctype",
+                                    rec["day"], "youtube.analytics.reports", fetched, None, "verified")
+        n += 1
+    if last:
+        _set_cursor(conn, tenant_id, row_id, "ctype_through", last)
+    return n
+
+
+def fetch_retention(conn, g, tenant_id, ch_id, vid, today, fetched, through):
+    ret = g(ANALYTICS_API, {"ids": "channel==MINE", "startDate": BACKFILL_START, "endDate": today.isoformat(),
+                            "metrics": "audienceWatchRatio,relativeRetentionPerformance",
+                            "dimensions": "elapsedVideoTimeRatio", "filters": f"video=={vid}"})
+    cols = [h["name"] for h in ret.get("columnHeaders", [])]
+    rows = ret.get("rows", [])
+    if not rows:
+        return False
+    conn.execute("DELETE FROM metrics WHERE tenant_id=? AND asset_id=? AND grain='retention_bucket'", (tenant_id, vid))
+    for r in rows:
+        rec = dict(zip(cols, r))
+        key = f"ratio:{float(rec['elapsedVideoTimeRatio']):.2f}"
+        for m in ("audienceWatchRatio", "relativeRetentionPerformance"):
+            if m in rec:
+                youtube._put_metric(conn, tenant_id, ch_id, vid, m, float(rec[m]), "ratio", "retention_bucket", key,
+                                    "youtube.analytics.reports", fetched, through, "aggregate_only")
+    return True
 
 
 def sync_all(conn, *, client, progress=lambda p, m: None):

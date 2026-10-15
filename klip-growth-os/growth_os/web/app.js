@@ -112,7 +112,7 @@ const NAV = [
   ["Overview", [["home", "Home", "⌂"], ["analytics", "Analytics overview", "◔"]]],
   ["Content", [["episodes", "Episode intelligence", "▦"], ["youtube", "YouTube", "▶"], ["instagram", "Instagram", "◎"], ["podcasts", "Podcasts", "♪"]]],
   ["Labs", [["thumbnails", "Thumbnail lab", "▣"], ["titles", "Title lab", "T"], ["seo", "SEO & discoverability", "⌕"]]],
-  ["Growth", [["trends", "Trend radar", "↗"], ["recommendations", "Recommendations", "✦"], ["calendar", "Content calendar", "▤"]]],
+  ["Growth", [["monetization", "Monetization", "$"], ["trends", "Trend radar", "↗"], ["recommendations", "Recommendations", "✦"], ["calendar", "Content calendar", "▤"]]],
   ["Operate", [["reports", "Reports", "⎙"], ["jobs", "Jobs & integrations", "⟳"], ["accounts", "Manage accounts", "⚿"], ["settings", "Settings", "⚙"]]],
 ];
 function renderNav(active) {
@@ -350,7 +350,8 @@ PAGES.episode = async (id) => {
         kk("Impressions", nf(v.impressions), pm.impressions ? `p${pm.impressions.percentile} vs peers` : null),
         kk("Impressions CTR", pct(v.ctr), peerTxt(pm.ctr, pct)),
         kk("Avg % viewed", pct(v.avg_pct_viewed), peerTxt(pm.avg_pct_viewed, pct)),
-        kk("Watch time", `${nf(v.watch_minutes)} min`, null)),
+        kk("Watch time", v.watch_minutes != null ? `${nf(v.watch_hours)} h (${nf(v.watch_minutes)} min)` : "—", null),
+        kk("Avg view duration", v.avg_view_s != null ? dur(Math.round(v.avg_view_s)) : "—", v.duration_s && v.avg_view_s != null ? `of ${dur(v.duration_s)}` : null)),
       el("p", { class: "faint", style: "font-size:12px;margin:8px 0 0" }, `Peer set: ${d.peers.basis} (n=${d.peers.n}).`))));
 
   const ret = el("div", {});
@@ -360,7 +361,7 @@ PAGES.episode = async (id) => {
         xKey: "x", yfmt: (x) => `${Math.round(x * 100)}%`, xfmt: (x) => (v.duration_s ? dur(Math.round(x * v.duration_s)) : `${Math.round(x * 100)}%`),
         tipX: (x) => (v.duration_s ? `at ${dur(Math.round(x * v.duration_s))}` : `${Math.round(x * 100)}%`), area: true, height: 240,
         empty: "No retention curve yet (needs enough views, or the video is a Short / still processing)." })),
-      el("div", { class: "foot" }, d.retention_note)),
+      el("div", { class: "foot" }, d.retention_note), rewatchBox(d.rewatch, v)),
     card("Traffic sources", basisTag(v.quality === "synthetic" ? "synthetic" : "measured"), (() => { const b = el("div", {}); return drawLater(b, () => C.bars(b, Object.entries(d.traffic_sources).map(([k, x]) => ({ label: k.replaceAll("_", " ").toLowerCase(), v: x })), { empty: "Fetched for the most-changed videos each sync." })); })())));
 
   wrap.append(el("div", { class: "grid g3 sec" },
@@ -440,10 +441,59 @@ PAGES.youtube = async () => {
     el("div", { class: "grid g2 sec" }, el("section", { class: "card" }, el("div", { class: "card-h" }, el("h2", {}, "Average view duration (s)")), drawLater(t1, () => C.line(t1, [{ name: "Seconds", points: o.series.averageViewDuration, color: "--s2" }], {}))), formatCard(o)));
   const rows = vids.slice().sort((x, y) => (y.views_per_day || 0) - (x.views_per_day || 0));
   wrap.append(el("section", { class: "card sec" }, el("div", { class: "card-h" }, el("h2", {}, "All videos"), el("div", { class: "r" }, el("a", { class: "btn sm ghost", href: T("export/videos.csv") }, "CSV"))),
-    el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["Video", "Format", "Age", "Views/day", "Impr.", "CTR", "% viewed"].map((h, i) => el("th", { class: i > 1 ? "r" : "" }, h)))),
+    el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["Video", "Format", "Age", "Views/day", "Watch hrs", "Avg view", "% viewed", "Rewatch peak", "Impr.", "CTR"].map((h, i) => el("th", { class: i > 1 ? "r" : "" }, h)))),
       el("tbody", {}, rows.map((v) => el("tr", { class: "click", onclick: () => (location.hash = `#/episode/${v.asset_id}`) },
         el("td", { style: "max-width:360px" }, v.title), el("td", {}, fmtName(v.format)), el("td", { class: "r" }, `${v.age_days} d`), el("td", { class: "r" }, nf(v.views_per_day)),
-        el("td", { class: "r" }, nf(v.impressions)), el("td", { class: "r" }, pct(v.ctr)), el("td", { class: "r" }, pct(v.avg_pct_viewed)))))))));
+        el("td", { class: "r" }, nf(v.watch_hours)), el("td", { class: "r" }, v.avg_view_s != null ? dur(Math.round(v.avg_view_s)) : "—"),
+        el("td", { class: "r" }, pct(v.avg_pct_viewed)), el("td", { class: "r", title: "Highest audienceWatchRatio on the retention curve. Above 1.00x = that moment was replayed or scrubbed back to." }, v.rewatch_peak != null ? `${v.rewatch_peak.toFixed(2)}x` : "—"),
+        el("td", { class: "r" }, nf(v.impressions)), el("td", { class: "r" }, pct(v.ctr))))))),
+    el("div", { class: "foot" }, "Watch hours and average view duration are lifetime, from YouTube Analytics. Rewatch peak above 1.00x means part of the video was replayed or scrubbed back to; retention curves fill in a few videos per sync.")));
+  return wrap;
+};
+
+function rewatchBox(r, v) {
+  if (!r) return null;
+  const items = [];
+  if (r.loops_pct != null) items.push(["Loop rate (Shorts)", r.loops_pct > 0 ? `+${r.loops_pct.toFixed(1)}% beyond one full watch` : "no looping"]);
+  if (r.has_curve) {
+    items.push(["Rewatch peak", `${r.peak_ratio.toFixed(2)}x at ${r.peak_at_pct}%${v.duration_s ? ` (${dur(Math.round(r.peak_at_pct / 100 * v.duration_s))})` : ""}`]);
+    items.push(["Share of the video replayed (>1x)", `${r.rewatched_share_pct}%`]);
+    if (r.still_watching_at_10pct != null) items.push(["Still watching at 10% / 50%", `${r.still_watching_at_10pct}% / ${r.still_watching_at_50pct ?? "—"}%`]);
+    if (r.biggest_drop_at_pct != null) items.push(["Biggest drop", `${r.biggest_drop_pts} pts at ${r.biggest_drop_at_pct}%${v.duration_s ? ` (${dur(Math.round(r.biggest_drop_at_pct / 100 * v.duration_s))})` : ""}`]);
+  }
+  if (!items.length) return el("div", { class: "foot" }, "Rewatch data appears once this video's retention curve is fetched.");
+  return el("div", { class: "kv", style: "margin-top:10px" }, items.flatMap(([a, b]) => [el("dt", {}, a), el("dd", {}, b)]));
+}
+function meterRow(label, pctv, value, goal, note) {
+  return el("div", { style: "margin:10px 0" },
+    el("div", { style: "display:flex;justify-content:space-between;gap:8px;font-size:13px" }, el("span", {}, label), el("b", {}, `${value} / ${goal}`)),
+    el("div", { class: "meter", style: "margin-top:4px" }, el("i", { style: `width:${Math.max(1, pctv)}%` })),
+    note ? el("div", { class: "faint", style: "font-size:12px;margin-top:3px" }, note) : null);
+}
+
+PAGES.monetization = async () => {
+  const m = await api(T("monetization"));
+  const wrap = el("div", {}, ph("YouTube Partner Program", "Monetization", "Where the channel stands against YouTube's two monetization tiers, from your own analytics. YouTube Studio → Earn is the official count."));
+  if (!m.available) { wrap.append(emptyState({ title: "No Shorts vs long-form data yet.", body: "It fills in after the next YouTube sync." }, el("a", { class: "btn sm", href: "#/jobs" }, "Jobs"))); return wrap; }
+  const g = el("div", { class: "grid g4" });
+  [["Subscribers", nf(m.subscribers), `as of ${m.subscribers_as_of}`], ["Long-form watch hours (365 d)", nf(m.long_form_watch_hours_365d), `+${m.pace.long_form_hours_per_day} h/day lately`],
+   ["Shorts views (90 d)", nf(m.shorts_views_90d), `+${nf(m.pace.shorts_views_per_day)}/day lately`], ["Public uploads (90 d)", nf(m.uploads_90d), `data as of ${m.as_of}`]]
+    .forEach(([l, v, p]) => g.append(el("div", { class: "card kpi" }, el("div", { class: "l faint", style: "font-size:12px" }, l), el("div", { style: "font-size:26px;font-weight:700;margin:4px 0" }, v), el("div", { class: "faint", style: "font-size:12px" }, p))));
+  wrap.append(g);
+  const eta = (d) => (d == null ? "" : `about ${nf(d)} days at the current pace`);
+  const tiers = el("div", { class: "grid g2 sec" }, m.tiers.map((t) => el("section", { class: "card" },
+    el("div", { class: "card-h" }, el("h2", {}, t.name), el("div", { class: "r" }, el("span", { class: `st ${t.eligible_by_numbers ? "ok" : "warn"}` }, t.eligible_by_numbers ? "numbers met" : "not yet"))),
+    el("p", { class: "muted", style: "font-size:13px;margin:0 0 6px" }, `Unlocks: ${t.unlocks}`),
+    meterRow("Subscribers", t.subs_pct, nf(m.subscribers), nf(t.subs), t.subs_gap ? `${nf(t.subs_gap)} to go` : "met"),
+    t.uploads_90d ? meterRow("Public uploads, last 90 days", Math.min(100, 100 * m.uploads_90d / t.uploads_90d), nf(m.uploads_90d), t.uploads_90d, m.uploads_90d >= t.uploads_90d ? "met" : "") : null,
+    el("div", { class: "faint", style: "font-size:12px;margin-top:8px;text-transform:uppercase;letter-spacing:.08em" }, "Then either path" + (t.closest_path === "watch_hours" ? " (closest: watch hours)" : " (closest: Shorts views)")),
+    meterRow("Long-form watch hours, last 365 days", t.watch_hours_pct, nf(m.long_form_watch_hours_365d), nf(t.watch_hours_365d), t.watch_hours_gap ? `${nf(t.watch_hours_gap)} h to go · ${eta(t.days_to_watch_hours_at_pace)}` : "met"),
+    meterRow("Shorts views, last 90 days", t.shorts_views_pct, nf(m.shorts_views_90d), nf(t.shorts_views_90d), t.shorts_views_gap ? `${nf(t.shorts_views_gap)} to go · ${eta(t.days_to_shorts_views_at_pace)}` : "met"))));
+  wrap.append(tiers);
+  wrap.append(el("section", { class: "card sec" }, el("div", { class: "card-h" }, el("h2", {}, "Read before you apply")),
+    el("ul", { style: "margin:0;padding-left:18px;line-height:1.7;font-size:13.5px" }, m.notes.map((n) => el("li", {}, n)),
+      el("li", {}, `Shorts watch time in the last 90 days: ${nf(m.shorts_watch_hours_90d)} h (doesn't count toward the watch-hour goal).`)),
+    el("div", { class: "foot" }, "Sources: ", m.sources.map((u, i) => el("a", { href: u, target: "_blank", rel: "noopener", style: "margin-right:10px" }, i ? "Expanded YPP" : "YPP overview")))));
   return wrap;
 };
 
