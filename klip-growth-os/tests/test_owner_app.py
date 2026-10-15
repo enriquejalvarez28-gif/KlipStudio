@@ -15,7 +15,7 @@ from http.server import ThreadingHTTPServer
 
 import tests  # noqa: F401  (sets GROWTH_OS_DATA before growth_os imports)
 from growth_os import ai, analytics, api, brands, db, reports, scheduler, seed, trends
-from growth_os.connectors import youtube, youtube_sync
+from growth_os.connectors import youtube, youtube_reporting, youtube_sync
 from tests.test_brand_manager import CLIENT, RYJ_CH, FakeGoogle
 
 
@@ -342,6 +342,63 @@ class TestIncrementalSync(unittest.TestCase):
         d = api.video_detail(c, "ryj-media", "vLong")
         self.assertEqual(d["search_terms"], [{"term": "nil podcast", "views": 120.0}])
         self.assertEqual(d["video"]["quality"], "verified")
+
+
+class ReachGoogle(SyncGoogle):
+    """SyncGoogle plus the Reporting API (reach report type, job, one daily CSV)."""
+
+    def __init__(self):
+        super().__init__()
+        self.jobs, self.posts, self.downloads = [], 0, 0
+
+    def __call__(self, method, url, headers, body):
+        R = youtube_reporting.REPORTING_API
+        if url.startswith(R + "/reportTypes"):
+            return 200, json.dumps({"reportTypes": [{"id": "channel_basic_a2"}, {"id": "channel_reach_basic_a1"}]}).encode()
+        if url.startswith(R + "/jobs") and "/reports" in url:
+            return 200, json.dumps({"reports": [{"id": "r1", "startTime": "2026-10-10T07:00:00Z",
+                                                 "createTime": "2026-10-12T00:00:00Z",
+                                                 "downloadUrl": "https://youtubereporting.googleapis.com/v1/media/r1"}]}).encode()
+        if url.startswith(R + "/jobs") and method == "POST":
+            self.posts += 1
+            self.jobs.append({"id": "job1", "reportTypeId": json.loads(body)["reportTypeId"]})
+            return 200, json.dumps(self.jobs[-1]).encode()
+        if url.startswith(R + "/jobs"):
+            return 200, json.dumps({"jobs": self.jobs}).encode()
+        if url.startswith(R + "/media/"):
+            self.downloads += 1
+            csv_text = ("date,channel_id,video_id,traffic_source_type,video_thumbnail_impressions,video_thumbnail_impressions_ctr\n"
+                        "20261010,UCx,vLong,1,3000,0.05\n20261010,UCx,vLong,2,1000,0.01\n20261010,UCx,vShort,1,0,0\n")
+            return 200, csv_text.encode()
+        return super().__call__(method, url, headers, body)
+
+
+class TestReachReports(unittest.TestCase):
+    def test_parse_weights_ctr_by_impressions(self):
+        rows = youtube_reporting.parse_reach_csv(
+            "date,video_id,video_thumbnail_impressions,video_thumbnail_impressions_ctr\n"
+            "20261010,v1,3000,0.05\n20261010,v1,1000,0.01\n")
+        imp, ctr = rows[("2026-10-10", "v1")]
+        self.assertEqual(imp, 4000)
+        self.assertAlmostEqual(ctr, 0.04)
+
+    def test_sync_creates_job_once_and_stores_impressions(self):
+        c, _ = fresh()
+        g = ReachGoogle()
+        url = youtube.begin_auth(c, "ryj-media", "http://127.0.0.1/cb", CLIENT)
+        st = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(url).query))["state"]
+        [row] = youtube.finish_auth(c, state=st, code="x", client=CLIENT, transport=g)[1]
+        brands.verify_identity(c, "ryj-media", row, confirmed_platform_account_id=RYJ_CH, owner="owner")
+        brands.assign(c, "ryj-media", row, owner="owner")
+        r1 = youtube_sync.sync(c, "ryj-media", row, client=CLIENT, transport=g, today=date(2026, 10, 14))
+        self.assertEqual((r1["reach"]["report_type"], r1["reach"]["job_created"], r1["reach"]["reports_downloaded"]),
+                         ("channel_reach_basic_a1", True, 1))
+        r2 = youtube_sync.sync(c, "ryj-media", row, client=CLIENT, transport=g, today=date(2026, 10, 14))
+        self.assertEqual((g.posts, g.downloads, r2["reach"]["reports_downloaded"]), (1, 1, 0))  # reused, not re-downloaded
+        v = {x["asset_id"]: x for x in analytics.videos(c, "ryj-media")}["vLong"]["metrics"]
+        self.assertEqual(v["videoThumbnailImpressions"], 4000)
+        self.assertAlmostEqual(v["videoThumbnailImpressionsClickRate"], 4.0)
+        self.assertFalse(any(u.startswith("impressions/CTR not returned") for u in r2["unavailable"]))
 
 
 class TestReports(unittest.TestCase):

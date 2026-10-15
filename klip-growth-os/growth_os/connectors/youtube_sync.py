@@ -12,7 +12,7 @@ import json
 from datetime import date, timedelta
 
 from growth_os import analytics, brands
-from growth_os.connectors import youtube
+from growth_os.connectors import youtube, youtube_reporting
 from growth_os.connectors.youtube import ANALYTICS_API, DATA_API, ConnectorError, _get, parse_duration
 from growth_os.db import DATA_DIR, utcnow
 from growth_os.http import Client
@@ -167,24 +167,39 @@ def sync(conn, tenant_id, row_id, *, client, transport=None, today=None, progres
             youtube._put_metric(conn, tenant_id, ch_id, vid, m, float(rec[m]), "", "video_lifetime", "lifetime",
                                 "youtube.analytics.reports", fetched, through, "verified")
 
+    # 3b. Impressions + CTR from the Reporting API reach report (bulk CSVs).
+    progress(70, "impressions and CTR (reach reports)")
+    try:
+        out["reach"] = youtube_reporting.sync(conn, http, tenant_id, row_id, cred=cred, ch_id=ch_id, client=client)
+        out["unavailable"] += out["reach"].pop("unavailable", [])
+        if out["reach"]["rollup"]["videos"]:
+            out["unavailable"] = [u for u in out["unavailable"] if not u.startswith("impressions/CTR not returned")]
+    except Exception as e:  # reach data is additive; never fail the core sync over it
+        out["unavailable"].append(f"impressions/CTR (Reporting API): {str(e)[:120]}")
+
     # 4. Traffic sources + search terms only for the top changed videos.
     progress(80, "traffic sources and search terms")
+    done_breakdowns = []
     for vid in changed[:BREAKDOWN_TOP_N]:
-        ts = g(ANALYTICS_API, {"ids": "channel==MINE", "startDate": BACKFILL_START, "endDate": today.isoformat(),
-                               "metrics": "views", "dimensions": "insightTrafficSourceType", "filters": f"video=={vid}"})
-        conn.execute("DELETE FROM metrics WHERE tenant_id=? AND asset_id=? AND grain='traffic_source'", (tenant_id, vid))
-        for src, views in ts.get("rows", []):
-            youtube._put_metric(conn, tenant_id, ch_id, vid, "views", float(views), "views", "traffic_source", src,
-                                "youtube.analytics.reports", fetched, through, "verified")
-        st = g(ANALYTICS_API, {"ids": "channel==MINE", "startDate": BACKFILL_START, "endDate": today.isoformat(),
-                               "metrics": "views", "dimensions": "insightTrafficSourceDetail",
-                               "filters": f"video=={vid};insightTrafficSourceType==YT_SEARCH",
-                               "maxResults": 15, "sort": "-views"})
-        conn.execute("DELETE FROM metrics WHERE tenant_id=? AND asset_id=? AND grain='search_term'", (tenant_id, vid))
-        for term, views in st.get("rows", []):
-            youtube._put_metric(conn, tenant_id, ch_id, vid, "views", float(views), "views", "search_term", term,
-                                "youtube.analytics.reports", fetched, through, "verified")
-    out["breakdowns_for"] = changed[:BREAKDOWN_TOP_N]
+        try:
+            ts = g(ANALYTICS_API, {"ids": "channel==MINE", "startDate": BACKFILL_START, "endDate": today.isoformat(),
+                                   "metrics": "views", "dimensions": "insightTrafficSourceType", "filters": f"video=={vid}"})
+            conn.execute("DELETE FROM metrics WHERE tenant_id=? AND asset_id=? AND grain='traffic_source'", (tenant_id, vid))
+            for src, views in ts.get("rows", []):
+                youtube._put_metric(conn, tenant_id, ch_id, vid, "views", float(views), "views", "traffic_source", src,
+                                    "youtube.analytics.reports", fetched, through, "verified")
+            st = g(ANALYTICS_API, {"ids": "channel==MINE", "startDate": BACKFILL_START, "endDate": today.isoformat(),
+                                   "metrics": "views", "dimensions": "insightTrafficSourceDetail",
+                                   "filters": f"video=={vid};insightTrafficSourceType==YT_SEARCH",
+                                   "maxResults": 15, "sort": "-views"})
+            conn.execute("DELETE FROM metrics WHERE tenant_id=? AND asset_id=? AND grain='search_term'", (tenant_id, vid))
+            for term, views in st.get("rows", []):
+                youtube._put_metric(conn, tenant_id, ch_id, vid, "views", float(views), "views", "search_term", term,
+                                    "youtube.analytics.reports", fetched, through, "verified")
+            done_breakdowns.append(vid)
+        except Exception as e:  # one slow video must not lose the whole sync
+            out["unavailable"].append(f"traffic sources {vid}: {str(e)[:80]}")
+    out["breakdowns_for"] = done_breakdowns
     out["available_through"] = through
     progress(100, "done")
     return out

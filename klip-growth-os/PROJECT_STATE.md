@@ -4,7 +4,7 @@ Canonical state file. Read this plus `git diff` at session start; don't re-audit
 Specs: Master Spec v3 (Oct 2026) + Owner App & Visual Intelligence directive (Oct 2026).
 
 **Last updated:** 2026-10-14
-**Current phase:** Owner app built and tested. **The next real-data step is blocked on the owner's Google OAuth consent** for the RYJ YouTube pilot.
+**Current phase:** RYJ YouTube is LIVE on the owner's PC (channel `UCPqVudVSoLHqVV834Mg6JhA`, Respect Your Journey, @respectyourjourney). First full sync 2026-10-15: 55 videos, daily history through 2026-10-12, per-video lifetime metrics, traffic sources, search terms.
 
 ## Repository map — KEEP / EXTEND / BUILD
 
@@ -33,17 +33,25 @@ Specs: Master Spec v3 (Oct 2026) + Owner App & Visual Intelligence directive (Oc
 - Real PDF export (3 pages). Launcher first-run and second-run behaviour verified on Linux.
 - Jobs ran via the background scheduler and persisted across a restart. Trend research failed honestly in the container (network policy 403) and raised an alert.
 
+## Live setup (2026-10-15)
+
+- App runs on the owner's Windows PC from `C:\Users\enriq\Documents\KlipStudio\klip-growth-os` (desktop shortcut + auto-start at sign-in). Windows launcher verified on real Windows.
+- Google Cloud project `ryj-media-analytics` (OAuth client "Klip Growth OS (PC)", Testing mode). Owners: jumpshotgope@gmail.com and enriquejalvarez28@gmail.com (owner wants Enrique as the controlling owner). Test users: both.
+- Channel lives on jumpshotgope@gmail.com (personal account, not a Brand Account). Plan: move to a Brand Account with Enrique as Owner, then reconnect with Enrique's login.
+- Enabled APIs: YouTube Data v3, YouTube Analytics, YouTube Reporting.
+- Impressions/CTR: Analytics API returns HTTP 400 for `videoThumbnailImpressions*`. Now sourced from the Reporting API reach report (`connectors/youtube_reporting.py`): one job per channel, daily CSVs downloaded once, impression-weighted CTR rolled up to `video_lifetime`. Google starts delivering files ~48 h after job creation, so the window starts then.
+- Owner rule: read-only. Never change titles, thumbnails, posts or Instagram designs; give suggestions with evidence only. Jamar runs his own bots on the channel/IG; don't interfere.
+
 ## Blockers
 
-1. **RYJ YouTube OAuth**: owner creates the free Google Cloud desktop client and connects (README).
-2. **Windows launcher not run on real Windows** (written for it; the container is Linux). Owner's first double-click is the test.
+1. Instagram: RYJ IG is linked to Jamar's Facebook. Waiting for Jamar to add Enrique to the Page/IG in Meta Business Suite; then a Meta app under Enrique's account.
 3. Trend sources (Google News, Trends, YouTube feeds) and the Apple lookup are blocked in the cloud container. They're expected to work locally, but this isn't verified.
 4. Instagram needs a Meta developer app and a professional account linked to a Facebook Page.
 5. Location of any existing RYJ editing agent (Operator integration).
 
 ## Next, in order
 
-1. RYJ OAuth pilot: verify the channel ID → first sync → record the channel ID, sample and freshness here. Confirm whether impressions/CTR come back.
+1. Confirm the reach reporting job delivers CSVs (~48 h) and the thumbnail lab fills in.
 2. Retention ↔ transcript mapping (bounded ±90 s windows) on the episode deep dive.
 3. Instagram connector (Meta Graph), same Brand Manager flow.
 4. Spotify/Apple discoverability audits; feed metadata.
@@ -51,6 +59,8 @@ Specs: Master Spec v3 (Oct 2026) + Owner App & Visual Intelligence directive (Oc
 6. Report refinements; secure sharing later (`docs/DEPLOYMENT.md`).
 
 ## Decisions log
+
+- 2026-10-15: Impressions/CTR come from the YouTube Reporting API reach report, not the Analytics API (which rejects them). Network timeouts are retried as 504; a failing per-video breakdown no longer fails the sync.
 
 - 2026-10-14: stdlib + `cryptography` + `pillow` only. No web framework. Harvey untouched.
 - 2026-10-14: Shorts are classified by length (≤180 s), labelled `short_heuristic`.

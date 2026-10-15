@@ -31,10 +31,13 @@ class BudgetExceeded(Exception):
 def urllib_transport(method, url, headers, body):
     req = urllib.request.Request(url, data=body, method=method, headers=headers)
     try:
-        with urllib.request.urlopen(req, timeout=30) as r:
+        with urllib.request.urlopen(req, timeout=90) as r:
             return r.status, r.read()
     except urllib.error.HTTPError as e:
         return e.code, e.read()
+    except (TimeoutError, urllib.error.URLError, ConnectionError) as e:
+        # Treat network hiccups like a gateway timeout so the retry/backoff applies.
+        return 504, json.dumps({"error": f"network: {str(e)[:200]}"}).encode()
 
 
 class Client:
@@ -60,6 +63,23 @@ class Client:
                VALUES (?,?,?,?,?,?,?,?,?)""",
             (self.tenant_id, self.run_id, "api", name, quota_units, int(cache_hit), status, ms, utcnow()),
         )
+
+    def download(self, url, *, headers=None, log_name=None):
+        """GET raw bytes (bulk report CSVs). Counts against the same budget."""
+        name = log_name or url.split("?")[0]
+        if self.used_today() >= self.daily_requests:
+            raise BudgetExceeded(f"daily API request budget ({self.daily_requests}) reached; paused")
+        for attempt in range(MAX_RETRIES + 1):
+            t0 = time.monotonic()
+            status, raw = self.transport("GET", url, dict(headers or {}), None)
+            self._log(name, status, int((time.monotonic() - t0) * 1000), 1, False)
+            if status in (429, 500, 502, 503, 504) and attempt < MAX_RETRIES:
+                self.sleep(2 ** (attempt + 1))
+                continue
+            break
+        if status >= 400:
+            raise HttpError(status, raw[:300].decode(errors="replace") if isinstance(raw, bytes) else str(raw)[:300])
+        return raw
 
     def request(self, method, url, *, params=None, headers=None, form=None, json_body=None,
                 quota_units=1, cache=False, log_name=None):
