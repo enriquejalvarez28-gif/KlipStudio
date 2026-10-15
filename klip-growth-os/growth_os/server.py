@@ -283,6 +283,15 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 raise ValueError("bad action")
             return self._send(200, {"ok": True})
+        m = re.fullmatch(r"recommendations/(rec_[a-f0-9]+)/workflow", rest)
+        if m:
+            try:
+                return self._send(200, analytics.move_rec(c, t, m.group(1), str(body.get("to", "")), "owner",
+                                                          str(body.get("note", ""))[:500]))
+            except LookupError as e:
+                raise brands.BrandError("not_found", str(e))
+            except ValueError as e:
+                return self._send(400, {"error": "bad_state", "message": str(e)})
         m = re.fullmatch(r"(trends|recommendations)/([a-z]{2,4}_[a-f0-9]+)/status", rest)
         if m:
             table, rid = m.groups()

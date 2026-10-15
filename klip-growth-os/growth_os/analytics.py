@@ -486,3 +486,376 @@ def audience(conn, tenant_id):
     out["device"] = table("device")
     out["subscribed"] = table("subscribed")
     return out
+
+
+# ── Retention explorer ─────────────────────────────────────────────────
+
+def retention_curves(conn, tenant_id):
+    """{asset_id: [{x, v, rel}]} from stored aggregate retention buckets."""
+    out = {}
+    for a, k, m, v in conn.execute(
+            """SELECT asset_id, period_start, metric_name, value FROM metrics WHERE tenant_id=? AND platform='youtube'
+               AND grain='retention_bucket' ORDER BY asset_id, period_start""", (tenant_id,)):
+        x = float(k[6:])
+        pts = out.setdefault(a, {})
+        pts.setdefault(x, {"x": x})["v" if m == "audienceWatchRatio" else "rel"] = v
+    return {a: [p for _, p in sorted(pts.items()) if "v" in p] for a, pts in out.items()}
+
+
+def benchmark_curve(curves, asset_ids):
+    """Bucket-wise median of other videos' curves (same cohort)."""
+    peers = [curves[a] for a in asset_ids if a in curves]
+    if len(peers) < 2:
+        return [], len(peers)
+    by = {}
+    for c in peers:
+        for p in c:
+            by.setdefault(round(p["x"], 2), []).append(p["v"])
+    return [{"x": x, "v": round(statistics.median(vs), 4)} for x, vs in sorted(by.items()) if len(vs) >= 2], len(peers)
+
+
+def retention_events(curve, bench=None, duration_s=None, views=None, max_each=3):
+    """Deterministic markers on an aggregate retention curve.
+
+    Kinds: drop (steepest falls), replay (watch ratio rises: people scrubbed
+    back or rewatched), weak (sustained stretch below typical for YouTube,
+    relativeRetentionPerformance < 0.35), strong (> 0.65). Confidence follows
+    the video's view count. Aggregate data: never per-viewer.
+    """
+    if not curve or len(curve) < 3:
+        return []
+    conf = "low" if (views or 0) < 300 else "medium" if (views or 0) < 3000 else "high"
+    bmap = {round(p["x"], 2): p["v"] for p in (bench or [])}
+    ts = (lambda x: round(x * duration_s)) if duration_s else (lambda x: None)
+
+    def ev(kind, p, value, delta, label):
+        b = bmap.get(round(p["x"], 2))
+        return {"kind": kind, "x": p["x"], "t": ts(p["x"]), "value": round(value, 3), "delta": round(delta, 3),
+                "baseline": round(b, 3) if b is not None else None, "confidence": conf, "label": label}
+
+    out = []
+    steps = [(curve[i - 1], curve[i], curve[i - 1]["v"] - curve[i]["v"]) for i in range(1, len(curve))]
+    # Ignore the very start (everyone scrolls past in the first seconds) for "drop" ranking.
+    drops = sorted([s for s in steps if s[0]["x"] >= 0.03 and s[1]["x"] <= 0.95 and s[2] > 0.02],
+                   key=lambda s: -s[2])[:max_each]  # skip intro scroll-past and end screens
+    for a, b, d in drops:
+        out.append(ev("drop", b, b["v"], -d, f"Drop: {round(d * 100, 1)} pts of viewers leave here"))
+    rises = sorted([s for s in steps if s[2] < -0.01], key=lambda s: s[2])[:max_each]
+    for a, b, d in rises:
+        out.append(ev("replay", b, b["v"], -d, f"Replay: watch ratio rises {round(-d * 100, 1)} pts (rewinds/rewatches)"))
+    # Sustained weak / strong stretches by relative performance.
+    for kind, test, word in (("weak", lambda r: r < 0.35, "Weak stretch: below typical YouTube retention for this length"),
+                             ("strong", lambda r: r > 0.65, "Strong stretch: above typical YouTube retention for this length")):
+        run = []
+        for p in curve + [{"x": 2, "v": 0}]:
+            r = p.get("rel")
+            if r is not None and test(r):
+                run.append(p)
+                continue
+            if len(run) >= 3:
+                mid = run[len(run) // 2]
+                out.append(ev(kind, mid, mid.get("rel", 0), 0, f"{word} ({round(run[0]['x'] * 100)}–{round(run[-1]['x'] * 100)}%)"))
+            run = []
+    return sorted(out, key=lambda e: e["x"])
+
+
+# ── Growth review: evidence-backed, actionable recommendations (spec v4 §18) ──
+WORKFLOW = ["suggested", "prepared", "awaiting_approval", "approved", "executed", "verified", "evaluated",
+            "reverted", "dismissed"]
+WORKFLOW_STATUS = {"suggested": "open", "prepared": "open", "awaiting_approval": "open", "approved": "accepted",
+                   "executed": "done", "verified": "done", "evaluated": "done", "reverted": "done",
+                   "dismissed": "dismissed"}
+DAILY_NEW_LIMIT = 5  # top opportunities per run (spec §9: 3–5/day)
+
+
+def _guest(title):
+    parts = [p.strip() for p in re.split(r"[|]", title or "") if p.strip()]
+    if len(parts) < 2:
+        return None
+    g = re.sub(r"[^\w\s'\"“”.-]", "", parts[-1]).strip().strip("\"“”")
+    return g if 2 < len(g) < 60 else None
+
+
+def upsert_rec(conn, tenant_id, *, kind, asset_id, key, title, detail, evidence, diagnosis, hypotheses, steps,
+               test_plan, impact, effort, confidence, priority, alternatives=None, basis="derived"):
+    """Insert once per fingerprint; refresh evidence on an open item, never resurrect a dismissed one."""
+    fp = _fingerprint(kind, asset_id, key)
+    row = conn.execute("SELECT id, workflow FROM recommendations WHERE tenant_id=? AND fingerprint=?", (tenant_id, fp)).fetchone()
+    vals = (title, detail, json.dumps(evidence), diagnosis, json.dumps(hypotheses), json.dumps(steps),
+            json.dumps(test_plan), json.dumps(alternatives or []), impact, effort, confidence, priority)
+    if row:
+        if row["workflow"] in ("suggested", "prepared"):
+            conn.execute("""UPDATE recommendations SET title=?, detail=?, evidence_json=?, diagnosis=?, hypotheses_json=?,
+                            steps_json=?, test_plan_json=?, alternatives_json=?, impact=?, effort=?, confidence=?, priority=?
+                            WHERE id=?""", vals + (row["id"],))
+        return 0
+    conn.execute(
+        """INSERT INTO recommendations (id, tenant_id, asset_id, kind, priority, basis, title, detail, evidence_json,
+           fingerprint, created_at, diagnosis, hypotheses_json, steps_json, test_plan_json, alternatives_json, impact,
+           effort, confidence, workflow) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'suggested')""",
+        (new_id("rec_"), tenant_id, asset_id, kind, priority, basis, title, detail, json.dumps(evidence), fp, utcnow(),
+         diagnosis, json.dumps(hypotheses), json.dumps(steps), json.dumps(test_plan), json.dumps(alternatives or []),
+         impact, effort, confidence))
+    return 1
+
+
+def growth_review(conn, tenant_id, limit=DAILY_NEW_LIMIT):
+    """Deterministic triage → ranked candidates → at most `limit` new cards.
+
+    Classes (hypotheses, never proven by one metric): distribution (low
+    impressions), packaging (impressions ok, CTR low), content/hold (CTR ok or
+    unknown, % viewed low), double-down (a clear winner), funnel (Shorts with
+    reach whose full episode lags). Cohorts: same format (+ length bucket).
+    """
+    vids = videos(conn, tenant_id)
+    curves = retention_curves(conn, tenant_id)
+    longs = [v for v in vids if v["format"] == "long_form"]
+    cands = []
+    for v in vids:
+        if (v["age_days"] or 0) < 7:
+            continue
+        m, views = v["metrics"], v["metrics"].get("views") or 0
+        ps = peer_stats(vids, v)
+        pm = ps["metrics"]
+        if ps["n"] < 3 or views < 100:
+            continue  # insufficient evidence: observe, don't change
+        conf = "low" if views < 500 else "medium" if views < 5000 else "high"
+        fmt = "Short" if v["format"] == "short_heuristic" else "long-form episode"
+        ret, ctr, vpd, imp = (pm.get(k) for k in ("avg_pct_viewed", "ctr", "views_per_day", "impressions"))
+        base_ev = [{"metric": "Views", "value": views, "basis": "measured"},
+                   {"metric": "Age (days)", "value": v["age_days"], "basis": "measured"},
+                   {"metric": "Peer set", "value": f"{ps['basis']} (n={ps['n']})", "basis": "derived"}]
+        test = {"baseline": None, "metric": None, "window_days": 14,
+                "success": None, "reassess": "after 14 days or 1,000 new impressions, whichever is later"}
+        guest = _guest(v["title"])
+        # Content / hold problem
+        if ret and ret["percentile"] is not None and ret["percentile"] <= 25 and not (ctr and ctr["percentile"] <= 25):
+            ev = base_ev + [{"metric": "Avg % viewed", "value": ret["value"], "peer_median": ret["peer_median"],
+                             "percentile": ret["percentile"], "basis": "derived"}]
+            evs = retention_events(curves.get(v["asset_id"], []), None, v["duration_s"], views)
+            drop = next((e for e in sorted(evs, key=lambda e: e["delta"]) if e["kind"] == "drop"), None)
+            steps = []
+            if drop and drop["t"] is not None:
+                ev.append({"metric": "Biggest drop", "value": f"{round(-drop['delta'] * 100, 1)} pts at {drop['t'] // 60}:{drop['t'] % 60:02d}",
+                           "basis": "derived"})
+                steps.append(f"Watch {drop['t'] // 60}:{drop['t'] % 60:02d} on YouTube and note what happens there (topic change, long setup, audio issue).")
+            steps += ["Check that the first 30 seconds deliver what the title promises; don't re-edit the published video.",
+                      f"For the next {fmt}, open with the guest's strongest answer and cut setup before the first point.",
+                      "If the drop is a natural chapter break, add chapters so viewers can jump instead of leaving."]
+            gap = (ret["peer_median"] - ret["value"]) / max(ret["peer_median"], 1)
+            cands.append(dict(score=vpd["value"] * gap if vpd else gap, kind="retention_review", v=v, key="hold",
+                title=f"Viewers leave early: “{v['title']}”",
+                detail=f"Average viewed is {ret['value']:.1f}% vs {ret['peer_median']:.1f}% for comparable {fmt}s.",
+                evidence=ev, diagnosis="content", confidence=conf, impact="medium" if conf != "low" else "low", effort="medium",
+                hypotheses=[{"cause": "The opening takes too long to reach the payoff the title promises", "confidence": "medium"},
+                            {"cause": "Topic or guest fit is weaker for this audience", "confidence": "low"},
+                            {"cause": "Length: longer videos naturally hold a smaller share", "confidence": "low"}],
+                steps=steps, test=dict(test, baseline=ret["value"], metric="avg % viewed on the next 2 comparable uploads",
+                                         success=f"above the peer median ({ret['peer_median']:.1f}%)")))
+        # Packaging problem (needs impressions)
+        if ctr and imp and ctr["percentile"] is not None and ctr["percentile"] <= 25 and (imp["value"] or 0) >= 1000:
+            ev = base_ev + [{"metric": "Impressions", "value": imp["value"], "basis": "measured"},
+                            {"metric": "Impressions CTR", "value": ctr["value"], "peer_median": ctr["peer_median"],
+                             "percentile": ctr["percentile"], "basis": "derived"}]
+            cands.append(dict(score=(imp["value"] or 0) * (ctr["peer_median"] - ctr["value"]) / 100, kind="thumbnail_title_review",
+                v=v, key="packaging", title=f"Shown often, clicked less: “{v['title']}”",
+                detail=f"CTR {ctr['value']:.1f}% vs {ctr['peer_median']:.1f}% for comparable {fmt}s on {int(imp['value']):,} impressions.",
+                evidence=ev, diagnosis="packaging", confidence=conf, impact="high", effort="low",
+                hypotheses=[{"cause": "Thumbnail isn't readable at phone size or lacks a clear face/focal point", "confidence": "medium"},
+                            {"cause": "Title doesn't state the payoff or the guest's authority", "confidence": "medium"}],
+                steps=["Draft 3 titles (search, curiosity, guest authority) with the button on the episode page.",
+                       "Make 2 thumbnail variants from real frames: guest close-up + 2–4 word headline in white/gold.",
+                       "Use YouTube Studio Test & Compare if available; otherwise change one thing and mark it executed here.",
+                       "Keep the original title/thumbnail saved (the history panel already has it) for rollback."],
+                test=dict(test, baseline=ctr["value"], metric="impressions CTR", success=f"≥ peer median ({ctr['peer_median']:.1f}%)")))
+        # Distribution problem
+        if imp and imp["percentile"] is not None and imp["percentile"] <= 25 and ctr and ctr["percentile"] >= 50:
+            cands.append(dict(score=0.5, kind="distribution_review", v=v, key="distribution",
+                title=f"Good clicks, little reach: “{v['title']}”",
+                detail="People click when they see it, but YouTube shows it less than comparable videos.",
+                evidence=base_ev + [{"metric": "Impressions", "value": imp["value"], "peer_median": imp["peer_median"],
+                                     "percentile": imp["percentile"], "basis": "derived"}],
+                diagnosis="distribution", confidence=conf, impact="medium", effort="low",
+                hypotheses=[{"cause": "Few search/suggested entry points for this topic", "confidence": "medium"}],
+                steps=["Cut 2–3 Shorts from its strongest moments and link each to this episode (related video).",
+                       "Add it to a topic playlist and an end screen on your best-performing episode.",
+                       "Rewrite the first two description lines around the main search phrase."],
+                test=dict(test, baseline=imp["value"], metric="impressions per day", success="up vs the 14 days before")))
+        # Double down on a clear winner
+        if vpd and vpd["percentile"] is not None and vpd["percentile"] >= 90 and (ret is None or ret["percentile"] >= 50):
+            cands.append(dict(score=vpd["value"] * 2, kind="double_down", v=v, key="winner",
+                title=f"Winner: build on “{v['title']}”",
+                detail=f"{vpd['value']:.0f} views/day vs a peer median of {vpd['peer_median']:.0f}.",
+                evidence=base_ev + [{"metric": "Views per day", "value": vpd["value"], "peer_median": vpd["peer_median"],
+                                     "percentile": vpd["percentile"], "basis": "derived"}],
+                diagnosis="opportunity", confidence=conf, impact="high", effort="medium",
+                hypotheses=[{"cause": "The topic/guest angle resonates with this audience", "confidence": "medium"}],
+                steps=[f"Plan a follow-up on the same angle{f' (another conversation with {guest})' if guest else ''}.",
+                       "Cut 2 more Shorts from the same recording if they exist.",
+                       "Don't change this video's title or thumbnail: it's working."],
+                test=dict(test, baseline=vpd["value"], metric="views/day of the follow-up", success="≥ peer median within 14 days")))
+        # Shorts → full-episode funnel
+        if v["format"] == "short_heuristic" and views >= 1500 and guest:
+            full = next((l for l in longs if guest.lower() in (l["title"] or "").lower()), None)
+            if full and (full["metrics"].get("views") or 0) < views / 5:
+                cands.append(dict(score=views / 1000, kind="funnel", v=v, key=f"funnel:{full['asset_id']}",
+                    title=f"Send Short viewers to the full {guest} episode",
+                    detail=f"The Short has {int(views):,} views; the full episode “{full['title']}” has {int(full['metrics'].get('views') or 0):,}.",
+                    evidence=base_ev + [{"metric": "Full-episode views", "value": full["metrics"].get("views") or 0, "basis": "measured"}],
+                    diagnosis="distribution", confidence=conf, impact="medium", effort="low",
+                    hypotheses=[{"cause": "Short viewers don't know the full conversation exists", "confidence": "medium"}],
+                    steps=["In YouTube Studio, open the Short → Related video → choose the full episode.",
+                           "Pin a comment on the Short: “Full conversation with {} → link”.".format(guest),
+                           "Mark executed here; the app compares the full episode's views before/after."],
+                    test=dict(test, baseline=full["metrics"].get("views") or 0, metric="full-episode views/day",
+                              success="up vs the 14 days before")))
+    cands.sort(key=lambda c: -c["score"])
+    added = 0
+    today_n = conn.execute("SELECT COUNT(*) FROM recommendations WHERE tenant_id=? AND created_at>=? AND diagnosis!=''",
+                           (tenant_id, date.today().isoformat())).fetchone()[0]
+    limit = max(0, limit - today_n)  # a cap per day, not per run
+    for c in cands:
+        if added >= limit:
+            break
+        added += upsert_rec(conn, tenant_id, kind=c["kind"], asset_id=c["v"]["asset_id"], key=c["key"], title=c["title"],
+                            detail=c["detail"], evidence=c["evidence"], diagnosis=c["diagnosis"], hypotheses=c["hypotheses"],
+                            steps=c["steps"], test_plan=c["test"], impact=c["impact"], effort=c["effort"],
+                            confidence=c["confidence"], priority=1 if c["impact"] == "high" else 2)
+    evaluated = evaluate_executed(conn, tenant_id)
+    return {"candidates": len(cands), "new": added, "evaluated": evaluated}
+
+
+def _asset_snapshot(conn, tenant_id, asset_id):
+    if not asset_id:
+        return {}
+    v = next((x for x in videos(conn, tenant_id) if x["asset_id"] == asset_id), None)
+    if not v:
+        return {}
+    keep = ("views", "estimatedMinutesWatched", "averageViewPercentage", "videoThumbnailImpressions",
+            "videoThumbnailImpressionsClickRate", "subscribersGained")
+    return {"at": utcnow(), "title": v["title"], "age_days": v["age_days"], "views_per_day": v["views_per_day"],
+            **{k: v["metrics"].get(k) for k in keep}}
+
+
+def move_rec(conn, tenant_id, rec_id, to, actor="owner", note=""):
+    if to not in WORKFLOW:
+        raise ValueError(f"unknown state {to}")
+    r = conn.execute("SELECT * FROM recommendations WHERE id=? AND tenant_id=?", (rec_id, tenant_id)).fetchone()
+    if not r:
+        raise LookupError("recommendation not found")
+    frm = r["workflow"] or "suggested"
+    snap = {}
+    sets = {"workflow": to, "status": WORKFLOW_STATUS[to]}
+    if to == "approved":
+        snap = _asset_snapshot(conn, tenant_id, r["asset_id"])
+    if to == "executed":  # applied manually by the owner (write access is off): snapshot the baseline now
+        snap = _asset_snapshot(conn, tenant_id, r["asset_id"])
+        sets["baseline_json"] = json.dumps(snap)
+        sets["evaluate_after"] = (date.today() + timedelta(days=14)).isoformat()
+    conn.execute(f"UPDATE recommendations SET {', '.join(k + '=?' for k in sets)} WHERE id=?", (*sets.values(), rec_id))
+    conn.execute("INSERT INTO action_ledger (tenant_id, rec_id, from_state, to_state, actor, note, snapshot_json, at) "
+                 "VALUES (?,?,?,?,?,?,?,?)", (tenant_id, rec_id, frm, to, actor, note, json.dumps(snap), utcnow()))
+    return {"id": rec_id, "from": frm, "to": to}
+
+
+def evaluate_executed(conn, tenant_id):
+    """Observational before/after for executed items past their evaluation date (no causal claims)."""
+    n = 0
+    for r in conn.execute("""SELECT id, asset_id, baseline_json FROM recommendations WHERE tenant_id=? AND workflow IN
+                             ('executed','verified') AND evaluate_after IS NOT NULL AND evaluate_after<=?""",
+                          (tenant_id, date.today().isoformat())).fetchall():
+        before = json.loads(r["baseline_json"] or "{}")
+        after = _asset_snapshot(conn, tenant_id, r["asset_id"])
+        res = {"before": before, "after": after, "note": "Observational comparison; other factors also change over time."}
+        conn.execute("UPDATE recommendations SET workflow='evaluated', status='done', result_json=? WHERE id=?",
+                     (json.dumps(res), r["id"]))
+        conn.execute("INSERT INTO action_ledger (tenant_id, rec_id, from_state, to_state, actor, note, snapshot_json, at) "
+                     "VALUES (?,?,'executed','evaluated','analyst','auto-evaluated after 14 days',?,?)",
+                     (tenant_id, r["id"], json.dumps(after), utcnow()))
+        n += 1
+    return n
+
+
+
+# ── Format comparison, subscriber contribution, traffic over time ──────
+def formats_compare(conn, tenant_id, days=28):
+    end = conn.execute("SELECT MAX(period_start) FROM metrics WHERE tenant_id=? AND grain='day_ctype'", (tenant_id,)).fetchone()[0]
+    vids = videos(conn, tenant_id)
+    out = {"days": days, "as_of": end, "types": []}
+    names = {"SHORTS": "Shorts", "VIDEO_ON_DEMAND": "Long-form", "LIVE_STREAM": "Live"}
+    fmt_of = {"SHORTS": "short_heuristic", "VIDEO_ON_DEMAND": "long_form"}
+    for ct, label in names.items():
+        row = {"type": ct, "label": label}
+        if end:
+            start = (date.fromisoformat(end) - timedelta(days=days - 1)).isoformat()
+            v, _ = _ctype_sum(conn, tenant_id, "views", (ct,), start, end)
+            w, _ = _ctype_sum(conn, tenant_id, "estimatedMinutesWatched", (ct,), start, end)
+            row.update(views=int(v), watch_hours=round(w / 60, 1))
+        group = [x for x in vids if x["format"] == fmt_of.get(ct)]
+        if not group and not row.get("views"):
+            continue
+        subs = sum((x["metrics"].get("subscribersGained") or 0) for x in group)
+        pcts = [x["metrics"]["averageViewPercentage"] for x in group if x["metrics"].get("averageViewPercentage") is not None]
+        durs = [x["metrics"]["averageViewDuration"] for x in group if x["metrics"].get("averageViewDuration") is not None]
+        row.update(videos=len(group), subs_gained_lifetime=int(subs),
+                   median_pct_viewed=round(statistics.median(pcts), 1) if pcts else None,
+                   median_avg_view_s=round(statistics.median(durs)) if durs else None)
+        out["types"].append(row)
+    return out
+
+
+def subscriber_contribution(conn, tenant_id, top=12):
+    vids = [v for v in videos(conn, tenant_id) if v["metrics"].get("subscribersGained")]
+    vids.sort(key=lambda v: -(v["metrics"]["subscribersGained"] or 0))
+    total = sum(v["metrics"]["subscribersGained"] for v in vids)
+    return {"total": int(total), "items": [{"asset_id": v["asset_id"], "title": v["title"], "format": v["format"],
+                                            "subs": int(v["metrics"]["subscribersGained"]),
+                                            "per_1k_views": round(1000 * v["metrics"]["subscribersGained"] / v["metrics"]["views"], 2)
+                                            if v["metrics"].get("views") else None} for v in vids[:top]]}
+
+
+def traffic_over_time(conn, tenant_id, days=90, top=5):
+    end = conn.execute("SELECT MAX(period_start) FROM metrics WHERE tenant_id=? AND grain='day_traffic'", (tenant_id,)).fetchone()[0]
+    if not end:
+        return {"available": False, "series": []}
+    start = (date.fromisoformat(end) - timedelta(days=days - 1)).isoformat()
+    rows = conn.execute("""SELECT asset_id, period_start, value FROM metrics WHERE tenant_id=? AND grain='day_traffic'
+                           AND metric_name='views' AND period_start BETWEEN ? AND ?""", (tenant_id, start, end)).fetchall()
+    tot = {}
+    for a, d, v in rows:
+        tot[a] = tot.get(a, 0) + v
+    keep = [a for a, _ in sorted(tot.items(), key=lambda x: -x[1])[:top]]
+    # weekly buckets keep the lines readable
+    weeks = {}
+    for a, d, v in rows:
+        if a not in keep:
+            continue
+        dt = date.fromisoformat(d)
+        wk = (dt - timedelta(days=dt.weekday())).isoformat()
+        weeks.setdefault(a, {}).setdefault(wk, 0)
+        weeks[a][wk] += v
+    allw = sorted({w for s in weeks.values() for w in s})
+    return {"available": True, "as_of": end, "weeks": allw,
+            "series": [{"source": a[8:], "total": int(tot[a]), "points": [{"d": w, "v": weeks[a].get(w, 0)} for w in allw]} for a in keep]}
+
+
+
+def kpi_ctr(conn, tenant_id, days):
+    """Channel impressions CTR over the window from reach-report rows (impression-weighted)."""
+    end = conn.execute("""SELECT MAX(period_start) FROM metrics WHERE tenant_id=? AND grain='day_video'
+                          AND metric_name='videoThumbnailImpressions'""", (tenant_id,)).fetchone()[0]
+    if not end:
+        return None
+
+    def window(a, b):
+        r = conn.execute("""SELECT SUM(i.value), SUM(i.value * COALESCE(c.value,0)) FROM metrics i LEFT JOIN metrics c
+                            ON c.tenant_id=i.tenant_id AND c.asset_id=i.asset_id AND c.grain=i.grain AND c.period_start=i.period_start
+                            AND c.metric_name='videoThumbnailImpressionsClickRate'
+                            WHERE i.tenant_id=? AND i.grain='day_video' AND i.metric_name='videoThumbnailImpressions'
+                            AND i.period_start BETWEEN ? AND ?""", (tenant_id, a, b)).fetchone()
+        return (r[1] / r[0]) if r and r[0] else None
+    e = date.fromisoformat(end)
+    cur = window((e - timedelta(days=days - 1)).isoformat(), end)
+    prev = window((e - timedelta(days=2 * days - 1)).isoformat(), (e - timedelta(days=days)).isoformat())
+    return {"metric": "ctr", "label": "Impressions CTR", "unit": "pct", "days": days, "value": cur, "previous": prev,
+            "change": ((cur - prev) / prev) if cur is not None and prev else None, "through": end, "quality": "verified"}

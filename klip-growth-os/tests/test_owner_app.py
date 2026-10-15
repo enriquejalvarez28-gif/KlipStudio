@@ -414,6 +414,10 @@ class MoneyGoogle(ReachGoogle):
             return 200, json.dumps({"columnHeaders": [{"name": n} for n in ("day", "creatorContentType", "views", "estimatedMinutesWatched")],
                                     "rows": rows}).encode()
         dims = q.get("dimensions")
+        if url.startswith(youtube.ANALYTICS_API) and dims == "day,insightTrafficSourceType":
+            return 200, json.dumps({"columnHeaders": [{"name": n} for n in ("day", "insightTrafficSourceType", "views", "estimatedMinutesWatched")],
+                                    "rows": [["2026-10-05", "SHORTS", 500, 100], ["2026-10-05", "YT_SEARCH", 20, 30],
+                                             ["2026-10-12", "SHORTS", 700, 150]]}).encode()
         if url.startswith(youtube.ANALYTICS_API) and dims == "ageGroup,gender":
             return 200, json.dumps({"columnHeaders": [{"name": n} for n in ("ageGroup", "gender", "viewerPercentage")],
                                     "rows": [["age18-24", "male", 40.0], ["age25-34", "male", 35.0], ["age25-34", "female", 25.0]]}).encode()
@@ -451,12 +455,19 @@ class TestMonetizationAndRewatch(unittest.TestCase):
         d = api.video_detail(c, "ryj-media", "vLong")
         self.assertEqual((d["rewatch"]["peak_ratio"], d["rewatch"]["peak_at_pct"]), (1.2, 50))
         self.assertEqual(d["rewatch"]["biggest_drop_at_pct"], 50)
+        self.assertEqual(r["traffic_days"], 3)
+        tt = analytics.traffic_over_time(c, "ryj-media")
+        self.assertEqual(tt["series"][0]["source"], "SHORTS")
+        self.assertEqual(sum(p["v"] for p in tt["series"][0]["points"]), 1200)
+        fc = {x["label"]: x for x in analytics.formats_compare(c, "ryj-media", 28)["types"]}
+        self.assertEqual((fc["Long-form"]["views"], fc["Shorts"]["watch_hours"]), (2800, 140.0))
         a = analytics.audience(c, "ryj-media")
         self.assertEqual(r["audience"], {"age_gender": 3, "country": 2, "device": 2, "subscribed": 2})
         self.assertEqual(a["age"], [{"label": "18-24", "pct": 40.0}, {"label": "25-34", "pct": 60.0}])
         self.assertEqual(a["gender"][0], {"label": "male", "pct": 75.0})
         self.assertEqual((a["device"][0]["label"], a["device"][0]["share_pct"], a["device"][0]["watch_hours"]), ("MOBILE", 90.0, 20.0))
         self.assertEqual(a["subscribed"][1]["avg_view_s"], 300)
+        self.assertEqual([(e["kind"], e["x"]) for e in d["retention_events"]], [("replay", 0.5)])
         vl = {v["asset_id"]: v for v in api.video_list(c, "ryj-media")}
         self.assertEqual(vl["vLong"]["rewatch_peak"], 1.2)
 
@@ -464,6 +475,46 @@ class TestMonetizationAndRewatch(unittest.TestCase):
         self.assertEqual(analytics.rewatch_summary([], 117.5, "short_heuristic")["loops_pct"], 17.5)
         c, _ = fresh()
         self.assertFalse(analytics.monetization(c, "ryj-media")["available"])
+
+
+class TestGrowthEngine(unittest.TestCase):
+    def test_review_ranks_caps_and_workflow(self):
+        c, _ = fresh()
+        seed.seed_demo(c)
+        r = analytics.growth_review(c, "demo-synthetic")
+        self.assertGreater(r["candidates"], 0)
+        self.assertLessEqual(r["new"], analytics.DAILY_NEW_LIMIT)
+        again = analytics.growth_review(c, "demo-synthetic")
+        self.assertEqual(again["new"], 0)  # fingerprints: no duplicates on rerun
+        items = api.recommendations(c, "demo-synthetic")["items"]
+        rec = next(i for i in items if i["steps"])
+        self.assertTrue(rec["evidence"] and rec["hypotheses"] and rec["test_plan"]["metric"])
+        self.assertIn(rec["diagnosis"], ("content", "packaging", "distribution", "opportunity"))
+        for to in ("awaiting_approval", "approved", "executed"):
+            analytics.move_rec(c, "demo-synthetic", rec["id"], to)
+        row = c.execute("SELECT * FROM recommendations WHERE id=?", (rec["id"],)).fetchone()
+        self.assertEqual((row["workflow"], row["status"]), ("executed", "done"))
+        self.assertIn("views_per_day", json.loads(row["baseline_json"]))
+        c.execute("UPDATE recommendations SET evaluate_after='2000-01-01' WHERE id=?", (rec["id"],))
+        self.assertEqual(analytics.evaluate_executed(c, "demo-synthetic"), 1)
+        led = [l["to_state"] for l in api.recommendations(c, "demo-synthetic")["items"] if False] or \
+            [r[0] for r in c.execute("SELECT to_state FROM action_ledger WHERE rec_id=? ORDER BY id", (rec["id"],))]
+        self.assertEqual(led, ["awaiting_approval", "approved", "executed", "evaluated"])
+        with self.assertRaises(ValueError):
+            analytics.move_rec(c, "demo-synthetic", rec["id"], "published")
+        with self.assertRaises(LookupError):
+            analytics.move_rec(c, "ryj-media", rec["id"], "approved")  # other tenant can't touch it
+
+    def test_retention_events_skip_intro_and_outro(self):
+        curve = [{"x": 0.0, "v": 1.0}, {"x": 0.02, "v": 0.6}, {"x": 0.3, "v": 0.55}, {"x": 0.31, "v": 0.4},
+                 {"x": 0.5, "v": 0.5}, {"x": 0.97, "v": 0.45}, {"x": 1.0, "v": 0.1}]
+        ev = analytics.retention_events(curve, None, 1000, 5000)
+        kinds = [(e["kind"], e["x"]) for e in ev]
+        self.assertIn(("drop", 0.31), kinds)
+        self.assertIn(("replay", 0.5), kinds)
+        self.assertNotIn(("drop", 1.0), kinds)
+        self.assertNotIn(("drop", 0.02), kinds)
+        self.assertTrue(all(e["confidence"] == "high" for e in ev))
 
 
 class TestReports(unittest.TestCase):

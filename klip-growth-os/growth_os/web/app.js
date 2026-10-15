@@ -94,7 +94,7 @@ function mini(v, right) {
 }
 function kpiTile(k, series, label) {
   const t = el("div", { class: "card kpi" }, el("span", { class: "lab" }, label || k.label),
-    el("span", { class: "val" }, nf(k.value)),
+    el("span", { class: "val" }, k.unit === "pct" ? pct(k.value) : nf(k.value)),
     el("span", { class: `chg ${k.change == null ? "flat" : (k.metric === "subscribersLost" ? -k.change : k.change) > 0.005 ? "up" : (k.metric === "subscribersLost" ? -k.change : k.change) < -0.005 ? "down" : "flat"}` },
       k.change == null ? "no comparable prior period" : `${chg(k.change)} vs prior ${k.days} d`));
   if (series) { const sp = el("div", { class: "sp" }); t.append(sp); requestAnimationFrame(() => C.spark(sp, series)); }
@@ -219,9 +219,10 @@ PAGES.home = async () => {
       card("Get started", null, emptyState(NO_DATA, goAccounts())),
       card("Accounts", null, accountStrip(d.accounts))));
   } else {
-    const tiles = el("div", { class: "grid g4" });
-    for (const [m, label] of [["views", "YouTube views"], ["estimatedMinutesWatched", "Watch time (min)"], ["subscribersGained", "Subscribers gained"], ["subscribersLost", "Subscribers lost"]])
-      if (byM[m]) tiles.append(kpiTile(byM[m], (d.spark[m] || []).slice(-28), label));
+    const tiles = el("div", { class: "grid g5" });
+    for (const [m, label] of [["views", "YouTube views"], ["estimatedMinutesWatched", "Watch hours"], ["subscribersGained", "Subscribers gained"], ["ctr", "Impressions CTR"], ["averageViewPercentage", "Avg % viewed"]])
+      tiles.append(byM[m] ? kpiTile(byM[m], (d.spark[m] || []).slice(-28), label)
+        : el("div", { class: "card kpi" }, el("span", { class: "lab" }, label), el("span", { class: "val faint" }, "—"), el("span", { class: "chg flat" }, m === "ctr" ? "not yet available (reach reports pending)" : "not yet available")));
     for (const [p, k] of Object.entries(d.podcasts)) tiles.append(kpiTile(k, k.series.slice(-28), `${p === "spotify" ? "Spotify plays" : "Apple listeners"} (imported)`));
     wrap.append(tiles);
     const chartBox = el("div", {});
@@ -357,11 +358,14 @@ PAGES.episode = async (id) => {
   const ret = el("div", {});
   wrap.append(el("div", { class: "grid g3 sec" },
     el("section", { class: "card span2" }, el("div", { class: "card-h" }, el("h2", {}, "Audience retention"), el("div", { class: "r" }, basisTag(v.quality === "synthetic" ? "synthetic" : "measured"))),
-      drawLater(ret, () => C.line(ret, [{ name: "Still watching", points: d.retention }], {
+      drawLater(ret, () => C.line(ret, [{ name: "This video", points: d.retention }].concat(d.benchmark.length ? [{ name: `Typical ${fmtName(v.format)} (median of ${d.benchmark_n})`, points: alignBench(d.retention, d.benchmark), color: "--s3" }] : []), {
         xKey: "x", yfmt: (x) => `${Math.round(x * 100)}%`, xfmt: (x) => (v.duration_s ? dur(Math.round(x * v.duration_s)) : `${Math.round(x * 100)}%`),
-        tipX: (x) => (v.duration_s ? `at ${dur(Math.round(x * v.duration_s))}` : `${Math.round(x * 100)}%`), area: true, height: 240,
-        empty: "No retention curve yet (needs enough views, or the video is a Short / still processing)." })),
-      el("div", { class: "foot" }, d.retention_note), rewatchBox(d.rewatch, v)),
+        tipX: (x) => (v.duration_s ? `at ${dur(Math.round(x * v.duration_s))}` : `${Math.round(x * 100)}%`), area: !d.benchmark.length, height: 260,
+        markers: d.retention_events.map((e) => ({ x: e.x, kind: e.kind, label: e.label })),
+        onClick: (x) => { if (d.youtube_url && v.duration_s) window.open(`${d.youtube_url}&t=${Math.round(x * v.duration_s)}s`, "_blank", "noopener"); },
+        empty: "No retention curve yet (needs enough views, or still processing). Curves fill in about 15 videos per sync." })),
+      retentionEvents(d, v),
+      el("div", { class: "foot" }, d.retention_note, " ", d.transcript_note), rewatchBox(d.rewatch, v)),
     card("Traffic sources", basisTag(v.quality === "synthetic" ? "synthetic" : "measured"), (() => { const b = el("div", {}); return drawLater(b, () => C.bars(b, Object.entries(d.traffic_sources).map(([k, x]) => ({ label: k.replaceAll("_", " ").toLowerCase(), v: x })), { empty: "Fetched for the most-changed videos each sync." })); })())));
 
   wrap.append(el("div", { class: "grid g3 sec" },
@@ -425,6 +429,21 @@ function aiThumbCard(v, cached) {
 
 const COUNTRY = (() => { try { const dn = new Intl.DisplayNames(["en"], { type: "region" }); return (c) => { try { return dn.of(c) || c; } catch (e) { return c; } }; } catch (e) { return (c) => c; } })();
 const prettyDim = (x) => ({ SUBSCRIBED: "Subscribers", UNSUBSCRIBED: "Not subscribed", MOBILE: "Phone", DESKTOP: "Computer", TV: "TV", TABLET: "Tablet", GAME_CONSOLE: "Game console", UNKNOWN_PLATFORM: "Unknown" }[x] || x.replaceAll("_", " ").toLowerCase());
+function growthSection(o) {
+  const fc = o.formats_compare || { types: [] }, sc = o.subscriber_contribution || { items: [] }, tt = o.traffic_over_time || { series: [] };
+  const fmtRows = fc.types.map((t) => el("tr", {}, el("td", {}, t.label), el("td", { class: "r" }, nf(t.views)), el("td", { class: "r" }, nf(t.watch_hours)),
+    el("td", { class: "r" }, nf(t.videos)), el("td", { class: "r" }, pct(t.median_pct_viewed)), el("td", { class: "r" }, t.median_avg_view_s != null ? dur(t.median_avg_view_s) : "—"), el("td", { class: "r" }, nf(t.subs_gained_lifetime))));
+  const sb = el("div", {}), tr = el("div", {});
+  const pal = ["--s1", "--s2", "--s3", "--s4", "--s5"];
+  return el("div", {},
+    el("section", { class: "card sec" }, el("div", { class: "card-h" }, el("h2", {}, "Shorts vs long-form"), el("div", { class: "r faint", style: "font-size:12px" }, fc.as_of ? `views & watch hours: last ${fc.days} days to ${fc.as_of}` : "split arrives with the next sync")),
+      el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["", `Views (${fc.days} d)`, `Watch hrs (${fc.days} d)`, "Videos", "Median % viewed", "Median avg view", "Subs gained (lifetime)"].map((h, i) => el("th", { class: i ? "r" : "" }, h)))), el("tbody", {}, fmtRows))),
+      el("div", { class: "foot" }, "Long-form watch hours count toward monetization; Shorts watch hours don't. See the Monetization page.")),
+    el("div", { class: "grid g2 sec" },
+      card("Subscribers gained by video", el("span", { class: "faint", style: "font-size:12px" }, `${nf(sc.total)} total`),
+        drawLater(sb, () => C.bars(sb, sc.items.map((x) => ({ label: x.title.length > 46 ? x.title.slice(0, 44) + "…" : x.title, v: x.subs, note: `${fmtName(x.format)} · ${x.per_1k_views ?? "—"} subs per 1,000 views` })), { color: "--s2", empty: "No per-video subscriber data yet." }))),
+      card("Traffic sources over time (weekly views)", null, drawLater(tr, () => C.line(tr, tt.series.map((s, i) => ({ name: s.source.replaceAll("_", " ").toLowerCase(), points: s.points, color: pal[i % pal.length] })), { height: 230, tipX: (x) => `week of ${x}`, empty: "Fills in after the next sync." })))));
+}
 function audienceSection(a) {
   const head = el("div", { class: "card-h" }, el("h2", {}, "Audience · last 90 days"), el("div", { class: "r" }, basisTag("measured")));
   if (!a || !a.available) return el("section", { class: "card sec" }, head, el("p", { class: "empty" }, "Fills in after the next YouTube sync."));
@@ -460,6 +479,7 @@ PAGES.youtube = async () => {
       drawLater(sc, () => C.scatter(sc, scat, { xLabel: "Impressions CTR %", yLabel: "Avg % viewed", xfmt: (x) => `${x.toFixed(1)}%`, yfmt: (y) => `${Math.round(y)}%`, onClick: (p) => (location.hash = `#/episode/${p.id}`) })),
       el("div", { class: "foot" }, "Each dot is a video. Bottom-left videos lose people both before and after the click."))),
     el("div", { class: "grid g2 sec" }, el("section", { class: "card" }, el("div", { class: "card-h" }, el("h2", {}, "Average view duration (s)")), drawLater(t1, () => C.line(t1, [{ name: "Seconds", points: o.series.averageViewDuration, color: "--s2" }], {}))), formatCard(o)));
+  wrap.append(growthSection(o));
   wrap.append(audienceSection(aud));
   const rows = vids.slice().sort((x, y) => (y.views_per_day || 0) - (x.views_per_day || 0));
   wrap.append(el("section", { class: "card sec" }, el("div", { class: "card-h" }, el("h2", {}, "All videos"), el("div", { class: "r" }, el("a", { class: "btn sm ghost", href: T("export/videos.csv") }, "CSV"))),
@@ -473,6 +493,21 @@ PAGES.youtube = async () => {
   return wrap;
 };
 
+function alignBench(curve, bench) {
+  // Benchmark points matched to this video's x positions (nearest bucket) so tooltips line up.
+  if (!bench.length) return [];
+  return curve.map((p) => { let b = bench[0]; for (const q of bench) if (Math.abs(q.x - p.x) < Math.abs(b.x - p.x)) b = q; return { x: p.x, v: b.v }; });
+}
+function retentionEvents(d, v) {
+  const evs = d.retention_events || [];
+  if (!evs.length) return null;
+  const at = (e) => (e.t != null ? dur(e.t) : `${Math.round(e.x * 100)}%`);
+  return el("div", { class: "evlist" }, evs.map((e) => el("div", { class: "ev" },
+    el("span", { class: `k ${e.kind}` }, e.kind),
+    d.youtube_url && e.t != null ? el("a", { class: "t", href: `${d.youtube_url}&t=${e.t}s`, target: "_blank", rel: "noopener", title: "Open the video at this moment" }, at(e)) : el("span", { class: "t" }, at(e)),
+    el("span", {}, e.label, e.baseline != null ? el("span", { class: "faint" }, ` · typical here ${Math.round(e.baseline * 100)}%, this video ${Math.round(e.value * 100)}%`) : null),
+    el("span", { class: "faint", style: "font-size:11.5px" }, `${e.confidence} confidence`))));
+}
 function rewatchBox(r, v) {
   if (!r) return null;
   const items = [];
@@ -673,22 +708,57 @@ async function addToCalendar(t, day) {
   try { await api(T("calendar"), { title: title.value, day: date.value, kind: kind.value, trend_id: t ? t.id : null }); toast("Added to calendar"); route(true); } catch (e) { toast(e.message, true); }
 }
 
+const WF_LABEL = { suggested: "Suggested", prepared: "Prepared", awaiting_approval: "Awaiting approval", approved: "Approved", executed: "Executed", verified: "Verified", evaluated: "Evaluated", reverted: "Reverted", dismissed: "Dismissed" };
+const WF_NEXT = { suggested: [["prepared", "Mark prepared"], ["awaiting_approval", "Send for approval"]], prepared: [["awaiting_approval", "Send for approval"]],
+  awaiting_approval: [["approved", "Approve"]], approved: [["executed", "I applied it in YouTube Studio"]], executed: [["verified", "Verified live"], ["reverted", "Reverted"]],
+  verified: [["reverted", "Reverted"]], evaluated: [], reverted: [], dismissed: [["suggested", "Restore"]] };
+const DIAG = { content: ["Hold / content", "bad"], packaging: ["Packaging", "warn"], distribution: ["Distribution", "warn"], opportunity: ["Opportunity", "ok"], insufficient: ["Insufficient data", "na"] };
+function evText(e) {
+  const f = /CTR|%/.test(e.metric) ? pct : (x) => nf(x, 2);
+  return `${e.metric}: ${typeof e.value === "number" ? f(e.value) : e.value}${e.peer_median != null ? ` · peers ${f(e.peer_median)}` : ""}${e.percentile != null ? ` · p${e.percentile}` : ""}`;
+}
+function recCard(r, wf) {
+  const dg = DIAG[r.diagnosis] || [r.kind.replaceAll("_", " "), "na"];
+  const pipe = el("div", { class: "pipe" }, ["suggested", "awaiting_approval", "approved", "executed", "evaluated"].map((s) => {
+    const idx = wf.indexOf(r.workflow), sIdx = wf.indexOf(s);
+    return el("span", { class: `step ${r.workflow === s ? "on" : idx > sIdx && r.workflow !== "dismissed" ? "done" : ""}` }, WF_LABEL[s]);
+  }));
+  const move = async (to) => { try { await api(T(`recommendations/${r.id}/workflow`), { to }); route(true); } catch (e) { toast(e.message, true); } };
+  const actions = (WF_NEXT[r.workflow] || []).map(([to, label]) => el("button", { class: `btn sm ${to === "approved" ? "gold" : "ghost"}`, onclick: () => move(to) }, label));
+  if (!["dismissed", "evaluated", "reverted"].includes(r.workflow)) actions.push(el("button", { class: "btn sm ghost", onclick: () => move("dismissed") }, "Dismiss"));
+  const tp = r.test_plan || {};
+  const res = r.result && r.result.before ? r.result : null;
+  return el("section", { class: "card rec" },
+    el("div", { class: "card-h" }, el("div", {},
+      el("div", { class: "row", style: "gap:6px;flex-wrap:wrap;margin-bottom:4px" }, el("span", { class: `st ${dg[1]}` }, dg[0]),
+        r.impact ? el("span", { class: "tag" }, `impact ${r.impact}`) : null, r.effort ? el("span", { class: "tag" }, `effort ${r.effort}`) : null,
+        r.confidence ? el("span", { class: "tag" }, `${r.confidence} confidence`) : null, basisTag(r.basis)),
+      el("h2", { style: "font-size:16px" }, r.title)), el("div", { class: "r" }, r.asset_id ? el("a", { class: "btn sm ghost", href: `#/episode/${r.asset_id}` }, "Open episode") : null)),
+    el("p", { class: "muted", style: "margin:0 0 8px;font-size:13.5px" }, r.detail),
+    el("div", { class: "ev" }, r.evidence.slice(0, 6).map((e) => el("span", {}, evText(e)))),
+    r.hypotheses.length ? el("div", { class: "sub" }, el("b", {}, "Possible reasons (not proven): "), r.hypotheses.map((h) => `${h.cause} (${h.confidence})`).join(" · ")) : null,
+    r.steps.length ? el("div", { class: "sub" }, el("b", {}, "Steps"), el("ol", { style: "margin:4px 0 0;padding-left:20px;line-height:1.6" }, r.steps.map((x) => el("li", {}, x)))) : null,
+    tp.metric ? el("div", { class: "sub" }, el("b", {}, "Test: "), `${tp.metric}; baseline ${tp.baseline != null ? nf(tp.baseline, 2) : "—"}; success = ${tp.success}; reassess ${tp.reassess}.`) : null,
+    r.kind === "thumbnail_title_review" || r.kind === "retention_review" ? el("div", { class: "sub" }, el("b", {}, "Alternatives: "), "draft 3 titles and 2 thumbnail concepts on the episode page (", el("a", { href: `#/episode/${r.asset_id}` }, "Generate"), "). Drafts only; nothing is published.") : null,
+    res ? el("div", { class: "sub" }, el("b", {}, "Before → after: "), `views/day ${nf(res.before.views_per_day, 2)} → ${nf(res.after.views_per_day, 2)} · % viewed ${pct(res.before.averageViewPercentage)} → ${pct(res.after.averageViewPercentage)} · CTR ${pct(res.before.videoThumbnailImpressionsClickRate)} → ${pct(res.after.videoThumbnailImpressionsClickRate)}. `, el("span", { class: "faint" }, res.note)) : null,
+    r.evaluate_after && r.workflow === "executed" ? el("div", { class: "sub faint" }, `Baseline saved. Auto-evaluation on ${r.evaluate_after}.`) : null,
+    pipe,
+    el("div", { class: "row", style: "margin-top:8px;gap:6px;flex-wrap:wrap" }, actions, el("span", { class: "faint", style: "font-size:12px;margin-left:auto" }, `${WF_LABEL[r.workflow]} · created ${ago(r.created_at)}`)),
+    r.ledger.length ? el("details", { class: "sub" }, el("summary", { class: "faint" }, `History (${r.ledger.length})`),
+      r.ledger.map((l) => el("div", { class: "faint", style: "font-size:12px" }, `${l.at.slice(0, 16).replace("T", " ")} · ${l.actor}: ${WF_LABEL[l.from_state] || l.from_state} → ${WF_LABEL[l.to_state]}${l.note ? ` (${l.note})` : ""}`))) : null);
+}
+
 PAGES.recommendations = async () => {
   const d = await api(T("recommendations"));
   const f = sessionGet("rec.f", "open");
   const items = d.items.filter((r) => f === "all" || r.status === f);
-  const wrap = el("div", {}, ph("AI & analytic recommendations", "Recommendations", "Every item shows its basis: measured data, a calculation over it (derived), or an AI draft. Nothing is applied automatically.",
-    el("button", { class: "btn", onclick: async () => { await api("/api/jobs/packaging_check/run", { tenant_id: S.brand }); await api("/api/jobs/daily_review/run", { tenant_id: S.brand }); toast("Checks queued"); } }, "Run checks now"),
+  const wrap = el("div", {}, ph("Growth recommendations", "Recommendations", "Each card states what was measured, possible reasons, exact steps, a test, and where it is in the approval flow. Nothing is applied automatically.",
+    el("button", { class: "btn", onclick: async () => { await api("/api/jobs/daily_review/run", { tenant_id: S.brand }); await api("/api/jobs/packaging_check/run", { tenant_id: S.brand }); toast("Review queued; refresh in a minute"); } }, "Run review now"),
     el("a", { class: "btn ghost", href: T("export/recommendations.csv") }, "CSV")));
-  wrap.append(el("div", { class: "filters" }, seg([["open", "Open"], ["accepted", "Accepted"], ["done", "Done"], ["dismissed", "Dismissed"], ["all", "All"]], f, (v) => { sessionSet("rec.f", v); route(true); })));
-  if (!items.length) { wrap.append(emptyState({ title: "Nothing here.", body: "Recommendations are added by the daily review and the thumbnail/title check when data supports them." })); return wrap; }
-  wrap.append(el("section", { class: "card" }, el("div", { class: "list" }, items.map((r) => {
-    const li = recItem(r);
-    li.querySelector(".body").append(el("div", { class: "row", style: "margin-top:8px" },
-      ["accepted", "done", "dismissed"].filter((s) => s !== r.status).map((s) => el("button", { class: "btn sm ghost", onclick: async () => { await api(T(`recommendations/${r.id}/status`), { status: s }); route(true); } }, s === "accepted" ? "Accept" : s === "done" ? "Mark done" : "Dismiss")),
-      el("span", { class: "faint", style: "font-size:12px" }, `priority ${r.priority} · ${ago(r.created_at)}`)));
-    return li;
-  }))));
+  wrap.append(el("div", { class: "note sec", style: "font-size:13px" }, d.write_note));
+  wrap.append(el("div", { class: "filters" }, seg([["open", "Open"], ["accepted", "Approved"], ["done", "Done"], ["dismissed", "Dismissed"], ["all", "All"]], f, (v) => { sessionSet("rec.f", v); route(true); })));
+  if (!items.length) { wrap.append(emptyState({ title: "Nothing here.", body: "The daily review (7:00) adds the top 3–5 opportunities when the data supports them. Videos under 7 days old or with under 100 views are left to settle." })); return wrap; }
+  wrap.append(el("div", { class: "grid", style: "gap:12px" }, items.map((r) => recCard(r, d.workflow))));
   return wrap;
 };
 

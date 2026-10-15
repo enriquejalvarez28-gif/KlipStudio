@@ -29,7 +29,11 @@ def trend_research(conn, tenant_id, progress):
 
 
 def daily_review(conn, tenant_id, progress):
-    return {t: analytics.daily_review(conn, t) for t in _tenants(conn, tenant_id)}
+    out = {}
+    for t in _tenants(conn, tenant_id):
+        out[t] = analytics.daily_review(conn, t)
+        out[t]["growth_review"] = analytics.growth_review(conn, t)
+    return out
 
 
 def packaging_check(conn, tenant_id, progress):

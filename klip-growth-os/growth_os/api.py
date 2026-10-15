@@ -36,11 +36,21 @@ def app_info(conn):
 
 
 def _kpis(conn, t, days):
+    """Spec v4 §20.1: views, watch hours, subscribers gained, CTR (when available), avg % viewed (when available)."""
     out = []
-    for m in ("views", "estimatedMinutesWatched", "subscribersGained", "subscribersLost"):
+    for m in ("views", "estimatedMinutesWatched", "subscribersGained", "averageViewPercentage"):
         k = analytics.kpi(conn, t, m, days)
-        if k:
-            out.append(k)
+        if not k:
+            continue
+        if m == "estimatedMinutesWatched":
+            k.update(label="Watch hours", value=k["value"] / 60 if k["value"] is not None else None,
+                     previous=k["previous"] / 60 if k["previous"] is not None else None)
+        if m == "averageViewPercentage":
+            k.update(label="Avg % viewed", unit="pct")
+        out.append(k)
+    c = analytics.kpi_ctr(conn, t, days)
+    if c:
+        out.insert(3, c)
     return out
 
 
@@ -104,6 +114,14 @@ def home(conn, t):
 
 
 def overview(conn, t, days=90):
+    d = _overview(conn, t, days)
+    d["formats_compare"] = analytics.formats_compare(conn, t, 28)
+    d["subscriber_contribution"] = analytics.subscriber_contribution(conn, t)
+    d["traffic_over_time"] = analytics.traffic_over_time(conn, t, days)
+    return d
+
+
+def _overview(conn, t, days=90):
     vids = analytics.videos(conn, t)
     fmt = {}
     for v in vids:
@@ -169,9 +187,11 @@ def video_detail(conn, t, asset_id):
     v = next((x for x in vids if x["asset_id"] == asset_id), None)
     if not v:
         raise brands.BrandError("not_found", "video not found for this brand")
-    ret = [{"x": float(r["period_start"][6:]), "v": r["value"]} for r in conn.execute(
-        """SELECT period_start, value FROM metrics WHERE tenant_id=? AND asset_id=? AND grain='retention_bucket'
-           AND metric_name='audienceWatchRatio' ORDER BY period_start""", (t, asset_id))]
+    curves = analytics.retention_curves(conn, t)
+    ret = curves.get(asset_id, [])
+    cohort = [x["asset_id"] for x in vids if x["format"] == v["format"] and x["asset_id"] != asset_id]
+    bench, bench_n = analytics.benchmark_curve(curves, cohort)
+    events = analytics.retention_events(ret, bench, v["duration_s"], v["metrics"].get("views"))
     ts = {r["period_start"]: r["value"] for r in conn.execute(
         "SELECT period_start, value FROM metrics WHERE tenant_id=? AND asset_id=? AND grain='traffic_source' ORDER BY value DESC",
         (t, asset_id))}
@@ -189,7 +209,10 @@ def video_detail(conn, t, asset_id):
                                           (t, asset_id))]
     return {
         "video": _vid_card(v), "metrics": v["metrics"], "peers": analytics.peer_stats(vids, v),
-        "retention": ret, "rewatch": analytics.rewatch_summary(ret, v["metrics"].get("averageViewPercentage"), v["format"]),
+        "retention": ret, "benchmark": bench, "benchmark_n": bench_n, "retention_events": events,
+        "transcript": None,
+        "transcript_note": "Transcript not linked yet. Click a marker to open the video at that moment on YouTube.",
+        "rewatch": analytics.rewatch_summary(ret, v["metrics"].get("averageViewPercentage"), v["format"]),
         "retention_note": "Aggregate audience retention (share of viewers still watching at each point). "
                                             "It does not show individual viewers.",
         "traffic_sources": ts, "search_terms": terms,
@@ -328,11 +351,23 @@ def seo(conn, t):
 
 def recommendations(conn, t):
     rows = []
+    ledger = {}
+    for r in conn.execute("SELECT rec_id, from_state, to_state, actor, note, at FROM action_ledger WHERE tenant_id=? ORDER BY id", (t,)):
+        ledger.setdefault(r["rec_id"], []).append(dict(r))
+    titles = {r[0]: r[1] for r in conn.execute("SELECT asset_id, title FROM assets WHERE tenant_id=?", (t,))}
     for r in conn.execute("SELECT * FROM recommendations WHERE tenant_id=? ORDER BY status='open' DESC, priority, created_at DESC LIMIT 200", (t,)):
         d = dict(r)
         d["evidence"] = json.loads(d.pop("evidence_json"))
+        for k in ("hypotheses", "steps", "test_plan", "alternatives", "baseline", "result"):
+            raw = d.pop(f"{k}_json", None)
+            d[k] = json.loads(raw) if raw else ({} if k in ("test_plan", "baseline", "result") else [])
+        d["workflow"] = d.get("workflow") or ("dismissed" if d["status"] == "dismissed" else "suggested")
+        d["ledger"] = ledger.get(d["id"], [])
+        d["asset_title"] = titles.get(d["asset_id"])
         rows.append(d)
-    return {"items": rows}
+    return {"items": rows, "workflow": analytics.WORKFLOW, "write_access": False,
+            "write_note": "Write access to YouTube is off (read-only). Approved items are applied by you in YouTube Studio, "
+                          "then marked Executed here so the app can compare before/after."}
 
 
 def calendar(conn, t, month):

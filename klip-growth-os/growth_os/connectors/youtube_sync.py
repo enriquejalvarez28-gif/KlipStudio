@@ -83,9 +83,12 @@ def sync(conn, tenant_id, row_id, *, client, transport=None, today=None, progres
     # 1. Daily channel metrics, delta from cursor with a lag window.
     progress(15, "daily channel metrics")
     cur = _cursor(conn, tenant_id, row_id, "daily_through")
-    start = BACKFILL_START if not cur else (date.fromisoformat(cur) - timedelta(days=LAG_DAYS)).isoformat()
+    has_pct = conn.execute("SELECT 1 FROM metrics WHERE tenant_id=? AND grain='day' AND metric_name='averageViewPercentage' LIMIT 1",
+                           (tenant_id,)).fetchone()
+    start = BACKFILL_START if (not cur or not has_pct) else (date.fromisoformat(cur) - timedelta(days=LAG_DAYS)).isoformat()
     daily = g(ANALYTICS_API, {"ids": "channel==MINE", "startDate": start, "endDate": today.isoformat(),
-                              "metrics": "views,estimatedMinutesWatched,averageViewDuration,subscribersGained,subscribersLost",
+                              "metrics": "views,estimatedMinutesWatched,averageViewDuration,averageViewPercentage,"
+                                         "subscribersGained,subscribersLost",
                               "dimensions": "day", "sort": "day"})
     cols = [h["name"] for h in daily.get("columnHeaders", [])]
     fetched = utcnow()
@@ -214,6 +217,12 @@ def sync(conn, tenant_id, row_id, *, client, transport=None, today=None, progres
     except Exception as e:
         out["unavailable"].append(f"Shorts vs long-form split: {str(e)[:100]}")
 
+    # 5a. Channel traffic sources by day (for the traffic-over-time chart).
+    try:
+        out["traffic_days"] = sync_traffic_days(conn, g, tenant_id, row_id, ch_id, today, fetched)
+    except Exception as e:
+        out["unavailable"].append(f"traffic sources by day: {str(e)[:100]}")
+
     # 5b. Audience breakdowns for the last 90 days (age/gender, country, device,
     # subscribed vs not). Aggregates only; YouTube withholds small groups.
     progress(91, "audience breakdowns")
@@ -331,3 +340,23 @@ def sync_audience(conn, g, tenant_id, ch_id, today, fetched, through):
                                     label, "youtube.analytics.reports", fetched, through, "aggregate_only")
         done[key] = len(rep.get("rows", []))
     return done
+
+
+def sync_traffic_days(conn, g, tenant_id, row_id, ch_id, today, fetched):
+    cur = _cursor(conn, tenant_id, row_id, "traffic_through")
+    start = (today - timedelta(days=120)) if not cur else (date.fromisoformat(cur) - timedelta(days=LAG_DAYS))
+    rep = g(ANALYTICS_API, {"ids": "channel==MINE", "startDate": start.isoformat(), "endDate": today.isoformat(),
+                            "metrics": "views,estimatedMinutesWatched", "dimensions": "day,insightTrafficSourceType",
+                            "sort": "day"})
+    cols = [h["name"] for h in rep.get("columnHeaders", [])]
+    last, n = None, 0
+    for r in rep.get("rows", []):
+        rec = dict(zip(cols, r))
+        last = rec["day"]
+        for m in ("views", "estimatedMinutesWatched"):
+            youtube._put_metric(conn, tenant_id, ch_id, f"traffic:{rec['insightTrafficSourceType']}", m, float(rec[m]), "",
+                                "day_traffic", rec["day"], "youtube.analytics.reports", fetched, None, "verified")
+        n += 1
+    if last:
+        _set_cursor(conn, tenant_id, row_id, "traffic_through", last)
+    return n

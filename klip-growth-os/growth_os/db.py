@@ -248,6 +248,27 @@ MIGRATIONS = [
     );
     CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
     """,
+    # v3 (2026-10-15): recommendation engine v2 + action ledger (spec v4 §18, §22).
+    """
+    ALTER TABLE recommendations ADD COLUMN diagnosis TEXT DEFAULT '';
+    ALTER TABLE recommendations ADD COLUMN hypotheses_json TEXT DEFAULT '[]';
+    ALTER TABLE recommendations ADD COLUMN steps_json TEXT DEFAULT '[]';
+    ALTER TABLE recommendations ADD COLUMN test_plan_json TEXT DEFAULT '{}';
+    ALTER TABLE recommendations ADD COLUMN alternatives_json TEXT DEFAULT '[]';
+    ALTER TABLE recommendations ADD COLUMN impact TEXT DEFAULT '';
+    ALTER TABLE recommendations ADD COLUMN effort TEXT DEFAULT '';
+    ALTER TABLE recommendations ADD COLUMN confidence TEXT DEFAULT '';
+    ALTER TABLE recommendations ADD COLUMN workflow TEXT DEFAULT 'suggested';
+    ALTER TABLE recommendations ADD COLUMN baseline_json TEXT DEFAULT '{}';
+    ALTER TABLE recommendations ADD COLUMN evaluate_after TEXT;
+    ALTER TABLE recommendations ADD COLUMN result_json TEXT DEFAULT '{}';
+    CREATE TABLE action_ledger (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, tenant_id TEXT NOT NULL, rec_id TEXT NOT NULL,
+        from_state TEXT, to_state TEXT NOT NULL, actor TEXT NOT NULL, note TEXT DEFAULT '',
+        snapshot_json TEXT DEFAULT '{}', at TEXT NOT NULL
+    );
+    CREATE INDEX action_ledger_rec ON action_ledger (tenant_id, rec_id);
+    """,
 ]
 
 
