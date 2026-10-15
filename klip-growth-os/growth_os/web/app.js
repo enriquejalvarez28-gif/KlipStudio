@@ -96,7 +96,7 @@ function kpiTile(k, series, label) {
   const t = el("div", { class: "card kpi" }, el("span", { class: "lab" }, label || k.label),
     el("span", { class: "val" }, k.unit === "pct" ? pct(k.value) : nf(k.value)),
     el("span", { class: `chg ${k.change == null ? "flat" : (k.metric === "subscribersLost" ? -k.change : k.change) > 0.005 ? "up" : (k.metric === "subscribersLost" ? -k.change : k.change) < -0.005 ? "down" : "flat"}` },
-      k.change == null ? "no comparable prior period" : `${chg(k.change)} vs prior ${k.days} d`));
+      k.note ? k.note : k.change == null ? "no comparable prior period" : `${chg(k.change)} vs prior ${k.days} d`));
   if (series) { const sp = el("div", { class: "sp" }); t.append(sp); requestAnimationFrame(() => C.spark(sp, series)); }
   if (k.quality === "synthetic") t.append(el("span", { class: "tag synthetic", style: "align-self:flex-start;margin-top:6px" }, "synthetic"));
   return t;
@@ -374,6 +374,7 @@ PAGES.episode = async (id) => {
     card("Thumbnail (measured)", null, thumbFeatures(d.thumbnail)),
     card("SEO & discoverability", null, el("div", { class: "checks" }, d.seo.map(checkRow)))));
 
+  wrap.append(thumbStudio(v));
   wrap.append(el("div", { class: "grid g2 sec" }, aiTitlesCard(v, d.ai_titles), aiThumbCard(v, d.ai_thumbnail)));
 
   const hist = d.history;
@@ -417,6 +418,39 @@ function aiTitlesCard(v, cached) {
     (o.titles || []).map((t) => el("div", { class: "alt" }, el("div", { class: "s" }, (t.strategy || "").replaceAll("_", " ")), el("div", { class: "tt2" }, t.title, el("span", { class: "faint", style: "font-weight:400;font-size:12px" }, `  ${t.title.length} chars`)), el("div", { class: "muted", style: "font-size:13px" }, t.why))),
     o.keep_reason ? el("p", { class: "muted", style: "font-size:13px" }, el("b", {}, o.keep_current ? "Keep current? Yes. " : "Keep current? Consider a change. "), o.keep_reason) : null));
   return card("Alternative titles", x.btn, x.body, x.meta);
+}
+function thumbStudio(v) {
+  const box = el("section", { class: "card sec" }, el("div", { class: "card-h" }, el("h2", {}, "Thumbnail studio"), el("div", { class: "r faint", style: "font-size:12px" }, "RYJ style · local previews only")), el("p", { class: "empty" }, "Loading…"));
+  (async () => {
+    let d; try { d = await api(T(`thumbs/${v.asset_id}`)); } catch (e) { box.lastChild.textContent = e.message; return; }
+    const fmtSel = el("select", { class: "input", "aria-label": "Thumbnail format" }, Object.entries(d.formats).map(([k, l]) =>
+      el("option", { value: k, selected: k === d.recommended, disabled: k !== "guest" && !d.hosts_available.length }, k !== "guest" && !d.hosts_available.length ? `${l} (add host photos)` : l)));
+    const hA = el("input", { class: "input", value: d.default_headlines[0], "aria-label": "Headline A", style: "flex:1;min-width:220px" });
+    const hB = el("input", { class: "input", value: d.default_headlines[1], "aria-label": "Headline B", style: "flex:1;min-width:220px" });
+    const cred = el("input", { class: "input", placeholder: "Optional credential pill, e.g. EX-NATIONAL TEAM GYMNAST", "aria-label": "Credential", style: "flex:1;min-width:220px" });
+    const out = el("div", {});
+    const show = (r) => out.replaceChildren(
+      el("img", { src: r.sheet || r.sheet_url, alt: "Current thumbnail next to variants A and B, full and phone size", style: "width:100%;border-radius:10px;border:1px solid var(--line);margin-top:10px" }),
+      el("div", { class: "row", style: "gap:8px;margin-top:8px;flex-wrap:wrap" }, (r.variants || []).map((x) => el("a", { class: "btn sm ghost", href: x.url, target: "_blank", rel: "noopener", download: x.file }, `Open ${x.file.split("-").pop().replace(".jpg", "")} (1280×720)`)),
+        el("button", { class: "btn sm", onclick: async () => { await api(T("experiments"), { asset_id: v.asset_id, method: "native", status: "planned", variants: (r.variants || []).map((x) => ({ format: x.format, label: x.headline, file: x.file })) }); toast("Experiment recorded as planned"); } }, "Record as planned A/B test")),
+      el("p", { class: "faint", style: "font-size:12px;margin:6px 0 0" }, r.source || "", " ", r.approval || ""));
+    const go = el("button", { class: "btn gold", onclick: async () => {
+      go.disabled = true; go.textContent = "Rendering…";
+      try { show(await api(T(`thumbs/${v.asset_id}/previews`), { headlines: [hA.value, hB.value], format: fmtSel.value, credential: cred.value })); }
+      catch (e) { toast(e.message, true); } finally { go.disabled = false; go.textContent = "Render previews"; }
+    } }, "Render previews");
+    box.replaceChildren(box.firstChild,
+      el("div", { class: "kv", style: "margin:0 0 10px" }, el("dt", {}, "Recommended format"), el("dd", {}, el("b", {}, d.label), ` — ${d.why}`),
+        el("dt", {}, "Evidence"), el("dd", {}, d.evidence), d.test_format ? el("dt", {}, "Worth testing") : null, d.test_format ? el("dd", {}, d.formats[d.test_format]) : null,
+        el("dt", {}, "Current (your tag)"), el("dd", {}, d.current_format ? d.formats[d.current_format] : "not tagged yet — tag it in the Thumbnail lab")),
+      el("div", { class: "row", style: "gap:8px;flex-wrap:wrap" }, hA, hB),
+      el("div", { class: "row", style: "gap:8px;flex-wrap:wrap;margin-top:8px" }, cred, fmtSel, go),
+      el("p", { class: "faint", style: "font-size:12px;margin:6px 0 0" }, "Use / to break lines and *word* for the gold emphasis (default: last line gold). Keep the words faithful to what was said."),
+      out,
+      el("ul", { class: "faint", style: "font-size:12px;margin:10px 0 0;padding-left:18px" }, d.rules.map((x) => el("li", {}, x))));
+    if (d.previews.length) show(d.previews[0]);
+  })();
+  return box;
 }
 function aiThumbCard(v, cached) {
   const x = aiBox("thumbnail", v, cached, (o) => el("div", {},
@@ -604,11 +638,30 @@ PAGES.thumbnails = async () => {
         el("span", { class: "hbar-t", style: "position:relative" }, el("span", { class: "hbar-f", style: `position:absolute;left:${r < 0 ? 50 + r * 50 : 50}%;width:${Math.abs(r) * 50}%;background:var(${r < 0 ? "--s3" : "--s2"});border-radius:3px` })),
         el("span", { class: "hbar-v" }, r.toFixed(2))))); return assoc; })() : el("p", { class: "empty" }, "Needs 8+ long-form videos with CTR."),
       el("div", { class: "foot" }, d.association_note))));
+  const fp = d.format_performance;
+  wrap.append(el("div", { class: "grid g2 sec" },
+    card("Format strategy: what works for RYJ", null,
+      el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["Video", "Thumbnail format", "Videos", "Median CTR", "Median views/day", "Median % viewed"].map((h, i) => el("th", { class: i > 1 ? "r" : "" }, h)))),
+        el("tbody", {}, fp.rows.map((r) => el("tr", {}, el("td", {}, r.video_format === "long_form" ? "Long-form" : "Shorts"), el("td", {}, r.label, r.owner_tagged < r.n ? el("span", { class: "faint" }, ` (${r.owner_tagged}/${r.n} tagged)`) : null),
+          el("td", { class: "r" }, r.n), el("td", { class: "r" }, pct(r.median_ctr)), el("td", { class: "r" }, nf(r.median_views_per_day, 1)), el("td", { class: "r" }, pct(r.median_pct_viewed))))))),
+      el("div", { class: "foot" }, fp.note, " Three formats: guest-focused (guest is the hook), host + guest (a host's reaction or disagreement adds to the story), host-led (debates, rankings, analysis).")),
+    card("Thumbnail experiments", null, d.experiments.length ? el("div", { class: "list" }, d.experiments.map((e) => el("div", { class: "li" }, el("div", { class: "body" },
+      el("div", { class: "t" }, `${(d.items.find((i) => i.asset_id === e.asset_id) || {}).title || e.asset_id}`),
+      el("div", { class: "d" }, `${e.method === "native" ? "YouTube Test & Compare" : "Sequential change"} · ${e.status} · ${e.variants.map((x) => x.label).join(" vs ")}${e.result.winner ? ` · winner: ${e.result.winner}` : ""}`),
+      e.result.caveat ? el("div", { class: "faint", style: "font-size:12px" }, e.result.caveat) : null))))
+      : el("p", { class: "empty" }, "No experiments yet. Render previews on an episode page and record a planned test. YouTube doesn't share Test & Compare results through its API, so enter the winner here when Studio shows it."))));
   const flagged = d.items.filter((i) => i.review);
   const show = sessionGet("th.show", "flagged");
   const grid = el("div", { class: "vgrid" });
   const list = show === "flagged" && flagged.length ? flagged : d.items;
-  grid.append(...list.map((i) => vcard(i, { flag: i.review ? "review" : null, right: i.ctr_pctile != null ? `CTR p${i.ctr_pctile}` : "" })));
+  grid.append(...list.map((i) => {
+    const c = vcard(i, { flag: i.review ? "review" : null, right: i.ctr_pctile != null ? `CTR p${i.ctr_pctile}` : "" });
+    const sel = el("select", { class: "input", style: "font-size:12px;padding:4px 6px;margin-top:6px;width:100%", "aria-label": "Thumbnail format",
+      onchange: async (e) => { try { await api(T(`thumbs/${i.asset_id}/format`), { format: e.target.value }); toast("Format saved"); } catch (err) { toast(err.message, true); } } },
+      el("option", { value: "", disabled: true, selected: !i.thumb_format }, `Format? (suggested: ${d.formats[i.thumb_format_suggested]})`),
+      Object.entries(d.formats).map(([k, l]) => el("option", { value: k, selected: k === i.thumb_format }, l)));
+    return el("div", { class: "vwrap" }, c, sel);
+  }));
   wrap.append(el("div", { class: "filters sec" }, el("h2", {}, show === "flagged" && flagged.length ? `Deserve review (${flagged.length})` : `All thumbnails (${d.items.length})`),
     seg([["flagged", "Flagged"], ["all", "All"]], show, (v) => { sessionSet("th.show", v); route(true); })), grid,
     el("p", { class: "faint", style: "font-size:12.5px" }, "Flag rule: CTR in the bottom quartile of matched peers, with ≥1,000 impressions and ≥7 days old. ", d.experiments_note));

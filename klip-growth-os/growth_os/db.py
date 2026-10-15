@@ -269,6 +269,15 @@ MIGRATIONS = [
     );
     CREATE INDEX action_ledger_rec ON action_ledger (tenant_id, rec_id);
     """,
+    # v4 (2026-10-15): thumbnail experiments (native Test & Compare results entered by the owner, or sequential tests).
+    """
+    CREATE TABLE thumb_experiments (
+        id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, asset_id TEXT NOT NULL,
+        method TEXT NOT NULL CHECK (method IN ('native','sequential')), status TEXT NOT NULL DEFAULT 'planned',
+        started_at TEXT, ended_at TEXT, variants_json TEXT DEFAULT '[]', result_json TEXT DEFAULT '{}',
+        created_at TEXT NOT NULL
+    );
+    """,
 ]
 
 

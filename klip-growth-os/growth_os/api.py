@@ -6,7 +6,7 @@ import re
 import statistics
 from datetime import date, timedelta
 
-from growth_os import ai, analytics, brands, reports, scheduler, trends, vault
+from growth_os import thumbs as thumbs_mod, ai, analytics, brands, reports, scheduler, trends, vault
 from growth_os.db import get_setting, utcnow
 
 PLATFORM_NOTES = {
@@ -278,7 +278,13 @@ def thumbnails(conn, t):
     for k in ("luminance", "contrast", "colorfulness", "saturation", "edge_density", "focal_contrast"):
         if len(lf) >= 8:
             assoc[k] = round(statistics.correlation([i["features"][k] for i in lf], [i["ctr"] for i in lf]), 2)
+    tg = thumbs_mod.tags(conn, t)
+    for i in items:
+        i["thumb_format"] = tg.get(i["asset_id"])
+        i["thumb_format_suggested"], i["thumb_format_why"] = thumbs_mod.suggest_format(i["title"])
     return {"items": items, "association": assoc, "association_n": len(lf),
+            "format_performance": thumbs_mod.format_performance(conn, t), "formats": thumbs_mod.FORMATS,
+            "experiments": thumbs_mod.experiments(conn, t),
             "association_note": "Correlation across this brand's long-form videos (Pearson r). Descriptive only: it is "
                                 "not a test result and many other factors affect CTR.",
             "experiments_note": "To compare thumbnails properly, use YouTube Studio's Test & Compare where available. "
@@ -428,3 +434,21 @@ def settings(conn, t):
     return {"topics": [{"keyword": k, "weight": w} for k, w in analytics.topic_keywords(conn, t)],
             "competitors": [dict(r) for r in conn.execute("SELECT ref, name FROM competitors WHERE tenant_id=? AND platform='youtube'", (t,))],
             "ai": ai.status(conn), "ai_daily_calls": get_setting(conn, "ai.daily_calls", ai.DEFAULT_DAILY_CALLS)}
+
+
+def thumb_studio(conn, t, asset_id):
+    rec = thumbs_mod.recommend_format(conn, t, asset_id)
+    title = conn.execute("SELECT title FROM assets WHERE tenant_id=? AND asset_id=?", (t, asset_id)).fetchone()[0]
+    prev = [json.loads(r[0]) | {"at": r[1]} for r in conn.execute(
+        "SELECT value, observed_at FROM asset_history WHERE tenant_id=? AND asset_id=? AND field='thumb_preview' "
+        "ORDER BY observed_at DESC LIMIT 6", (t, asset_id))]
+    for p_ in prev:
+        for v in p_["variants"]:
+            v.setdefault("url", f"/preview/{t}/{asset_id}/{v['file']}")
+        p_["sheet_url"] = f"/preview/{t}/{asset_id}/{p_['sheet']}"
+    return {**rec, "formats": thumbs_mod.FORMATS, "default_headlines": thumbs_mod.default_headlines(title),
+            "previews": prev, "experiments": [e for e in thumbs_mod.experiments(conn, t) if e["asset_id"] == asset_id],
+            "rules": ["Previews reuse this video's own photo and logo; faces are never changed.",
+                      "Nothing is uploaded. Changing the live thumbnail needs your approval (done in YouTube Studio).",
+                      "Use YouTube Studio Test & Compare when available, then record the result here.",
+                      "Hosts are only suggested when their reaction or debate strengthens the hook."]}

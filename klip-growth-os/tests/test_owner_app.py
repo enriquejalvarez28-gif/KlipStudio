@@ -14,7 +14,7 @@ from datetime import date, datetime, timedelta, timezone
 from http.server import ThreadingHTTPServer
 
 import tests  # noqa: F401  (sets GROWTH_OS_DATA before growth_os imports)
-from growth_os import ai, analytics, api, brands, db, reports, scheduler, seed, trends
+from growth_os import ai, analytics, api, brands, db, reports, scheduler, seed, thumbs, trends
 from growth_os.connectors import youtube, youtube_reporting, youtube_sync
 from tests.test_brand_manager import CLIENT, RYJ_CH, FakeGoogle
 
@@ -519,6 +519,59 @@ class TestGrowthEngine(unittest.TestCase):
         self.assertNotIn(("drop", 1.0), kinds)
         self.assertNotIn(("drop", 0.02), kinds)
         self.assertTrue(all(e["confidence"] == "high" for e in ev))
+
+
+class TestThumbnailStrategy(unittest.TestCase):
+    def _video(self, c):
+        c.execute("INSERT INTO assets VALUES ('ryj-media','youtube','UCx','vT','When Should Kids Start Lifting? | Coach Ray',"
+                  "'2026-09-01T00:00:00Z',3000,'long_form','',NULL,'2026-10-01')")
+        from PIL import Image, ImageDraw
+        d = db.DATA_DIR / "thumbs" / "ryj-media"
+        d.mkdir(parents=True, exist_ok=True)
+        im = Image.new("RGB", (1280, 720), (5, 5, 5))
+        dr = ImageDraw.Draw(im)
+        dr.rectangle([60, 250, 560, 450], fill=(255, 255, 255))  # old headline block on the black panel
+        for x in range(700, 1280):
+            for y in range(0, 720, 4):
+                dr.line([(x, y), (x, y + 3)], fill=((x * 7) % 255, (y * 3) % 255, 120))  # "photo"
+        im.save(d / "vT.jpg", quality=95)
+        return d / "vT.jpg"
+
+    def test_formats_and_headlines(self):
+        self.assertEqual(thumbs.suggest_format("Is Maxx Crosby the BEST Pass Rusher in the NFL?")[0], "host_led")
+        self.assertEqual(thumbs.suggest_format("Gymnastics Teaches Girls to Get Back Up | Ivanka Victory")[0], "guest")
+        self.assertEqual(thumbs.suggest_format("Coach X vs Coach Y: Who's Right? | Coach X")[0], "host_guest")
+        self.assertEqual(thumbs.parse_headline("Pay to play / is hurting / *U.S. soccer*"),
+                         [[("PAY", False), ("TO", False), ("PLAY", False)], [("IS", False), ("HURTING", False)],
+                          [("U.S.", True), ("SOCCER", True)]])
+        self.assertTrue(all(g for _, g in thumbs.parse_headline("are athletes more than their medals?")[-1]))
+
+    def test_render_keeps_the_photo_untouched_and_isolated(self):
+        c, _ = fresh()
+        src = self._video(c)
+        from PIL import Image
+        out = thumbs.previews(c, "ryj-media", "vT", ["When should kids *start lifting?*", "Too young / *to lift?*"])
+        self.assertEqual(len(out["variants"]), 2)
+        a = Image.open(db.DATA_DIR / "previews" / "ryj-media" / "vT" / out["variants"][0]["file"]).convert("RGB")
+        self.assertEqual(a.size, (1280, 720))
+        orig = Image.open(src).convert("RGB")
+        # Far-right photo region is copied, not altered (JPEG tolerance only).
+        diffs = [abs(p - q) for x in range(1100, 1270, 17) for y in range(20, 700, 37)
+                 for p, q in zip(a.getpixel((x, y)), orig.getpixel((x, y)))]
+        self.assertLess(max(diffs), 24)
+        with self.assertRaises(ValueError):  # no host photos → host formats refused, never faked
+            thumbs.previews(c, "ryj-media", "vT", ["X"], fmt="host_led")
+        with self.assertRaises(LookupError):
+            thumbs.set_tag(c, "demo-synthetic", "vT", "guest")
+        thumbs.set_tag(c, "ryj-media", "vT", "guest")
+        self.assertEqual(thumbs.tags(c, "ryj-media"), {"vT": "guest"})
+        e = thumbs.save_experiment(c, "ryj-media", {"asset_id": "vT", "method": "sequential", "winner": "A",
+                                                     "variants": [{"label": "A"}, {"label": "B"}]})
+        ex = thumbs.experiments(c, "ryj-media")
+        self.assertEqual((ex[0]["id"], ex[0]["result"]["winner"]), (e["id"], "A"))
+        self.assertIn("confounded", ex[0]["result"]["caveat"])
+        st = api.thumb_studio(c, "ryj-media", "vT")
+        self.assertEqual((st["recommended"], st["current_format"], len(st["previews"])), ("guest", "guest", 1))
 
 
 class TestReports(unittest.TestCase):

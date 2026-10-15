@@ -21,7 +21,7 @@ from datetime import date
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from growth_os import ai, analytics, api, brands, db, reports, scheduler, vault
+from growth_os import ai, analytics, api, brands, db, reports, scheduler, thumbs, vault
 from growth_os.connectors import podcast, youtube
 from growth_os.db import DATA_DIR, new_id, set_setting, utcnow
 from growth_os.http import BudgetExceeded, HttpError
@@ -134,6 +134,13 @@ class Handler(BaseHTTPRequestHandler):
                 if not f.exists():
                     return self._send(404, {"error": "no thumbnail cached"})
                 return self._send(200, f.read_bytes(), "image/jpeg")
+            m = re.fullmatch(rf"/preview/{TENANT}/([A-Za-z0-9_-]{{1,64}})/([0-9TZ]{{8,16}}-[a-z_]+-(?:A|B|sheet)\.jpg)", path)
+            if m:
+                brands.get_brand(c, m.group(1))
+                f = DATA_DIR / "previews" / m.group(1) / m.group(2) / m.group(3)
+                if not f.exists():
+                    return self._send(404, {"error": "no such preview"})
+                return self._send(200, f.read_bytes(), "image/jpeg")
             if path == "/api/app":
                 return self._send(200, api.app_info(c))
             if path == "/api/jobs":
@@ -222,6 +229,14 @@ class Handler(BaseHTTPRequestHandler):
         m = re.fullmatch(r"video/([A-Za-z0-9_-]{1,64})", rest)
         if m:
             return self._send(200, api.video_detail(c, t, m.group(1)))
+        m = re.fullmatch(r"thumbs/([A-Za-z0-9_-]{1,64})", rest)
+        if m:
+            try:
+                return self._send(200, api.thumb_studio(c, t, m.group(1)))
+            except LookupError as e:
+                raise brands.BrandError("not_found", str(e))
+        if rest == "experiments":
+            return self._send(200, thumbs.experiments(c, t))
         m = re.fullmatch(r"reports/(rep_[a-f0-9]+)(\.pdf|\.html)?", rest)
         if m:
             r = c.execute("SELECT * FROM reports WHERE id=? AND tenant_id=?", (m.group(1), t)).fetchone()
@@ -239,6 +254,20 @@ class Handler(BaseHTTPRequestHandler):
         return self._send(404, {"error": "not found"})
 
     def tenant_post(self, c, t, rest, body):
+        m = re.fullmatch(r"thumbs/([A-Za-z0-9_-]{1,64})/(format|previews)", rest)
+        if m or rest == "experiments":
+            try:
+                if rest == "experiments":
+                    return self._send(200, thumbs.save_experiment(c, t, body))
+                if m.group(2) == "format":
+                    return self._send(200, thumbs.set_tag(c, t, m.group(1), str(body.get("format", ""))))
+                hl = [str(x)[:90] for x in (body.get("headlines") or [])][:2]
+                return self._send(200, thumbs.previews(c, t, m.group(1), hl, str(body.get("format", "guest")),
+                                                       str(body.get("credential", ""))[:48]))
+            except LookupError as e:
+                raise brands.BrandError("not_found", str(e))
+            except ValueError as e:
+                return self._send(400, {"error": "bad_request", "message": str(e)})
         m = re.fullmatch(r"connect/(youtube|spotify|apple_podcasts|instagram)", rest)
         if m:
             p = m.group(1)

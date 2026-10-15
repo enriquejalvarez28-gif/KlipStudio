@@ -855,9 +855,16 @@ def kpi_ctr(conn, tenant_id, days):
                             AND c.metric_name='videoThumbnailImpressionsClickRate'
                             WHERE i.tenant_id=? AND i.grain='day_video' AND i.metric_name='videoThumbnailImpressions'
                             AND i.period_start BETWEEN ? AND ?""", (tenant_id, a, b)).fetchone()
-        return (r[1] / r[0]) if r and r[0] else None
+        return ((r[1] / r[0]) if r and r[0] else None), (r[0] or 0) if r else 0
     e = date.fromisoformat(end)
-    cur = window((e - timedelta(days=days - 1)).isoformat(), end)
-    prev = window((e - timedelta(days=2 * days - 1)).isoformat(), (e - timedelta(days=days)).isoformat())
+    cur, n_imp = window((e - timedelta(days=days - 1)).isoformat(), end)
+    prev, n_prev = window((e - timedelta(days=2 * days - 1)).isoformat(), (e - timedelta(days=days)).isoformat())
+    if n_prev < 1000:
+        prev = None  # don't compare against a thin window
+    days_n = conn.execute("""SELECT COUNT(DISTINCT period_start) FROM metrics WHERE tenant_id=? AND grain='day_video'
+                             AND metric_name='videoThumbnailImpressions' AND period_start>=?""",
+                          (tenant_id, (e - timedelta(days=days - 1)).isoformat())).fetchone()[0]
     return {"metric": "ctr", "label": "Impressions CTR", "unit": "pct", "days": days, "value": cur, "previous": prev,
-            "change": ((cur - prev) / prev) if cur is not None and prev else None, "through": end, "quality": "verified"}
+            "change": ((cur - prev) / prev) if cur is not None and prev else None, "through": end, "quality": "verified",
+            "impressions": int(n_imp), "days_of_data": days_n,
+            "note": f"on {int(n_imp):,} impressions over {days_n} day{'s' if days_n != 1 else ''}" if days_n < days else None}
