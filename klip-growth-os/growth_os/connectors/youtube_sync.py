@@ -8,6 +8,7 @@ change.
 """
 
 import hashlib
+import re
 import json
 from datetime import date, timedelta
 
@@ -268,7 +269,8 @@ def sync_content_types(conn, g, tenant_id, row_id, ch_id, today, fetched):
     n = 0
     for r in rep.get("rows", []):
         rec = dict(zip(cols, r))
-        ct = (rec.get("creatorContentType") or "UNSPECIFIED").upper()
+        # API returns camelCase ("videoOnDemand", "shorts", "liveStream"); store UPPER_SNAKE.
+        ct = re.sub(r"(?<=[a-z])(?=[A-Z])", "_", rec.get("creatorContentType") or "UNSPECIFIED").upper()
         last = rec["day"]
         for m in ("views", "estimatedMinutesWatched"):
             if m in rec:

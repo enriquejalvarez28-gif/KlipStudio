@@ -294,6 +294,11 @@ MIGRATIONS = [
         plan_json TEXT NOT NULL, sources_json TEXT DEFAULT '[]', created_at TEXT NOT NULL
     );
     """,
+    # v6 (2026-10-15): content types were stored as ctype:VIDEOONDEMAND (camelCase upper-cased); normalize.
+    """
+    UPDATE OR REPLACE metrics SET asset_id='ctype:VIDEO_ON_DEMAND' WHERE asset_id='ctype:VIDEOONDEMAND';
+    UPDATE OR REPLACE metrics SET asset_id='ctype:LIVE_STREAM' WHERE asset_id='ctype:LIVESTREAM';
+    """,
 ]
 
 

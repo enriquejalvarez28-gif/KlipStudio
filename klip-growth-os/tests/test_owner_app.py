@@ -412,7 +412,7 @@ class MoneyGoogle(ReachGoogle):
             rows = []
             for i in range(30):
                 d = (date(2026, 10, 11) - timedelta(days=i)).isoformat()
-                rows += [[d, "VIDEO_ON_DEMAND", 100, 600], [d, "SHORTS", 1000, 300]]
+                rows += [[d, "videoOnDemand", 100, 600], [d, "shorts", 1000, 300]]  # API casing
             return 200, json.dumps({"columnHeaders": [{"name": n} for n in ("day", "creatorContentType", "views", "estimatedMinutesWatched")],
                                     "rows": rows}).encode()
         dims = q.get("dimensions")
