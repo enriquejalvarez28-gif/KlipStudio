@@ -108,11 +108,13 @@ def overview(conn, t, days=90):
         if v["views_per_day"] is None or (v["age_days"] or 0) < 7:
             continue
         fmt.setdefault(v["format"], []).append(v)
+    def _med(vals):
+        vals = [x for x in vals if x is not None]
+        return statistics.median(vals) if vals else None  # None renders as "—", never a fake 0%
+
     formats = [{"format": f, "count": len(vs), "median_views_per_day": statistics.median(x["views_per_day"] for x in vs),
-                "median_ctr": statistics.median([x["metrics"]["videoThumbnailImpressionsClickRate"] for x in vs
-                                                 if x["metrics"].get("videoThumbnailImpressionsClickRate") is not None] or [0]),
-                "median_avg_pct_viewed": statistics.median([x["metrics"]["averageViewPercentage"] for x in vs
-                                                            if x["metrics"].get("averageViewPercentage") is not None] or [0])}
+                "median_ctr": _med(x["metrics"].get("videoThumbnailImpressionsClickRate") for x in vs),
+                "median_avg_pct_viewed": _med(x["metrics"].get("averageViewPercentage") for x in vs)}
                for f, vs in fmt.items()]
     traffic = {}
     for r in conn.execute("""SELECT period_start src, SUM(value) v FROM metrics WHERE tenant_id=? AND platform='youtube'
