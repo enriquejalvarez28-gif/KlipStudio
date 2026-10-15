@@ -64,6 +64,13 @@ Specs: Master Spec v3 (Oct 2026) + Owner App & Visual Intelligence directive (Oc
 - Pending: transcript mapping (needs local transcripts; caption download needs a write-class scope), episode cohort comparison (first 7/28 days), CTR x impressions scatter + thumbnail gallery once reach CSVs land, PDF report refresh, Instagram (Meta access), Operator writes (off until approved), secure share links (needs hosted auth; PDF export is the sharing path now).
 - Owner action still needed: one manual restart via Desktop "Klip Growth OS - restart" so the self-update code loads.
 
+## Spec v5 progress (2026-10-15)
+- Recommendation cards: "Prepare assets" (3 titles search/curiosity/hybrid via cached ai.ask or rule-based drafts, 2 RYJ thumbnail previews, SEO first lines + transcript chapters) → PREVIEW_READY. v5 state labels (ANALYZED…OUTCOME_REVIEWED, BLOCKED, FAILED), 7/14/28-day checkpoints, cap 3 new/day. (`prep.py`, `analytics.py`)
+- YouTube page: source freshness strip, daily Shorts vs long-form views + watch hours, launch cohorts day 1/3/7/28 (new sync step, grain `video_day`, 8 videos/sync).
+- Transcripts: drop YouTube Studio .srt/.vtt in `data/transcripts/<video_id>.srt`; retention markers show the ±30–60 s excerpt.
+- Discovery page (`discovery.py`, migration v5): distribution statuses (iTunes Search + RSS), keyword workspace (observed search terms, no volumes), manual AI-visibility log, competitor library, episode planner (cited trend-radar sources; AI optional).
+- Operator dry run: refuses wrong channel or unapproved card; BLOCKED "awaiting authorization" without youtube.force-ssl. Weekly report: approved actions + outcomes, 3 proposed changes.
+
 ## Decisions log
 
 - 2026-10-15: Impressions/CTR come from the YouTube Reporting API reach report, not the Analytics API (which rejects them). Network timeouts are retried as 504; a failing per-video breakdown no longer fails the sync.

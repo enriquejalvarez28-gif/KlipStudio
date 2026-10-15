@@ -424,7 +424,7 @@ def previews(conn, tenant_id, asset_id, headlines, fmt="guest", credential=""):
         labels.append(f"{'AB'[i]}: {FORMATS[fmt]}")
     sheet = f"{stamp}-{fmt}-sheet.jpg"
     contact_sheet(orig, [Image.open(out_dir / m["file"]) for m in made], labels, out_dir / sheet)
-    conn.execute("INSERT INTO asset_history VALUES (?,?,?,?,?,?,?,?)",
+    conn.execute("INSERT OR REPLACE INTO asset_history VALUES (?,?,?,?,?,?,?,?)",  # same-second rerender
                  (tenant_id, "youtube", asset_id, "thumb_preview", json.dumps({"variants": made, "sheet": sheet}),
                   stamp, utcnow(), "thumbs.render (local preview, not uploaded)"))
     return {"variants": made, "sheet": f"/preview/{tenant_id}/{asset_id}/{sheet}",

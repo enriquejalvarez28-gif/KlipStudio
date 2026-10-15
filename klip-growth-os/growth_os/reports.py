@@ -80,11 +80,18 @@ def build_data(conn, tenant_id, start, end):
     in_period = [v for v in vids if v["published_at"] and start.isoformat() <= v["published_at"][:10] <= end.isoformat()]
     ranked = sorted([v for v in vids if v["views_per_day"] is not None], key=lambda v: v["views_per_day"], reverse=True)
     recs = [dict(r) for r in conn.execute(
-        "SELECT * FROM recommendations WHERE tenant_id=? AND status='open' ORDER BY priority, created_at DESC LIMIT 8",
+        "SELECT * FROM recommendations WHERE tenant_id=? AND status='open' ORDER BY priority, created_at DESC LIMIT 3",
         (tenant_id,))]
     trs = [dict(r) for r in conn.execute(
         "SELECT * FROM trends WHERE tenant_id=? AND status!='dismissed' ORDER BY score DESC LIMIT 6", (tenant_id,))]
+    acts = [dict(r) for r in conn.execute(
+        """SELECT l.to_state, l.actor, l.note, l.at, r.title, r.result_json FROM action_ledger l JOIN recommendations r
+           ON r.id=l.rec_id WHERE l.tenant_id=? AND l.at>=? AND l.at<? AND l.to_state IN
+           ('approved','executed','verified','evaluated','reverted','blocked','failed') ORDER BY l.at""",
+        (tenant_id, start.isoformat(), (end + timedelta(days=1)).isoformat()))]
     return {
+        "actions": [{"state": analytics.STATE_LABELS.get(a["to_state"], a["to_state"]), "title": a["title"],
+                     "at": a["at"][:10], "note": a["note"], "outcome": _outcome(a)} for a in acts],
         "brand": dict(brand), "start": start.isoformat(), "end": end.isoformat(),
         "kpis": [k for k in kpis if k], "series": analytics.series(conn, tenant_id, "views", days),
         "published": [{k: v[k] for k in ("asset_id", "title", "published_at", "format")} | {"views": v["metrics"].get("views")}
@@ -97,6 +104,19 @@ def build_data(conn, tenant_id, start, end):
         "accounts": [{k: a[k] for k in ("platform", "account_name", "platform_account_id", "state", "data_as_of")}
                      for a in brands.accounts(conn, tenant_id) if a["state"] != brands.REJECTED],
     }
+
+
+def _outcome(a):
+    if a["to_state"] != "evaluated" or not a["result_json"]:
+        return ""
+    res = json.loads(a["result_json"])
+    b, af = res.get("before") or {}, res.get("after") or {}
+    parts = []
+    for k, lab in (("views_per_day", "views/day"), ("videoThumbnailImpressionsClickRate", "CTR %"),
+                   ("averageViewPercentage", "avg % viewed")):
+        if b.get(k) is not None and af.get(k) is not None:
+            parts.append(f"{lab} {b[k]:.1f} → {af[k]:.1f}")
+    return "; ".join(parts) + (" (observational)" if parts else "")
 
 
 CSS = """
@@ -151,6 +171,12 @@ def render(data, kind):
         h.append("<h2>Recommended actions</h2><table><tr><th>Action</th><th>Basis</th></tr>")
         for r in data["recs"]:
             h.append(f"<tr><td><b>{esc(r['title'])}</b><br><span class='muted'>{esc(r['detail'])}</span></td><td>{esc(r['basis'])}</td></tr>")
+        h.append("</table>")
+    if data.get("actions"):
+        h.append("<h2>Approved actions and outcomes</h2><table><tr><th>Date</th><th>State</th><th>Change</th><th>Outcome</th></tr>")
+        for a in data["actions"]:
+            h.append(f"<tr><td>{esc(a['at'])}</td><td>{esc(a['state'])}</td><td>{esc(a['title'])}<br><span class='muted'>"
+                     f"{esc(a['note'] or '')}</span></td><td>{esc(a['outcome'] or '—')}</td></tr>")
         h.append("</table>")
     if data["trends"]:
         h.append("<h2>Opportunities on the radar</h2><table><tr><th>Topic</th><th>Source</th><th>Score*</th></tr>")

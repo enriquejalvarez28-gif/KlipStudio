@@ -11,11 +11,13 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import date, datetime, timedelta, timezone
+from unittest import mock
 from http.server import ThreadingHTTPServer
 
 import tests  # noqa: F401  (sets GROWTH_OS_DATA before growth_os imports)
 from growth_os import ai, analytics, api, brands, db, reports, scheduler, seed, thumbs, trends
 from growth_os.connectors import youtube, youtube_reporting, youtube_sync
+from growth_os.db import utcnow
 from tests.test_brand_manager import CLIENT, RYJ_CH, FakeGoogle
 
 
@@ -499,8 +501,17 @@ class TestGrowthEngine(unittest.TestCase):
         row = c.execute("SELECT * FROM recommendations WHERE id=?", (rec["id"],)).fetchone()
         self.assertEqual((row["workflow"], row["status"]), ("executed", "done"))
         self.assertIn("views_per_day", json.loads(row["baseline_json"]))
-        c.execute("UPDATE recommendations SET evaluate_after='2000-01-01' WHERE id=?", (rec["id"],))
+        b = json.loads(row["baseline_json"])
+        b["at"] = (date.today() - timedelta(days=10)).isoformat()
+        c.execute("UPDATE recommendations SET evaluate_after='2000-01-01', baseline_json=? WHERE id=?", (json.dumps(b), rec["id"]))
+        self.assertEqual(analytics.evaluate_executed(c, "demo-synthetic"), 0)  # day 10: only the 7-day checkpoint
+        row = c.execute("SELECT * FROM recommendations WHERE id=?", (rec["id"],)).fetchone()
+        self.assertEqual(list(json.loads(row["result_json"])["checkpoints"]), ["7"])
+        b["at"] = (date.today() - timedelta(days=30)).isoformat()
+        c.execute("UPDATE recommendations SET evaluate_after='2000-01-01', baseline_json=? WHERE id=?", (json.dumps(b), rec["id"]))
         self.assertEqual(analytics.evaluate_executed(c, "demo-synthetic"), 1)
+        row = c.execute("SELECT * FROM recommendations WHERE id=?", (rec["id"],)).fetchone()
+        self.assertEqual(sorted(json.loads(row["result_json"])["checkpoints"]), ["14", "28", "7"])
         led = [l["to_state"] for l in api.recommendations(c, "demo-synthetic")["items"] if False] or \
             [r[0] for r in c.execute("SELECT to_state FROM action_ledger WHERE rec_id=? ORDER BY id", (rec["id"],))]
         self.assertEqual(led, ["awaiting_approval", "approved", "executed", "evaluated"])
@@ -594,3 +605,110 @@ class TestReports(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestSpecV5(unittest.TestCase):
+    D = "demo-synthetic"
+
+    def setUp(self):  # never call a real model from tests
+        p = mock.patch.object(ai, "status", return_value={"enabled": True, "cli_found": False, "daily_cap": 9,
+                                                          "used_today": 0, "reason": "no CLI in tests"})
+        p.start()
+        self.addCleanup(p.stop)
+
+    def _rec(self, c):
+        seed.seed_demo(c)
+        analytics.growth_review(c, self.D)
+        return c.execute("SELECT * FROM recommendations WHERE tenant_id=? AND asset_id IS NOT NULL AND diagnosis!='' LIMIT 1",
+                         (self.D,)).fetchone()
+
+    def test_prepare_pack_and_states(self):
+        from growth_os import prep
+        c, _ = fresh()
+        rec = self._rec(c)
+        self.assertLessEqual(c.execute("SELECT COUNT(*) FROM recommendations WHERE tenant_id=? AND diagnosis!=''",
+                                       (self.D,)).fetchone()[0], 3)
+        pack = prep.prepare_rec(c, self.D, rec["id"])  # no CLI here: rule-based titles
+        self.assertEqual([t["strategy"] for t in pack["titles"]], ["search_driven", "curiosity", "hybrid"])
+        self.assertTrue(all(len(t["title"]) <= 70 for t in pack["titles"]))
+        self.assertIn("first_lines", pack["seo"])
+        item = next(i for i in api.recommendations(c, self.D)["items"] if i["id"] == rec["id"])
+        self.assertEqual((item["workflow"], item["state_label"]), ("prepared", "PREVIEW_READY"))
+        self.assertEqual(item["prepared"]["keyword"], pack["keyword"])
+        fake = lambda prompt, model: {"result": json.dumps({"titles": [{"strategy": s, "title": f"T {s}", "why": "w"}
+                                                                     for s in prep.PREP_STRATEGIES]})}
+        with mock.patch.object(ai, "status", return_value={"enabled": True, "cli_found": True, "daily_cap": 9, "used_today": 0}):
+            pack2 = prep.prepare_rec(c, self.D, rec["id"], runner=fake)
+        self.assertTrue(pack2["titles"][0]["source"].startswith("AI draft"))
+
+    def test_transcript_windows_and_chapters(self):
+        from growth_os import prep
+        srt = "1\n00:00:01,000 --> 00:00:04,000\nWelcome to the show\n\n2\n00:01:30,500 --> 00:01:33,000\n<i>Lifting at 12?</i>\n\n" \
+              "3\n00:03:10,000 --> 00:03:14,000\nHere's what the research says\n"
+        segs = prep.parse_captions(srt)
+        self.assertEqual(len(segs), 3)
+        self.assertEqual(segs[1]["text"], "Lifting at 12?")
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:04.000\nWelcome to the show\n"
+        self.assertEqual(prep.parse_captions(vtt)[0]["start"], 1.0)
+        w = prep.window(segs, 100)
+        self.assertIn("Lifting", w["text"])
+        self.assertNotIn("research", w["text"])
+        self.assertEqual(prep.chapters(segs, 240, n=2)[1]["t"], 190)
+        self.assertEqual(prep.chapters(segs, 50), [])
+
+    def test_cohorts_points(self):
+        from growth_os import prep
+        c, _ = fresh()
+        pub = date.today() - timedelta(days=40)
+        c.execute("INSERT INTO assets VALUES ('ryj-media','youtube','UCx','vC','Cohort test',?,600,'long_form','',NULL,?)",
+                  (pub.isoformat() + "T00:00:00Z", utcnow()))
+        for i in range(29):
+            c.execute("""INSERT INTO metrics (tenant_id, platform, platform_account_id, asset_id, metric_name, value, unit, grain,
+                         period_start, source, fetched_at, data_quality) VALUES ('ryj-media','youtube','UCx','vC','views',10,'',
+                         'video_day',?,'t',?, 'verified')""", ((pub + timedelta(days=i)).isoformat(), utcnow()))
+        it = prep.cohorts(c, "ryj-media")["items"][0]
+        self.assertEqual({k: v["views"] for k, v in it["points"].items()}, {"1": 10, "3": 30, "7": 70, "28": 280})
+
+    def test_discovery_distribution_samples_plan(self):
+        from growth_os import discovery
+        c, _ = fresh()
+        seed.seed_demo(c)
+
+        def transport(method, url, headers, body):
+            if "itunes" in url:
+                return 200, json.dumps({"results": [{"collectionName": "Demo Studio Podcast (synthetic)",
+                                                     "feedUrl": "https://feeds.example/x.xml", "trackCount": 3}]}).encode()
+            return 200, (b"<rss><channel><title>Demo</title><description>d</description><item><pubDate>Mon, 12 Oct 2026"
+                         b"</pubDate></item></channel></rss>")
+        st = {d["platform"]: d["status"] for d in discovery.check_distribution(c, self.D, transport=transport)}
+        self.assertEqual(st["youtube"], "Connected analytics")
+        self.assertEqual(st["apple_podcasts"], "Verified listing only")
+        self.assertEqual(st["rss"], "Verified listing only")
+        self.assertEqual(st["instagram"], "Needs authorization")
+        self.assertTrue(set(st.values()) <= set(discovery.STATUSES))
+        down = discovery.check_distribution(c, self.D, transport=lambda *a: (503, b"x"))
+        self.assertEqual({d["platform"]: d["status"] for d in down}["apple_podcasts"], "Unavailable")
+        discovery.add_ai_sample(c, self.D, {"query": "q1", "engine": "Claude.ai (free)", "mentioned": True})
+        discovery.add_ai_sample(c, self.D, {"query": "q1", "engine": "ChatGPT", "mentioned": False})
+        self.assertEqual(discovery.ai_samples(c, self.D)["summary"], [{"query": "q1", "samples": 2, "mentioned": 1}])
+        with self.assertRaises(ValueError):
+            discovery.add_ai_sample(c, self.D, {"query": "", "engine": "x"})
+        p = discovery.plan_episode(c, self.D, "When should young athletes start lifting?")
+        self.assertIn("_unavailable", p["plan"])  # no CLI: honest, no invented plan
+        self.assertEqual(len(discovery.page(c, self.D)["plans"]), 1)
+        self.assertIn("search_terms", discovery.keywords(c, self.D))
+
+    def test_operator_dry_run_refuses_and_blocks(self):
+        from growth_os import discovery
+        c, _ = fresh()
+        rec = self._rec(c)
+        self.assertEqual(discovery.operator_dry_run(c, self.D, rec["id"], "UC_SYNTHETIC_DEMO_CHANNEL")["result"], "REFUSED")
+        analytics.move_rec(c, self.D, rec["id"], "approved")
+        self.assertEqual(discovery.operator_dry_run(c, self.D, rec["id"], "UC_SOMEONE_ELSE")["result"], "REFUSED")
+        r = discovery.operator_dry_run(c, self.D, rec["id"], "UC_SYNTHETIC_DEMO_CHANNEL")
+        self.assertEqual(r["result"], "BLOCKED")
+        self.assertIn("awaiting authorization", r["reason"])
+        row = c.execute("SELECT workflow FROM recommendations WHERE id=?", (rec["id"],)).fetchone()
+        self.assertEqual(row[0], "blocked")
+        data = reports.build_data(c, self.D, date.today() - timedelta(days=7), date.today())
+        self.assertIn("BLOCKED", [a["state"] for a in data["actions"]])

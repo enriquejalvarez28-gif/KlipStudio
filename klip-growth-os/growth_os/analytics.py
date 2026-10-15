@@ -561,11 +561,17 @@ def retention_events(curve, bench=None, duration_s=None, views=None, max_each=3)
 
 # ── Growth review: evidence-backed, actionable recommendations (spec v4 §18) ──
 WORKFLOW = ["suggested", "prepared", "awaiting_approval", "approved", "executed", "verified", "evaluated",
-            "reverted", "dismissed"]
+            "reverted", "dismissed", "blocked", "failed"]
 WORKFLOW_STATUS = {"suggested": "open", "prepared": "open", "awaiting_approval": "open", "approved": "accepted",
                    "executed": "done", "verified": "done", "evaluated": "done", "reverted": "done",
-                   "dismissed": "dismissed"}
-DAILY_NEW_LIMIT = 5  # top opportunities per run (spec §9: 3–5/day)
+                   "dismissed": "dismissed", "blocked": "accepted", "failed": "accepted"}
+# Spec v5 §10.2 state machine names for the same states (write access is off, so EXECUTING is the owner in Studio).
+STATE_LABELS = {"suggested": "ANALYZED", "prepared": "PREVIEW_READY", "awaiting_approval": "AWAITING_APPROVAL",
+                "approved": "APPROVED", "executed": "MONITORING", "verified": "VERIFIED · MONITORING",
+                "evaluated": "OUTCOME_REVIEWED", "reverted": "ROLLED_BACK", "dismissed": "REJECTED",
+                "blocked": "BLOCKED", "failed": "FAILED"}
+CHECKPOINTS = (7, 14, 28)  # post-change outcome windows (days)
+DAILY_NEW_LIMIT = 3  # top opportunities per day (spec v5 §10.1)
 
 
 def _guest(title):
@@ -753,7 +759,7 @@ def move_rec(conn, tenant_id, rec_id, to, actor="owner", note=""):
     if to == "executed":  # applied manually by the owner (write access is off): snapshot the baseline now
         snap = _asset_snapshot(conn, tenant_id, r["asset_id"])
         sets["baseline_json"] = json.dumps(snap)
-        sets["evaluate_after"] = (date.today() + timedelta(days=14)).isoformat()
+        sets["evaluate_after"] = (date.today() + timedelta(days=CHECKPOINTS[0])).isoformat()
     conn.execute(f"UPDATE recommendations SET {', '.join(k + '=?' for k in sets)} WHERE id=?", (*sets.values(), rec_id))
     conn.execute("INSERT INTO action_ledger (tenant_id, rec_id, from_state, to_state, actor, note, snapshot_json, at) "
                  "VALUES (?,?,?,?,?,?,?,?)", (tenant_id, rec_id, frm, to, actor, note, json.dumps(snap), utcnow()))
@@ -761,22 +767,41 @@ def move_rec(conn, tenant_id, rec_id, to, actor="owner", note=""):
 
 
 def evaluate_executed(conn, tenant_id):
-    """Observational before/after for executed items past their evaluation date (no causal claims)."""
-    n = 0
-    for r in conn.execute("""SELECT id, asset_id, baseline_json FROM recommendations WHERE tenant_id=? AND workflow IN
-                             ('executed','verified') AND evaluate_after IS NOT NULL AND evaluate_after<=?""",
-                          (tenant_id, date.today().isoformat())).fetchall():
-        before = json.loads(r["baseline_json"] or "{}")
-        after = _asset_snapshot(conn, tenant_id, r["asset_id"])
-        res = {"before": before, "after": after, "note": "Observational comparison; other factors also change over time."}
-        conn.execute("UPDATE recommendations SET workflow='evaluated', status='done', result_json=? WHERE id=?",
-                     (json.dumps(res), r["id"]))
-        conn.execute("INSERT INTO action_ledger (tenant_id, rec_id, from_state, to_state, actor, note, snapshot_json, at) "
-                     "VALUES (?,?,'executed','evaluated','analyst','auto-evaluated after 14 days',?,?)",
-                     (tenant_id, r["id"], json.dumps(after), utcnow()))
-        n += 1
-    return n
+    """Observational 7/14/28-day checkpoints for executed items (no causal claims).
 
+    Each due checkpoint stores a snapshot; after the last one the card moves to
+    OUTCOME_REVIEWED. Returns the number of cards that reached their final review.
+    """
+    n = 0
+    today = date.today()
+    for r in conn.execute("""SELECT id, asset_id, baseline_json, result_json FROM recommendations WHERE tenant_id=? AND
+                             workflow IN ('executed','verified') AND evaluate_after IS NOT NULL AND evaluate_after<=?""",
+                          (tenant_id, today.isoformat())).fetchall():
+        before = json.loads(r["baseline_json"] or "{}")
+        res = json.loads(r["result_json"] or "{}") or {}
+        cps = res.setdefault("checkpoints", {})
+        try:
+            start = date.fromisoformat((before.get("at") or "")[:10])
+        except ValueError:
+            start = today - timedelta(days=CHECKPOINTS[-1])
+        days = (today - start).days
+        snap = _asset_snapshot(conn, tenant_id, r["asset_id"])
+        for cp in CHECKPOINTS:
+            if days >= cp and str(cp) not in cps:
+                cps[str(cp)] = dict(snap, taken_on_day=days)
+        res.update(before=before, after=snap, note="Observational comparison; other factors also change over time.")
+        nxt = next((cp for cp in CHECKPOINTS if str(cp) not in cps), None)
+        if nxt is None:
+            conn.execute("UPDATE recommendations SET workflow='evaluated', status='done', result_json=? WHERE id=?",
+                         (json.dumps(res), r["id"]))
+            conn.execute("INSERT INTO action_ledger (tenant_id, rec_id, from_state, to_state, actor, note, snapshot_json, at) "
+                         "VALUES (?,?,'executed','evaluated','analyst','outcome reviewed after the 28-day checkpoint',?,?)",
+                         (tenant_id, r["id"], json.dumps(snap), utcnow()))
+            n += 1
+        else:
+            conn.execute("UPDATE recommendations SET result_json=?, evaluate_after=? WHERE id=?",
+                         (json.dumps(res), (start + timedelta(days=nxt)).isoformat(), r["id"]))
+    return n
 
 
 # ── Format comparison, subscriber contribution, traffic over time ──────

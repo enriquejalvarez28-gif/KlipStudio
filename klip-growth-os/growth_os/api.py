@@ -6,7 +6,7 @@ import re
 import statistics
 from datetime import date, timedelta
 
-from growth_os import thumbs as thumbs_mod, ai, analytics, brands, reports, scheduler, trends, vault
+from growth_os import thumbs as thumbs_mod, ai, analytics, prep, brands, reports, scheduler, trends, vault
 from growth_os.db import get_setting, utcnow
 
 PLATFORM_NOTES = {
@@ -118,6 +118,8 @@ def overview(conn, t, days=90):
     d["formats_compare"] = analytics.formats_compare(conn, t, 28)
     d["subscriber_contribution"] = analytics.subscriber_contribution(conn, t)
     d["traffic_over_time"] = analytics.traffic_over_time(conn, t, days)
+    d["ctype_trend"] = prep.ctype_trend(conn, t, days)
+    d["freshness_strip"] = prep.freshness_strip(conn, t)
     return d
 
 
@@ -192,6 +194,8 @@ def video_detail(conn, t, asset_id):
     cohort = [x["asset_id"] for x in vids if x["format"] == v["format"] and x["asset_id"] != asset_id]
     bench, bench_n = analytics.benchmark_curve(curves, cohort)
     events = analytics.retention_events(ret, bench, v["duration_s"], v["metrics"].get("views"))
+    segs = prep.load_transcript(t, asset_id)
+    prep.attach_windows(events, segs)
     ts = {r["period_start"]: r["value"] for r in conn.execute(
         "SELECT period_start, value FROM metrics WHERE tenant_id=? AND asset_id=? AND grain='traffic_source' ORDER BY value DESC",
         (t, asset_id))}
@@ -210,8 +214,10 @@ def video_detail(conn, t, asset_id):
     return {
         "video": _vid_card(v), "metrics": v["metrics"], "peers": analytics.peer_stats(vids, v),
         "retention": ret, "benchmark": bench, "benchmark_n": bench_n, "retention_events": events,
-        "transcript": None,
-        "transcript_note": "Transcript not linked yet. Click a marker to open the video at that moment on YouTube.",
+        "transcript": {"segments": len(segs), "file": prep.transcript_path(t, asset_id).name} if segs else None,
+        "transcript_note": None if segs else (
+            "Transcript not linked yet. In YouTube Studio → Subtitles, download the .srt for this video and save it as "
+            f"data/transcripts/{asset_id}.srt; each retention marker then shows what was said there."),
         "rewatch": analytics.rewatch_summary(ret, v["metrics"].get("averageViewPercentage"), v["format"]),
         "retention_note": "Aggregate audience retention (share of viewers still watching at each point). "
                                             "It does not show individual viewers.",
@@ -368,10 +374,16 @@ def recommendations(conn, t):
             raw = d.pop(f"{k}_json", None)
             d[k] = json.loads(raw) if raw else ({} if k in ("test_plan", "baseline", "result") else [])
         d["workflow"] = d.get("workflow") or ("dismissed" if d["status"] == "dismissed" else "suggested")
+        d["state_label"] = analytics.STATE_LABELS.get(d["workflow"], d["workflow"].upper())
+        alts = d.get("alternatives")
+        d["prepared"] = alts.get("prepared") if isinstance(alts, dict) else None
         d["ledger"] = ledger.get(d["id"], [])
         d["asset_title"] = titles.get(d["asset_id"])
         rows.append(d)
-    return {"items": rows, "workflow": analytics.WORKFLOW, "write_access": False,
+    yt = conn.execute("SELECT platform_account_id FROM platform_accounts WHERE tenant_id=? AND platform='youtube' "
+                      "AND state!='REJECTED' LIMIT 1", (t,)).fetchone()
+    return {"items": rows, "workflow": analytics.WORKFLOW, "state_labels": analytics.STATE_LABELS,
+            "checkpoints": analytics.CHECKPOINTS, "channel_id": yt[0] if yt else None, "write_access": False,
             "write_note": "Write access to YouTube is off (read-only). Approved items are applied by you in YouTube Studio, "
                           "then marked Executed here so the app can compare before/after."}
 

@@ -245,6 +245,13 @@ def sync(conn, tenant_id, row_id, *, client, transport=None, today=None, progres
         except Exception as e:
             out["unavailable"].append(f"retention {vid}: {str(e)[:80]}")
     out["retention_fetched"] = got
+
+    # 7. Per-video daily views for launch cohorts (day 1/3/7/28 since publish).
+    progress(97, "launch cohorts")
+    try:
+        out["cohort_videos"] = sync_video_days(conn, g, tenant_id, ch_id, today, fetched)
+    except Exception as e:
+        out["unavailable"].append(f"launch cohorts: {str(e)[:100]}")
     out["available_through"] = through
     progress(100, "done")
     return out
@@ -360,3 +367,37 @@ def sync_traffic_days(conn, g, tenant_id, row_id, ch_id, today, fetched):
     if last:
         _set_cursor(conn, tenant_id, row_id, "traffic_through", last)
     return n
+
+
+COHORT_PER_SYNC = 8   # videos per sync (each is one Analytics call)
+COHORT_DAYS = 29      # publish day + 28
+
+
+def sync_video_days(conn, g, tenant_id, ch_id, today, fetched):
+    """Daily views/watch time for each video's first 29 days (grain video_day).
+
+    Complete videos (older than 31 days with data stored) are skipped; recent
+    ones are refreshed so day-1/3/7 points fill in as they happen.
+    """
+    rows = conn.execute("SELECT asset_id, published_at FROM assets WHERE tenant_id=? AND platform='youtube' "
+                        "AND published_at IS NOT NULL ORDER BY published_at DESC", (tenant_id,)).fetchall()
+    have = {r[0] for r in conn.execute("SELECT DISTINCT asset_id FROM metrics WHERE tenant_id=? AND grain='video_day'",
+                                       (tenant_id,))}
+    todo = [r for r in rows if r["asset_id"] not in have or
+            (today - date.fromisoformat(r["published_at"][:10])).days <= COHORT_DAYS + LAG_DAYS]
+    done = []
+    for r in todo[:COHORT_PER_SYNC]:
+        pub = date.fromisoformat(r["published_at"][:10])
+        end = min(today, pub + timedelta(days=COHORT_DAYS - 1))
+        rep = g(ANALYTICS_API, {"ids": "channel==MINE", "startDate": pub.isoformat(), "endDate": end.isoformat(),
+                                "metrics": "views,estimatedMinutesWatched", "dimensions": "day",
+                                "filters": f"video=={r['asset_id']}", "sort": "day"})
+        cols = [h["name"] for h in rep.get("columnHeaders", [])]
+        for row in rep.get("rows", []):
+            rec = dict(zip(cols, row))
+            for m in ("views", "estimatedMinutesWatched"):
+                if m in rec:
+                    youtube._put_metric(conn, tenant_id, ch_id, r["asset_id"], m, float(rec[m]), "", "video_day",
+                                        rec["day"], "youtube.analytics.reports", fetched, None, "verified")
+        done.append(r["asset_id"])
+    return done

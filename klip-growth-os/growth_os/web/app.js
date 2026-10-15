@@ -112,7 +112,7 @@ const NAV = [
   ["Overview", [["home", "Home", "⌂"], ["analytics", "Analytics overview", "◔"]]],
   ["Content", [["episodes", "Episode intelligence", "▦"], ["youtube", "YouTube", "▶"], ["instagram", "Instagram", "◎"], ["podcasts", "Podcasts", "♪"]]],
   ["Labs", [["thumbnails", "Thumbnail lab", "▣"], ["titles", "Title lab", "T"], ["seo", "SEO & discoverability", "⌕"]]],
-  ["Growth", [["monetization", "Monetization", "$"], ["trends", "Trend radar", "↗"], ["recommendations", "Recommendations", "✦"], ["calendar", "Content calendar", "▤"]]],
+  ["Growth", [["monetization", "Monetization", "$"], ["discovery", "Discovery", "⌖"], ["trends", "Trend radar", "↗"], ["recommendations", "Recommendations", "✦"], ["calendar", "Content calendar", "▤"]]],
   ["Operate", [["reports", "Reports", "⎙"], ["jobs", "Jobs & integrations", "⟳"], ["accounts", "Manage accounts", "⚿"], ["settings", "Settings", "⚙"]]],
 ];
 function renderNav(active) {
@@ -365,7 +365,7 @@ PAGES.episode = async (id) => {
         onClick: (x) => { if (d.youtube_url && v.duration_s) window.open(`${d.youtube_url}&t=${Math.round(x * v.duration_s)}s`, "_blank", "noopener"); },
         empty: "No retention curve yet (needs enough views, or still processing). Curves fill in about 15 videos per sync." })),
       retentionEvents(d, v),
-      el("div", { class: "foot" }, d.retention_note, " ", d.transcript_note), rewatchBox(d.rewatch, v)),
+      el("div", { class: "foot" }, d.retention_note, " ", d.transcript_note || `Transcript linked (${d.transcript.file}); markers show what was said there.`), rewatchBox(d.rewatch, v)),
     card("Traffic sources", basisTag(v.quality === "synthetic" ? "synthetic" : "measured"), (() => { const b = el("div", {}); return drawLater(b, () => C.bars(b, Object.entries(d.traffic_sources).map(([k, x]) => ({ label: k.replaceAll("_", " ").toLowerCase(), v: x })), { empty: "Fetched for the most-changed videos each sync." })); })())));
 
   wrap.append(el("div", { class: "grid g3 sec" },
@@ -467,9 +467,14 @@ function growthSection(o) {
   const fc = o.formats_compare || { types: [] }, sc = o.subscriber_contribution || { items: [] }, tt = o.traffic_over_time || { series: [] };
   const fmtRows = fc.types.map((t) => el("tr", {}, el("td", {}, t.label), el("td", { class: "r" }, nf(t.views)), el("td", { class: "r" }, nf(t.watch_hours)),
     el("td", { class: "r" }, nf(t.videos)), el("td", { class: "r" }, pct(t.median_pct_viewed)), el("td", { class: "r" }, t.median_avg_view_s != null ? dur(t.median_avg_view_s) : "—"), el("td", { class: "r" }, nf(t.subs_gained_lifetime))));
-  const sb = el("div", {}), tr = el("div", {});
+  const sb = el("div", {}), tr = el("div", {}), ct = el("div", {}), ch = el("div", {});
   const pal = ["--s1", "--s2", "--s3", "--s4", "--s5"];
+  const tdat = o.ctype_trend || [];
   return el("div", {},
+    o.freshness_strip ? el("div", { class: "fresh sec" }, o.freshness_strip.map((f) => el("span", { title: f.note || "" }, el("b", {}, f.source), " ", f.as_of ? f.as_of.slice(0, 16).replace("T", " ") : "—"))) : null,
+    el("div", { class: "grid g2 sec" },
+      card("Daily views: Shorts vs long-form", null, drawLater(ct, () => C.line(ct, [{ name: "Shorts", points: tdat.map((x) => ({ d: x.d, v: x.shorts_views })), color: "--s3" }, { name: "Long-form", points: tdat.map((x) => ({ d: x.d, v: x.long_views })), color: "--s1" }], { height: 220, tipX: (x) => x, empty: "Fills in after the next sync." }))),
+      card("Daily watch hours: Shorts vs long-form", null, drawLater(ch, () => C.line(ch, [{ name: "Shorts", points: tdat.map((x) => ({ d: x.d, v: x.shorts_hours })), color: "--s3" }, { name: "Long-form", points: tdat.map((x) => ({ d: x.d, v: x.long_hours })), color: "--s1" }], { height: 220, tipX: (x) => x, empty: "Fills in after the next sync." })))),
     el("section", { class: "card sec" }, el("div", { class: "card-h" }, el("h2", {}, "Shorts vs long-form"), el("div", { class: "r faint", style: "font-size:12px" }, fc.as_of ? `views & watch hours: last ${fc.days} days to ${fc.as_of}` : "split arrives with the next sync")),
       el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["", `Views (${fc.days} d)`, `Watch hrs (${fc.days} d)`, "Videos", "Median % viewed", "Median avg view", "Subs gained (lifetime)"].map((h, i) => el("th", { class: i ? "r" : "" }, h)))), el("tbody", {}, fmtRows))),
       el("div", { class: "foot" }, "Long-form watch hours count toward monetization; Shorts watch hours don't. See the Monetization page.")),
@@ -498,7 +503,7 @@ function audienceSection(a) {
 }
 
 PAGES.youtube = async () => {
-  const [o, vids, acc, aud] = await Promise.all([api(T("overview?days=90")), api(T("videos")), api(T("accounts")), api(T("audience"))]);
+  const [o, vids, acc, aud, coh] = await Promise.all([api(T("overview?days=90")), api(T("videos")), api(T("accounts")), api(T("audience")), api(T("cohorts"))]);
   const a = acc.youtube;
   const wrap = el("div", {}, ph("YouTube intelligence", a.name || "YouTube", a.id ? `Channel ${a.id}` : "No channel connected yet.", stPill(a.state), freshBadge(a.data_as_of)));
   if (!vids.length && !o.kpis.length) { wrap.append(emptyState(NO_DATA, goAccounts())); return wrap; }
@@ -514,6 +519,7 @@ PAGES.youtube = async () => {
       el("div", { class: "foot" }, "Each dot is a video. Bottom-left videos lose people both before and after the click."))),
     el("div", { class: "grid g2 sec" }, el("section", { class: "card" }, el("div", { class: "card-h" }, el("h2", {}, "Average view duration (s)")), drawLater(t1, () => C.line(t1, [{ name: "Seconds", points: o.series.averageViewDuration, color: "--s2" }], {}))), formatCard(o)));
   wrap.append(growthSection(o));
+  wrap.append(cohortSection(coh));
   wrap.append(audienceSection(aud));
   const rows = vids.slice().sort((x, y) => (y.views_per_day || 0) - (x.views_per_day || 0));
   wrap.append(el("section", { class: "card sec" }, el("div", { class: "card-h" }, el("h2", {}, "All videos"), el("div", { class: "r" }, el("a", { class: "btn sm ghost", href: T("export/videos.csv") }, "CSV"))),
@@ -527,6 +533,15 @@ PAGES.youtube = async () => {
   return wrap;
 };
 
+function cohortSection(c) {
+  const cell = (x) => (x ? el("td", { class: "r" }, nf(x.views), el("div", { class: "faint", style: "font-size:11px" }, `${nf(x.watch_hours)} h`)) : el("td", { class: "r faint" }, "—"));
+  return el("section", { class: "card sec" }, el("div", { class: "card-h" }, el("h2", {}, "Launch cohorts: views at day 1 / 3 / 7 / 28")),
+    c.items.length ? el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" },
+      el("thead", {}, el("tr", {}, ["Video", "Published", ...c.points.map((n) => `Day ${n}`)].map((h, i) => el("th", { class: i > 1 ? "r" : "" }, h)))),
+      el("tbody", {}, c.items.map((it) => el("tr", {}, el("td", {}, el("a", { href: `#/episode/${it.asset_id}` }, it.title), el("div", { class: "faint", style: "font-size:11px" }, fmtName(it.format))),
+        el("td", {}, it.published_at), ...c.points.map((n) => cell(it.points[String(n)]))))))) : el("p", { class: "empty" }, "Per-video launch data is collected a few videos per sync; it fills in over the next syncs."),
+    el("div", { class: "foot" }, c.note));
+}
 function alignBench(curve, bench) {
   // Benchmark points matched to this video's x positions (nearest bucket) so tooltips line up.
   if (!bench.length) return [];
@@ -540,7 +555,8 @@ function retentionEvents(d, v) {
     el("span", { class: `k ${e.kind}` }, e.kind),
     d.youtube_url && e.t != null ? el("a", { class: "t", href: `${d.youtube_url}&t=${e.t}s`, target: "_blank", rel: "noopener", title: "Open the video at this moment" }, at(e)) : el("span", { class: "t" }, at(e)),
     el("span", {}, e.label, e.baseline != null ? el("span", { class: "faint" }, ` · typical here ${Math.round(e.baseline * 100)}%, this video ${Math.round(e.value * 100)}%`) : null),
-    el("span", { class: "faint", style: "font-size:11.5px" }, `${e.confidence} confidence`))));
+    el("span", { class: "faint", style: "font-size:11.5px" }, `${e.confidence} confidence`),
+    e.transcript ? el("div", { class: "tx" }, el("span", { class: "faint" }, `${dur(e.transcript.from)}–${dur(e.transcript.to)}: `), `“${e.transcript.text}”`) : null)));
 }
 function rewatchBox(r, v) {
   if (!r) return null;
@@ -585,6 +601,51 @@ PAGES.monetization = async () => {
     el("ul", { style: "margin:0;padding-left:18px;line-height:1.7;font-size:13.5px" }, m.notes.map((n) => el("li", {}, n)),
       el("li", {}, `Shorts watch time in the last 90 days: ${nf(m.shorts_watch_hours_90d)} h (doesn't count toward the watch-hour goal).`)),
     el("div", { class: "foot" }, "Sources: ", m.sources.map((u, i) => el("a", { href: u, target: "_blank", rel: "noopener", style: "margin-right:10px" }, i ? "Expanded YPP" : "YPP overview")))));
+  return wrap;
+};
+
+PAGES.discovery = async () => {
+  const d = await api(T("discovery"));
+  const wrap = el("div", {}, ph("Discovery", "Discovery & planning", "Where the show is listed, what people search, whether AI assistants mention it, what comparable channels publish, and a pre-recording episode planner. Public data only; nothing is invented.",
+    el("button", { class: "btn", onclick: async (e) => { e.target.disabled = true; try { await api(T("discovery/distribution"), {}); route(true); } catch (x) { toast(x.message, true); e.target.disabled = false; } } }, "↻ Check listings")));
+  const stCls = { "Connected analytics": "ok", "Verified listing only": "ok", "Imported report": "ok", "Needs authorization": "warn", "Not found": "bad", Unavailable: "na" };
+  const det = (x) => { const v = x.detail || {}; return v.collectionViewUrl ? el("a", { href: v.collectionViewUrl, target: "_blank", rel: "noopener" }, `${v.collectionName} · ${v.trackCount ?? "?"} episodes`)
+    : v.url ? el("span", {}, `${v.title || "feed"} · ${v.episodes ?? "?"} episodes · latest ${v.latest || "—"}`) : el("span", { class: "faint" }, v.why || v.error || v.account || ""); };
+  wrap.append(card("Distribution health", el("span", { class: "faint", style: "font-size:12px" }, d.distribution[0] ? `checked ${ago(d.distribution[0].checked_at)}` : "not checked yet"),
+    d.distribution.length ? el("div", { class: "list" }, d.distribution.map((x) => el("div", { class: "li" }, el("div", { class: "body" }, el("div", { class: "t" }, x.platform.replaceAll("_", " ")), el("div", { class: "d" }, det(x))), el("span", { class: `st ${stCls[x.status] || "na"}` }, x.status))))
+      : el("p", { class: "empty" }, "Click “Check listings” to look the show up on Apple Podcasts (public search) and read its RSS feed.")));
+  const k = d.keywords;
+  wrap.append(el("div", { class: "grid g2 sec" },
+    card("Search terms that found your videos", null, k.search_terms.length ? el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, el("th", {}, "Term"), el("th", { class: "r" }, "Views"), el("th", { class: "r" }, "Videos"))),
+      el("tbody", {}, k.search_terms.slice(0, 20).map((x) => el("tr", {}, el("td", {}, x.term), el("td", { class: "r" }, nf(x.views)), el("td", { class: "r" }, x.videos)))))) : el("p", { class: "empty" }, "Appears after syncs collect YouTube search terms."), el("div", { class: "foot" }, k.note)),
+    card("Brand topics", null, el("div", { class: "row", style: "flex-wrap:wrap;gap:6px" }, k.topics.map((x) => el("span", { class: "tag" }, `${x.keyword} · in ${x.in_titles} titles`))))));
+  const a = d.ai_visibility;
+  const f = { query: el("input", { placeholder: "Question asked", value: a.suggested_queries[0] }), engine: el("input", { placeholder: "AI tool + model (e.g. ChatGPT free)" }), mentioned: el("input", { type: "checkbox" }), cited_url: el("input", { placeholder: "Cited link (optional)" }), note: el("input", { placeholder: "Short excerpt / note" }) };
+  wrap.append(card("AI visibility (manual samples)", null, el("p", { class: "faint", style: "font-size:12.5px" }, a.method),
+    el("div", { class: "row", style: "flex-wrap:wrap;gap:6px" }, f.query, f.engine, el("label", { class: "row", style: "gap:4px" }, f.mentioned, "RYJ mentioned"), f.cited_url, f.note,
+      el("button", { class: "btn sm", onclick: async () => { try { await api(T("discovery/ai-sample"), { query: f.query.value, engine: f.engine.value, mentioned: f.mentioned.checked, cited_url: f.cited_url.value, note: f.note.value }); route(true); } catch (e) { toast(e.message, true); } } }, "Log sample")),
+    el("div", { class: "faint", style: "font-size:12px;margin-top:6px" }, "Suggested: ", a.suggested_queries.join(" · ")),
+    a.summary.length ? el("div", { class: "list" }, a.summary.map((x) => el("div", { class: "li" }, el("div", { class: "body" }, el("div", { class: "t" }, x.query), el("div", { class: "d" }, `mentioned in ${x.mentioned} of ${x.samples} samples`))))) : null));
+  const c = d.competitors;
+  wrap.append(card("Competitor library", null, c.library.length ? el("div", { class: "list" }, c.library.map((x) => el("div", { class: "li" }, el("div", { class: "body" }, el("div", { class: "t" }, x.name || x.ref),
+    el("div", { class: "d" }, `${x.uploads_seen} recent uploads seen · ${x.days_between_uploads != null ? `every ~${x.days_between_uploads} days` : "cadence unknown"}${x.latest[0] ? ` · latest: ${x.latest[0].title}` : ""}`)))))
+    : el("p", { class: "empty" }, "No competitor channels yet. Add them in Settings → Competitors; the trend radar reads their public feeds."),
+    c.gaps.length ? el("div", { class: "sub" }, el("b", {}, "Topics they covered that you haven't: "), c.gaps.slice(0, 6).map((g) => el("div", { style: "font-size:13px" }, el("a", { href: g.url, target: "_blank", rel: "noopener" }, g.title), el("span", { class: "faint" }, ` · ${g.competitor} · ${(g.published_at || "").slice(0, 10)}`)))) : null,
+    el("div", { class: "foot" }, c.note)));
+  const topic = el("input", { placeholder: "Topic or viewer question (e.g. When should young athletes start lifting?)", style: "flex:1;min-width:240px" }), guest = el("input", { placeholder: "Guest (optional)" });
+  const out = el("div", {});
+  const showPlan = (p) => { const x = p.plan || {}; out.replaceChildren(el("div", { class: "sub" },
+    x._unavailable ? el("div", { class: "note" }, `AI drafts unavailable (${x._unavailable}). Sources below are still real; write the questions yourself or enable AI in Settings.`) : null,
+    x.viewer_question ? el("div", {}, el("b", {}, "Viewer question: "), x.viewer_question, x.trending_or_evergreen ? el("span", { class: "tag", style: "margin-left:6px" }, x.trending_or_evergreen) : null) : null,
+    x.why_ryj ? el("div", {}, el("b", {}, "Why RYJ: "), x.why_ryj) : null, x.guest_expertise ? el("div", {}, el("b", {}, "Guest expertise: "), x.guest_expertise) : null,
+    ...[["Questions", x.questions], ["Opening hooks", x.hooks], ["Follow-ups", x.follow_ups], ["Titles", x.titles], ["Thumbnail headlines", x.thumbnail_headlines], ["Clip themes", x.clip_themes]].filter(([, l]) => l && l.length)
+      .map(([h, l]) => el("div", {}, el("b", {}, h), el("ol", { style: "margin:2px 0 6px;padding-left:20px" }, l.map((q) => el("li", {}, q))))),
+    x.metric_to_watch ? el("div", {}, el("b", {}, "Metric to watch: "), x.metric_to_watch) : null,
+    el("div", {}, el("b", {}, "Sources: "), (p.sources || []).length ? (p.sources || []).map((s) => el("div", { style: "font-size:12.5px" }, el("a", { href: s.url, target: "_blank", rel: "noopener" }, s.title), el("span", { class: "faint" }, ` · ${s.source} · ${(s.published_at || "").slice(0, 10)}`))) : el("span", { class: "faint" }, "no matching dated sources in the trend radar: treat as evergreen")),
+    p.rules ? el("div", { class: "faint", style: "font-size:12px" }, p.rules) : null)); };
+  wrap.append(card("Episode opportunity planner", null, el("div", { class: "row", style: "flex-wrap:wrap;gap:6px" }, topic, guest,
+    el("button", { class: "btn gold sm", onclick: async (e) => { e.target.disabled = true; try { showPlan(await api(T("discovery/plan"), { topic: topic.value, guest: guest.value })); } catch (x) { toast(x.message, true); } e.target.disabled = false; } }, "Plan episode")),
+    out, d.plans.length ? el("details", { class: "sub" }, el("summary", { class: "faint" }, `Saved plans (${d.plans.length})`), d.plans.map((p) => el("div", {}, el("a", { href: "#", onclick: (e) => { e.preventDefault(); showPlan(p); } }, p.topic), el("span", { class: "faint" }, ` · ${ago(p.created_at)}`)))) : null));
   return wrap;
 };
 
@@ -761,23 +822,49 @@ async function addToCalendar(t, day) {
   try { await api(T("calendar"), { title: title.value, day: date.value, kind: kind.value, trend_id: t ? t.id : null }); toast("Added to calendar"); route(true); } catch (e) { toast(e.message, true); }
 }
 
-const WF_LABEL = { suggested: "Suggested", prepared: "Prepared", awaiting_approval: "Awaiting approval", approved: "Approved", executed: "Executed", verified: "Verified", evaluated: "Evaluated", reverted: "Reverted", dismissed: "Dismissed" };
-const WF_NEXT = { suggested: [["prepared", "Mark prepared"], ["awaiting_approval", "Send for approval"]], prepared: [["awaiting_approval", "Send for approval"]],
-  awaiting_approval: [["approved", "Approve"]], approved: [["executed", "I applied it in YouTube Studio"]], executed: [["verified", "Verified live"], ["reverted", "Reverted"]],
-  verified: [["reverted", "Reverted"]], evaluated: [], reverted: [], dismissed: [["suggested", "Restore"]] };
+const WF_LABEL = { suggested: "Analyzed", prepared: "Preview ready", awaiting_approval: "Awaiting approval", approved: "Approved", executed: "Monitoring", verified: "Verified · monitoring", evaluated: "Outcome reviewed", reverted: "Rolled back", dismissed: "Rejected", blocked: "Blocked", failed: "Failed" };
+const WF_NEXT = { suggested: [["@prepare", "Prepare assets"], ["awaiting_approval", "Send for approval"]], prepared: [["@prepare", "Re-prepare"], ["awaiting_approval", "Send for approval"]],
+  awaiting_approval: [["approved", "Approve"]], approved: [["@dryrun", "Operator dry run"], ["executed", "I applied it in YouTube Studio"]], blocked: [["executed", "I applied it in YouTube Studio"]],
+  failed: [["approved", "Back to approved"]], executed: [["verified", "Verified live"], ["reverted", "Rolled back"]],
+  verified: [["reverted", "Rolled back"]], evaluated: [], reverted: [], dismissed: [["suggested", "Restore"]] };
+function prepBox(p) {
+  if (!p) return null;
+  const th = p.thumbnails;
+  return el("div", { class: "sub prep" }, el("b", {}, "Asset pack (local drafts, nothing published)"),
+    el("div", { class: "faint", style: "font-size:12px" }, `Keyword: ${p.keyword || "—"} (${p.keyword_basis}) · prepared ${ago(p.prepared_at)}`),
+    el("ol", { style: "margin:6px 0;padding-left:20px;line-height:1.6" }, (p.titles || []).map((t) => el("li", {}, el("b", {}, t.title), el("span", { class: "faint" }, ` · ${(t.strategy || "").replaceAll("_", " ")} · ${t.source || ""}`)))),
+    th ? el("a", { href: th.sheet, target: "_blank", rel: "noopener" }, el("img", { src: th.sheet, alt: "Current thumbnail next to two previews", style: "width:100%;max-width:640px;border-radius:8px;display:block" })) : null,
+    th ? el("div", { class: "faint", style: "font-size:12px" }, th.source, " ", th.approval) : null,
+    p.seo ? el("div", { style: "margin-top:6px;font-size:13px" }, el("b", {}, "Description, first lines: "), p.seo.first_lines,
+      p.seo.chapters.length ? el("pre", { style: "margin:4px 0;font-size:12px;white-space:pre-wrap" }, p.seo.chapters.join("\n")) : el("div", { class: "faint", style: "font-size:12px" }, p.seo.chapters_note)) : null,
+    (p.notes || []).map((n) => el("div", { class: "faint", style: "font-size:12px" }, n)));
+}
+function checkpointsBox(r, cps) {
+  const done = (r.result && r.result.checkpoints) || {};
+  if (!["executed", "verified", "evaluated"].includes(r.workflow)) return null;
+  const b = r.baseline || {};
+  return el("div", { class: "sub" }, el("b", {}, "Outcome checkpoints: "), (cps || [7, 14, 28]).map((n) => {
+    const c = done[String(n)];
+    return el("span", { class: "tag", style: "margin-right:6px" }, c ? `day ${n}: ${nf(c.views_per_day, 2)} views/day (was ${nf(b.views_per_day, 2)})` : `day ${n}: pending`);
+  }), el("span", { class: "faint", style: "font-size:12px" }, " Observational before/after, not proof of cause."));
+}
 const DIAG = { content: ["Hold / content", "bad"], packaging: ["Packaging", "warn"], distribution: ["Distribution", "warn"], opportunity: ["Opportunity", "ok"], insufficient: ["Insufficient data", "na"] };
 function evText(e) {
   const f = /CTR|%/.test(e.metric) ? pct : (x) => nf(x, 2);
   return `${e.metric}: ${typeof e.value === "number" ? f(e.value) : e.value}${e.peer_median != null ? ` · peers ${f(e.peer_median)}` : ""}${e.percentile != null ? ` · p${e.percentile}` : ""}`;
 }
-function recCard(r, wf) {
+function recCard(r, wf, ctx = {}) {
   const dg = DIAG[r.diagnosis] || [r.kind.replaceAll("_", " "), "na"];
-  const pipe = el("div", { class: "pipe" }, ["suggested", "awaiting_approval", "approved", "executed", "evaluated"].map((s) => {
+  const pipe = el("div", { class: "pipe" }, ["suggested", "prepared", "awaiting_approval", "approved", "executed", "evaluated"].map((s) => {
     const idx = wf.indexOf(r.workflow), sIdx = wf.indexOf(s);
     return el("span", { class: `step ${r.workflow === s ? "on" : idx > sIdx && r.workflow !== "dismissed" ? "done" : ""}` }, WF_LABEL[s]);
   }));
   const move = async (to) => { try { await api(T(`recommendations/${r.id}/workflow`), { to }); route(true); } catch (e) { toast(e.message, true); } };
-  const actions = (WF_NEXT[r.workflow] || []).map(([to, label]) => el("button", { class: `btn sm ${to === "approved" ? "gold" : "ghost"}`, onclick: () => move(to) }, label));
+  const special = {
+    "@prepare": async (b) => { b.disabled = true; b.textContent = "Preparing…"; try { await api(T(`recommendations/${r.id}/prepare`), {}); route(true); } catch (e) { toast(e.message, true); b.disabled = false; } },
+    "@dryrun": async () => { try { const x = await api(T(`recommendations/${r.id}/dry-run`), { channel_id: ctx.channel_id || "" }); toast(`${x.result}: ${x.reason}`, x.result !== "READY"); route(true); } catch (e) { toast(e.message, true); } },
+  };
+  const actions = (WF_NEXT[r.workflow] || []).map(([to, label]) => el("button", { class: `btn sm ${to === "approved" || to === "@prepare" ? "gold" : "ghost"}`, onclick: (e) => (special[to] ? special[to](e.target) : move(to)) }, label));
   if (!["dismissed", "evaluated", "reverted"].includes(r.workflow)) actions.push(el("button", { class: "btn sm ghost", onclick: () => move("dismissed") }, "Dismiss"));
   const tp = r.test_plan || {};
   const res = r.result && r.result.before ? r.result : null;
@@ -792,11 +879,13 @@ function recCard(r, wf) {
     r.hypotheses.length ? el("div", { class: "sub" }, el("b", {}, "Possible reasons (not proven): "), r.hypotheses.map((h) => `${h.cause} (${h.confidence})`).join(" · ")) : null,
     r.steps.length ? el("div", { class: "sub" }, el("b", {}, "Steps"), el("ol", { style: "margin:4px 0 0;padding-left:20px;line-height:1.6" }, r.steps.map((x) => el("li", {}, x)))) : null,
     tp.metric ? el("div", { class: "sub" }, el("b", {}, "Test: "), `${tp.metric}; baseline ${tp.baseline != null ? nf(tp.baseline, 2) : "—"}; success = ${tp.success}; reassess ${tp.reassess}.`) : null,
-    r.kind === "thumbnail_title_review" || r.kind === "retention_review" ? el("div", { class: "sub" }, el("b", {}, "Alternatives: "), "draft 3 titles and 2 thumbnail concepts on the episode page (", el("a", { href: `#/episode/${r.asset_id}` }, "Generate"), "). Drafts only; nothing is published.") : null,
+    prepBox(r.prepared),
+    !r.prepared && r.asset_id && ["suggested", "prepared"].includes(r.workflow) ? el("div", { class: "sub faint" }, "“Prepare assets” drafts 3 titles (search, curiosity, hybrid), 2 RYJ-style thumbnail previews and an SEO draft. Nothing is published.") : null,
+    checkpointsBox(r, ctx.checkpoints),
     res ? el("div", { class: "sub" }, el("b", {}, "Before → after: "), `views/day ${nf(res.before.views_per_day, 2)} → ${nf(res.after.views_per_day, 2)} · % viewed ${pct(res.before.averageViewPercentage)} → ${pct(res.after.averageViewPercentage)} · CTR ${pct(res.before.videoThumbnailImpressionsClickRate)} → ${pct(res.after.videoThumbnailImpressionsClickRate)}. `, el("span", { class: "faint" }, res.note)) : null,
-    r.evaluate_after && r.workflow === "executed" ? el("div", { class: "sub faint" }, `Baseline saved. Auto-evaluation on ${r.evaluate_after}.`) : null,
+    r.evaluate_after && ["executed", "verified"].includes(r.workflow) ? el("div", { class: "sub faint" }, `Baseline saved. Next checkpoint on ${r.evaluate_after}.`) : null,
     pipe,
-    el("div", { class: "row", style: "margin-top:8px;gap:6px;flex-wrap:wrap" }, actions, el("span", { class: "faint", style: "font-size:12px;margin-left:auto" }, `${WF_LABEL[r.workflow]} · created ${ago(r.created_at)}`)),
+    el("div", { class: "row", style: "margin-top:8px;gap:6px;flex-wrap:wrap" }, actions, el("span", { class: "faint", style: "font-size:12px;margin-left:auto" }, `${r.state_label || WF_LABEL[r.workflow]} · created ${ago(r.created_at)}`)),
     r.ledger.length ? el("details", { class: "sub" }, el("summary", { class: "faint" }, `History (${r.ledger.length})`),
       r.ledger.map((l) => el("div", { class: "faint", style: "font-size:12px" }, `${l.at.slice(0, 16).replace("T", " ")} · ${l.actor}: ${WF_LABEL[l.from_state] || l.from_state} → ${WF_LABEL[l.to_state]}${l.note ? ` (${l.note})` : ""}`))) : null);
 }
@@ -810,8 +899,8 @@ PAGES.recommendations = async () => {
     el("a", { class: "btn ghost", href: T("export/recommendations.csv") }, "CSV")));
   wrap.append(el("div", { class: "note sec", style: "font-size:13px" }, d.write_note));
   wrap.append(el("div", { class: "filters" }, seg([["open", "Open"], ["accepted", "Approved"], ["done", "Done"], ["dismissed", "Dismissed"], ["all", "All"]], f, (v) => { sessionSet("rec.f", v); route(true); })));
-  if (!items.length) { wrap.append(emptyState({ title: "Nothing here.", body: "The daily review (7:00) adds the top 3–5 opportunities when the data supports them. Videos under 7 days old or with under 100 views are left to settle." })); return wrap; }
-  wrap.append(el("div", { class: "grid", style: "gap:12px" }, items.map((r) => recCard(r, d.workflow))));
+  if (!items.length) { wrap.append(emptyState({ title: "Nothing here.", body: "The daily review (7:00) adds up to 3 new opportunities a day when the data supports them. Videos under 7 days old or with under 100 views are left to settle." })); return wrap; }
+  wrap.append(el("div", { class: "grid", style: "gap:12px" }, items.map((r) => recCard(r, d.workflow, d))));
   return wrap;
 };
 

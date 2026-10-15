@@ -278,6 +278,22 @@ MIGRATIONS = [
         created_at TEXT NOT NULL
     );
     """,
+    # v5 (2026-10-15): discovery (distribution checks, manual AI-visibility samples, saved episode plans).
+    """
+    CREATE TABLE distribution_checks (
+        tenant_id TEXT NOT NULL, platform TEXT NOT NULL, status TEXT NOT NULL, detail_json TEXT DEFAULT '{}',
+        checked_at TEXT NOT NULL, PRIMARY KEY (tenant_id, platform)
+    );
+    CREATE TABLE ai_visibility_samples (
+        id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, sampled_on TEXT NOT NULL, engine TEXT NOT NULL,
+        query TEXT NOT NULL, mentioned INTEGER NOT NULL DEFAULT 0, cited_url TEXT DEFAULT '', note TEXT DEFAULT '',
+        created_at TEXT NOT NULL
+    );
+    CREATE TABLE episode_plans (
+        id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, topic TEXT NOT NULL, guest TEXT DEFAULT '',
+        plan_json TEXT NOT NULL, sources_json TEXT DEFAULT '[]', created_at TEXT NOT NULL
+    );
+    """,
 ]
 
 

@@ -21,7 +21,7 @@ from datetime import date
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from growth_os import ai, analytics, api, brands, db, reports, scheduler, thumbs, vault
+from growth_os import ai, analytics, api, brands, db, discovery, prep, reports, scheduler, thumbs, vault
 from growth_os.connectors import podcast, youtube
 from growth_os.db import DATA_DIR, new_id, set_setting, utcnow
 from growth_os.http import BudgetExceeded, HttpError
@@ -210,6 +210,8 @@ class Handler(BaseHTTPRequestHandler):
             "podcasts": lambda: api.podcasts(c, t),
             "monetization": lambda: analytics.monetization(c, t),
             "audience": lambda: analytics.audience(c, t),
+            "discovery": lambda: discovery.page(c, t),
+            "cohorts": lambda: prep.cohorts(c, t, q.get("format") or None),
             "settings": lambda: api.settings(c, t),
             "tiles": lambda: tiles(c, t),
             "accounts": lambda: api.accounts_summary(c, t),
@@ -254,6 +256,22 @@ class Handler(BaseHTTPRequestHandler):
         return self._send(404, {"error": "not found"})
 
     def tenant_post(self, c, t, rest, body):
+        m = re.fullmatch(r"recommendations/(rec_[a-f0-9]+)/(prepare|dry-run)", rest)
+        if m or rest in ("discovery/distribution", "discovery/ai-sample", "discovery/plan"):
+            try:
+                if rest == "discovery/distribution":
+                    return self._send(200, discovery.check_distribution(c, t, term=(body.get("term") or None)))
+                if rest == "discovery/ai-sample":
+                    return self._send(200, discovery.add_ai_sample(c, t, body))
+                if rest == "discovery/plan":
+                    return self._send(200, discovery.plan_episode(c, t, str(body.get("topic", "")), str(body.get("guest", ""))[:120]))
+                if m.group(2) == "prepare":
+                    return self._send(200, prep.prepare_rec(c, t, m.group(1)))
+                return self._send(200, discovery.operator_dry_run(c, t, m.group(1), str(body.get("channel_id", ""))))
+            except LookupError as e:
+                raise brands.BrandError("not_found", str(e))
+            except ValueError as e:
+                return self._send(400, {"error": "bad_request", "message": str(e)})
         m = re.fullmatch(r"thumbs/([A-Za-z0-9_-]{1,64})/(format|previews)", rest)
         if m or rest == "experiments":
             try:
