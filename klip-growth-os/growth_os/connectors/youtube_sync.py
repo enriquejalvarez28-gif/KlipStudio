@@ -214,6 +214,14 @@ def sync(conn, tenant_id, row_id, *, client, transport=None, today=None, progres
     except Exception as e:
         out["unavailable"].append(f"Shorts vs long-form split: {str(e)[:100]}")
 
+    # 5b. Audience breakdowns for the last 90 days (age/gender, country, device,
+    # subscribed vs not). Aggregates only; YouTube withholds small groups.
+    progress(91, "audience breakdowns")
+    try:
+        out["audience"] = sync_audience(conn, g, tenant_id, ch_id, today, fetched, through)
+    except Exception as e:
+        out["unavailable"].append(f"audience breakdowns: {str(e)[:100]}")
+
     # 6. Retention curves (incl. rewatch peaks) for every video, a few per sync.
     progress(94, "retention curves")
     have = {r[0] for r in conn.execute(
@@ -290,3 +298,36 @@ def sync_all(conn, *, client, progress=lambda p, m: None):
                                        progress=lambda p, m, i=i: progress(int((i + p / 100) * 100 / len(rows)), m))
     return results
 
+
+
+AUDIENCE_REPORTS = [
+    # (key, dimensions, metrics, sort)
+    ("age_gender", "ageGroup,gender", "viewerPercentage", None),
+    ("country", "country", "views,estimatedMinutesWatched,averageViewDuration", "-views"),
+    ("device", "deviceType", "views,estimatedMinutesWatched,averageViewDuration", "-views"),
+    ("subscribed", "subscribedStatus", "views,estimatedMinutesWatched,averageViewDuration", None),
+]
+AUDIENCE_DAYS = 90
+
+
+def sync_audience(conn, g, tenant_id, ch_id, today, fetched, through):
+    start = (today - timedelta(days=AUDIENCE_DAYS)).isoformat()
+    done = {}
+    for key, dims, metrics, sort in AUDIENCE_REPORTS:
+        params = {"ids": "channel==MINE", "startDate": start, "endDate": today.isoformat(),
+                  "metrics": metrics, "dimensions": dims}
+        if sort:
+            params.update(sort=sort, maxResults=25)
+        rep = g(ANALYTICS_API, params)
+        cols = [h["name"] for h in rep.get("columnHeaders", [])]
+        ndim = len(dims.split(","))
+        conn.execute("DELETE FROM metrics WHERE tenant_id=? AND asset_id=? AND grain='audience_90d'",
+                     (tenant_id, f"aud:{key}"))
+        for r in rep.get("rows", []):
+            rec = dict(zip(cols, r))
+            label = "|".join(str(rec[c]) for c in cols[:ndim])
+            for m in cols[ndim:]:
+                youtube._put_metric(conn, tenant_id, ch_id, f"aud:{key}", m, float(rec[m]), "", "audience_90d",
+                                    label, "youtube.analytics.reports", fetched, through, "aggregate_only")
+        done[key] = len(rep.get("rows", []))
+    return done

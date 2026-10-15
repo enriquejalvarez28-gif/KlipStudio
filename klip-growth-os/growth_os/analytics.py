@@ -445,3 +445,44 @@ def rewatch_summary(curve, avg_pct_viewed=None, fmt=None):
                still_watching_at_10pct=round(early * 100, 1) if early is not None else None,
                still_watching_at_50pct=round(half * 100, 1) if half is not None else None)
     return out
+
+
+AGE_LABELS = {"age13-17": "13-17", "age18-24": "18-24", "age25-34": "25-34", "age35-44": "35-44",
+              "age45-54": "45-54", "age55-64": "55-64", "age65-": "65+"}
+
+
+def audience(conn, tenant_id):
+    """Last-90-day audience breakdowns stored by the sync (aggregates only)."""
+    rows = conn.execute(
+        """SELECT asset_id, period_start, metric_name, value, fetched_at FROM metrics
+           WHERE tenant_id=? AND platform='youtube' AND grain='audience_90d'""", (tenant_id,)).fetchall()
+    by = {}
+    fetched = None
+    for a, label, m, v, f in rows:
+        by.setdefault(a[4:], {}).setdefault(label, {})[m] = v
+        fetched = max(fetched or f, f)
+    out = {"available": bool(rows), "window_days": 90, "fetched_at": fetched,
+           "note": "Last 90 days. Shares are of views (age/gender: of signed-in viewers). "
+                   "YouTube hides groups that are too small, so parts may not add to 100%."}
+    ages, genders = {}, {}
+    for label, ms in by.get("age_gender", {}).items():
+        age, gender = (label.split("|") + [""])[:2]
+        pctv = ms.get("viewerPercentage", 0)
+        ages[AGE_LABELS.get(age, age)] = ages.get(AGE_LABELS.get(age, age), 0) + pctv
+        genders[gender.lower()] = genders.get(gender.lower(), 0) + pctv
+    out["age"] = [{"label": k, "pct": round(v, 1)} for k, v in sorted(ages.items())]
+    out["gender"] = [{"label": k.replace("user_specified", "other"), "pct": round(v, 1)}
+                     for k, v in sorted(genders.items(), key=lambda x: -x[1])]
+
+    def table(key):
+        items = by.get(key, {})
+        total = sum(ms.get("views", 0) for ms in items.values()) or 1
+        res = [{"label": label, "views": ms.get("views"), "share_pct": round(100 * (ms.get("views") or 0) / total, 1),
+                "watch_hours": round((ms.get("estimatedMinutesWatched") or 0) / 60, 1),
+                "avg_view_s": ms.get("averageViewDuration")} for label, ms in items.items()]
+        return sorted(res, key=lambda r: -(r["views"] or 0))
+
+    out["country"] = table("country")[:15]
+    out["device"] = table("device")
+    out["subscribed"] = table("subscribed")
+    return out

@@ -423,8 +423,29 @@ function aiThumbCard(v, cached) {
     el("div", { class: "foot" }, "Concepts only. Published thumbnails are never replaced without your approval; compare variants with YouTube Studio's Test & Compare where available."));
 }
 
+const COUNTRY = (() => { try { const dn = new Intl.DisplayNames(["en"], { type: "region" }); return (c) => { try { return dn.of(c) || c; } catch (e) { return c; } }; } catch (e) { return (c) => c; } })();
+const prettyDim = (x) => ({ SUBSCRIBED: "Subscribers", UNSUBSCRIBED: "Not subscribed", MOBILE: "Phone", DESKTOP: "Computer", TV: "TV", TABLET: "Tablet", GAME_CONSOLE: "Game console", UNKNOWN_PLATFORM: "Unknown" }[x] || x.replaceAll("_", " ").toLowerCase());
+function audienceSection(a) {
+  const head = el("div", { class: "card-h" }, el("h2", {}, "Audience · last 90 days"), el("div", { class: "r" }, basisTag("measured")));
+  if (!a || !a.available) return el("section", { class: "card sec" }, head, el("p", { class: "empty" }, "Fills in after the next YouTube sync."));
+  const pc = (v) => `${v.toFixed(1)}%`;
+  const ag = el("div", {}), gd = el("div", {}), dv = el("div", {});
+  const subRows = a.subscribed.map((r) => el("tr", {}, el("td", {}, prettyDim(r.label)), el("td", { class: "r" }, pc(r.share_pct)), el("td", { class: "r" }, nf(r.watch_hours)), el("td", { class: "r" }, r.avg_view_s != null ? dur(Math.round(r.avg_view_s)) : "—")));
+  const ctRows = a.country.map((r) => el("tr", {}, el("td", {}, COUNTRY(r.label)), el("td", { class: "r" }, nf(r.views)), el("td", { class: "r" }, pc(r.share_pct)), el("td", { class: "r" }, nf(r.watch_hours))));
+  return el("div", {},
+    el("div", { class: "grid g3 sec" },
+      card("Age (signed-in viewers)", null, drawLater(ag, () => C.bars(ag, a.age.map((r) => ({ label: r.label, v: r.pct })), { fmt: pc, empty: "YouTube hasn't released age data yet (too few signed-in viewers)." }))),
+      card("Gender (signed-in viewers)", null, drawLater(gd, () => C.bars(gd, a.gender.map((r) => ({ label: r.label, v: r.pct })), { fmt: pc, color: "--s2", empty: "Not released yet." }))),
+      card("Device", null, drawLater(dv, () => C.bars(dv, a.device.map((r) => ({ label: prettyDim(r.label), v: r.share_pct, note: `${nf(r.watch_hours)} h watched · avg ${r.avg_view_s != null ? dur(Math.round(r.avg_view_s)) : "—"}` })), { fmt: pc })))),
+    el("div", { class: "grid g2 sec" },
+      card("Subscribers vs not", null, el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["", "Share of views", "Watch hrs", "Avg view"].map((h, i) => el("th", { class: i ? "r" : "" }, h)))), el("tbody", {}, subRows))),
+        el("div", { class: "foot" }, "How much of the viewing comes from people already subscribed. A low subscriber share means the algorithm is bringing in new people.")),
+      card("Top countries", null, el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["Country", "Views", "Share", "Watch hrs"].map((h, i) => el("th", { class: i ? "r" : "" }, h)))), el("tbody", {}, ctRows))))),
+    el("p", { class: "faint", style: "font-size:12px;margin:6px 0 0" }, a.note));
+}
+
 PAGES.youtube = async () => {
-  const [o, vids, acc] = await Promise.all([api(T("overview?days=90")), api(T("videos")), api(T("accounts"))]);
+  const [o, vids, acc, aud] = await Promise.all([api(T("overview?days=90")), api(T("videos")), api(T("accounts")), api(T("audience"))]);
   const a = acc.youtube;
   const wrap = el("div", {}, ph("YouTube intelligence", a.name || "YouTube", a.id ? `Channel ${a.id}` : "No channel connected yet.", stPill(a.state), freshBadge(a.data_as_of)));
   if (!vids.length && !o.kpis.length) { wrap.append(emptyState(NO_DATA, goAccounts())); return wrap; }
@@ -439,6 +460,7 @@ PAGES.youtube = async () => {
       drawLater(sc, () => C.scatter(sc, scat, { xLabel: "Impressions CTR %", yLabel: "Avg % viewed", xfmt: (x) => `${x.toFixed(1)}%`, yfmt: (y) => `${Math.round(y)}%`, onClick: (p) => (location.hash = `#/episode/${p.id}`) })),
       el("div", { class: "foot" }, "Each dot is a video. Bottom-left videos lose people both before and after the click."))),
     el("div", { class: "grid g2 sec" }, el("section", { class: "card" }, el("div", { class: "card-h" }, el("h2", {}, "Average view duration (s)")), drawLater(t1, () => C.line(t1, [{ name: "Seconds", points: o.series.averageViewDuration, color: "--s2" }], {}))), formatCard(o)));
+  wrap.append(audienceSection(aud));
   const rows = vids.slice().sort((x, y) => (y.views_per_day || 0) - (x.views_per_day || 0));
   wrap.append(el("section", { class: "card sec" }, el("div", { class: "card-h" }, el("h2", {}, "All videos"), el("div", { class: "r" }, el("a", { class: "btn sm ghost", href: T("export/videos.csv") }, "CSV"))),
     el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["Video", "Format", "Age", "Views/day", "Watch hrs", "Avg view", "% viewed", "Rewatch peak", "Impr.", "CTR"].map((h, i) => el("th", { class: i > 1 ? "r" : "" }, h)))),

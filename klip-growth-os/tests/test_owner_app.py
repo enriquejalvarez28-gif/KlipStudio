@@ -413,6 +413,14 @@ class MoneyGoogle(ReachGoogle):
                 rows += [[d, "VIDEO_ON_DEMAND", 100, 600], [d, "SHORTS", 1000, 300]]
             return 200, json.dumps({"columnHeaders": [{"name": n} for n in ("day", "creatorContentType", "views", "estimatedMinutesWatched")],
                                     "rows": rows}).encode()
+        dims = q.get("dimensions")
+        if url.startswith(youtube.ANALYTICS_API) and dims == "ageGroup,gender":
+            return 200, json.dumps({"columnHeaders": [{"name": n} for n in ("ageGroup", "gender", "viewerPercentage")],
+                                    "rows": [["age18-24", "male", 40.0], ["age25-34", "male", 35.0], ["age25-34", "female", 25.0]]}).encode()
+        if url.startswith(youtube.ANALYTICS_API) and dims in ("country", "deviceType", "subscribedStatus"):
+            vals = {"country": ["US", "CA"], "deviceType": ["MOBILE", "DESKTOP"], "subscribedStatus": ["UNSUBSCRIBED", "SUBSCRIBED"]}[dims]
+            return 200, json.dumps({"columnHeaders": [{"name": n} for n in (dims, "views", "estimatedMinutesWatched", "averageViewDuration")],
+                                    "rows": [[vals[0], 900, 1200, 60], [vals[1], 100, 600, 300]]}).encode()
         if url.startswith(youtube.ANALYTICS_API) and q.get("dimensions") == "elapsedVideoTimeRatio":
             return 200, json.dumps({"columnHeaders": [{"name": n} for n in ("elapsedVideoTimeRatio", "audienceWatchRatio", "relativeRetentionPerformance")],
                                     "rows": [[0.0, 1.0, 0.5], [0.1, 0.7, 0.5], [0.5, 1.2, 0.6], [1.0, 0.3, 0.5]]}).encode()
@@ -443,6 +451,12 @@ class TestMonetizationAndRewatch(unittest.TestCase):
         d = api.video_detail(c, "ryj-media", "vLong")
         self.assertEqual((d["rewatch"]["peak_ratio"], d["rewatch"]["peak_at_pct"]), (1.2, 50))
         self.assertEqual(d["rewatch"]["biggest_drop_at_pct"], 50)
+        a = analytics.audience(c, "ryj-media")
+        self.assertEqual(r["audience"], {"age_gender": 3, "country": 2, "device": 2, "subscribed": 2})
+        self.assertEqual(a["age"], [{"label": "18-24", "pct": 40.0}, {"label": "25-34", "pct": 60.0}])
+        self.assertEqual(a["gender"][0], {"label": "male", "pct": 75.0})
+        self.assertEqual((a["device"][0]["label"], a["device"][0]["share_pct"], a["device"][0]["watch_hours"]), ("MOBILE", 90.0, 20.0))
+        self.assertEqual(a["subscribed"][1]["avg_view_s"], 300)
         vl = {v["asset_id"]: v for v in api.video_list(c, "ryj-media")}
         self.assertEqual(vl["vLong"]["rewatch_peak"], 1.2)
 

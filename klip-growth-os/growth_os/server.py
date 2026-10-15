@@ -196,6 +196,7 @@ class Handler(BaseHTTPRequestHandler):
             "recommendations": lambda: api.recommendations(c, t),
             "podcasts": lambda: api.podcasts(c, t),
             "monetization": lambda: analytics.monetization(c, t),
+            "audience": lambda: analytics.audience(c, t),
             "settings": lambda: api.settings(c, t),
             "tiles": lambda: tiles(c, t),
             "accounts": lambda: api.accounts_summary(c, t),
