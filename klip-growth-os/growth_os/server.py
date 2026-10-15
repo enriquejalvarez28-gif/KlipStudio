@@ -7,10 +7,13 @@
 * The background scheduler runs in the same process (see scheduler.py).
 """
 
+import hashlib
 import json
+import os
 import re
 import secrets
 import threading
+import time
 import urllib.parse
 import urllib.request
 import webbrowser
@@ -173,6 +176,9 @@ class Handler(BaseHTTPRequestHandler):
         if m:
             c.execute("UPDATE alerts SET acked_at=? WHERE id=?", (utcnow(), int(m.group(1))))
             return self._send(200, {"ok": True})
+        if path == "/api/restart":
+            RESTART.set()
+            return self._send(200, {"ok": True, "message": "restarting; the page reloads in a few seconds"})
         if path == "/api/settings":
             if "ai_enabled" in body:
                 set_setting(c, "ai.enabled", bool(body["ai_enabled"]))
@@ -408,14 +414,78 @@ def already_running(port):
         return False
 
 
-def serve(port=8765, db_path=None, open_browser=False, with_scheduler=True):
+# ── Self-update: relaunch when the code on disk changes ─────────────────
+CODE_DIR = Path(__file__).resolve().parent
+RESTART = threading.Event()  # set by POST /api/restart or the code watcher
+
+
+def code_fingerprint():
+    h = []
+    for f in sorted(CODE_DIR.rglob("*")):
+        if f.is_file() and f.suffix in (".py", ".js", ".css", ".html") and "__pycache__" not in f.parts:
+            st = f.stat()
+            h.append(f"{f.relative_to(CODE_DIR)}:{st.st_mtime_ns}:{st.st_size}")
+    return hashlib.sha256("|".join(h).encode()).hexdigest()
+
+
+def _jobs_running(db_path):
+    try:
+        c = db.connect(db_path)
+        n = c.execute("SELECT COUNT(*) FROM job_runs WHERE state='running'").fetchone()[0]
+        c.close()
+        return n > 0
+    except Exception:
+        return False
+
+
+def _relaunch(srv, sched, port, with_scheduler, db_path):
+    """Start a fresh copy of the app, then exit this one. The new process waits
+    for the port to free up, so there is no 'already running' race."""
+    import subprocess
+    import sys
+    deadline = time.time() + 600
+    while _jobs_running(db_path) and time.time() < deadline:  # never cut a sync in half
+        time.sleep(5)
+    args = [sys.executable, "-m", "growth_os", "serve", "--port", str(port)] + ([] if with_scheduler else ["--no-scheduler"])
+    env = dict(os.environ, GROWTH_OS_RESTARTED="1")
+    flags = 0x08000000 if os.name == "nt" else 0  # CREATE_NO_WINDOW
+    print(f"{utcnow()} code changed or restart requested: relaunching")
+    subprocess.Popen(args, cwd=str(CODE_DIR.parent), env=env, creationflags=flags, close_fds=True)
+    if sched:
+        sched.stop.set()
+    threading.Thread(target=srv.shutdown, daemon=True).start()
+    time.sleep(1)
+    srv.server_close()
+    os._exit(0)
+
+
+def _watch(srv, sched, port, with_scheduler, db_path, every=20):
+    base = code_fingerprint()
+    while True:
+        if RESTART.wait(every):
+            return _relaunch(srv, sched, port, with_scheduler, db_path)
+        try:
+            fp = code_fingerprint()
+        except Exception:
+            continue
+        if fp != base:
+            time.sleep(5)  # let a multi-file copy finish
+            return _relaunch(srv, sched, port, with_scheduler, db_path)
+
+
+def serve(port=8765, db_path=None, open_browser=False, with_scheduler=True, watch=True):
     url = f"http://127.0.0.1:{port}/"
     import sys
     if sys.stdout is None or sys.stderr is None:  # pythonw (Windows shortcut): log to a file instead
         logs = DATA_DIR / "logs"
         logs.mkdir(parents=True, exist_ok=True)
         sys.stdout = sys.stderr = open(logs / "server.log", "a", buffering=1, encoding="utf-8")
-    if already_running(port):
+    if os.environ.pop("GROWTH_OS_RESTARTED", None):
+        for _ in range(60):  # previous copy is shutting down
+            if not already_running(port):
+                break
+            time.sleep(0.5)
+    elif already_running(port):
         print(f"Klip Growth OS is already running at {url}")
         if open_browser:
             webbrowser.open(url)
@@ -432,7 +502,9 @@ def serve(port=8765, db_path=None, open_browser=False, with_scheduler=True):
     if with_scheduler:
         sched = scheduler.Scheduler(REGISTRY, db_path)
         sched.start()
-    print(f"Klip Growth OS running at {url}  (Ctrl+C to stop)")
+    print(f"Klip Growth OS running at {url}  (Ctrl+C to stop) · code {code_fingerprint()[:10]}")
+    if watch:
+        threading.Thread(target=_watch, args=(srv, sched, port, with_scheduler, db_path), daemon=True).start()
     if open_browser:
         threading.Timer(0.8, lambda: webbrowser.open(url)).start()
     try:

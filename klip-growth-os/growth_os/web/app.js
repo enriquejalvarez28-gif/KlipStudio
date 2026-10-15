@@ -750,7 +750,13 @@ PAGES.reports = async () => {
 PAGES.jobs = async () => {
   const d = await api("/api/jobs");
   const wrap = el("div", {}, ph("Operations", "Jobs & integrations", "Background jobs run while this app is open on your computer, even when the browser tab is closed. No Claude chat is needed.",
-    el("span", { class: `st ${d.scheduler_alive ? "ok" : "bad"}` }, d.scheduler_alive ? "Scheduler running" : "Scheduler not running")));
+    el("span", { class: `st ${d.scheduler_alive ? "ok" : "bad"}` }, d.scheduler_alive ? "Scheduler running" : "Scheduler not running"),
+    el("button", { class: "btn sm ghost", title: "Reloads the app with the latest code. It also reloads by itself when an update is copied in.", onclick: async (e) => {
+      e.target.disabled = true; e.target.textContent = "Restarting…";
+      try { await api("/api/restart", {}); } catch (err) { /* connection drops during restart */ }
+      const t0 = Date.now(); const poll = async () => { try { await api("/api/app"); location.reload(); } catch (err) { if (Date.now() - t0 < 90000) setTimeout(poll, 2000); } };
+      setTimeout(poll, 4000);
+    } }, "Restart app")));
   const open = d.alerts.filter((a) => !a.acked_at);
   if (open.length) wrap.append(card(`Alerts (${open.length})`, null, el("div", { class: "list" }, open.map((a) => el("div", { class: "li" }, el("span", { class: "dotst bad" }),
     el("div", { class: "body" }, el("div", { class: "t" }, a.source), el("div", { class: "d" }, a.message), el("div", { class: "faint", style: "font-size:12px" }, ago(a.created_at))),
