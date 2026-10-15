@@ -864,7 +864,7 @@ function recCard(r, wf, ctx = {}) {
     "@prepare": async (b) => { b.disabled = true; b.textContent = "Preparing…"; try { await api(T(`recommendations/${r.id}/prepare`), {}); route(true); } catch (e) { toast(e.message, true); b.disabled = false; } },
     "@dryrun": async () => { try { const x = await api(T(`recommendations/${r.id}/dry-run`), { channel_id: ctx.channel_id || "" }); toast(`${x.result}: ${x.reason}`, x.result !== "READY"); route(true); } catch (e) { toast(e.message, true); } },
   };
-  const actions = (WF_NEXT[r.workflow] || []).map(([to, label]) => el("button", { class: `btn sm ${to === "approved" || to === "@prepare" ? "gold" : "ghost"}`, onclick: (e) => (special[to] ? special[to](e.target) : move(to)) }, label));
+  const actions = (WF_NEXT[r.workflow] || []).filter(([to]) => to !== "@prepare" || (r.asset_id && !["double_down", "funnel"].includes(r.kind))).map(([to, label]) => el("button", { class: `btn sm ${to === "approved" || to === "@prepare" ? "gold" : "ghost"}`, onclick: (e) => (special[to] ? special[to](e.target) : move(to)) }, label));
   if (!["dismissed", "evaluated", "reverted"].includes(r.workflow)) actions.push(el("button", { class: "btn sm ghost", onclick: () => move("dismissed") }, "Dismiss"));
   const tp = r.test_plan || {};
   const res = r.result && r.result.before ? r.result : null;
@@ -880,7 +880,7 @@ function recCard(r, wf, ctx = {}) {
     r.steps.length ? el("div", { class: "sub" }, el("b", {}, "Steps"), el("ol", { style: "margin:4px 0 0;padding-left:20px;line-height:1.6" }, r.steps.map((x) => el("li", {}, x)))) : null,
     tp.metric ? el("div", { class: "sub" }, el("b", {}, "Test: "), `${tp.metric}; baseline ${tp.baseline != null ? nf(tp.baseline, 2) : "—"}; success = ${tp.success}; reassess ${tp.reassess}.`) : null,
     prepBox(r.prepared),
-    !r.prepared && r.asset_id && ["suggested", "prepared"].includes(r.workflow) ? el("div", { class: "sub faint" }, "“Prepare assets” drafts 3 titles (search, curiosity, hybrid), 2 RYJ-style thumbnail previews and an SEO draft. Nothing is published.") : null,
+    !r.prepared && r.asset_id && !["double_down", "funnel"].includes(r.kind) && ["suggested", "prepared"].includes(r.workflow) ? el("div", { class: "sub faint" }, "“Prepare assets” drafts 3 titles (search, curiosity, hybrid), 2 RYJ-style thumbnail previews and an SEO draft. Nothing is published.") : null,
     checkpointsBox(r, ctx.checkpoints),
     res ? el("div", { class: "sub" }, el("b", {}, "Before → after: "), `views/day ${nf(res.before.views_per_day, 2)} → ${nf(res.after.views_per_day, 2)} · % viewed ${pct(res.before.averageViewPercentage)} → ${pct(res.after.averageViewPercentage)} · CTR ${pct(res.before.videoThumbnailImpressionsClickRate)} → ${pct(res.after.videoThumbnailImpressionsClickRate)}. `, el("span", { class: "faint" }, res.note)) : null,
     r.evaluate_after && ["executed", "verified"].includes(r.workflow) ? el("div", { class: "sub faint" }, `Baseline saved. Next checkpoint on ${r.evaluate_after}.`) : null,

@@ -376,7 +376,7 @@ def recommendations(conn, t):
         d["workflow"] = d.get("workflow") or ("dismissed" if d["status"] == "dismissed" else "suggested")
         d["state_label"] = analytics.STATE_LABELS.get(d["workflow"], d["workflow"].upper())
         alts = d.get("alternatives")
-        d["prepared"] = alts.get("prepared") if isinstance(alts, dict) else None
+        d["prepared"] = alts.get("prepared") if isinstance(alts, dict) and d["kind"] not in prep.NO_REPACKAGE else None
         d["ledger"] = ledger.get(d["id"], [])
         d["asset_title"] = titles.get(d["asset_id"])
         rows.append(d)

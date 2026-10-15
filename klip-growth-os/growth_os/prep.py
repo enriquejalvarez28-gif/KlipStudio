@@ -10,6 +10,7 @@ from datetime import date, timedelta
 from growth_os import ai, analytics, thumbs
 from growth_os.db import DATA_DIR, utcnow
 
+NO_REPACKAGE = ("double_down", "funnel")  # winners / funnel fixes keep their packaging
 PREP_STRATEGIES = ["search_driven", "curiosity", "hybrid_search_plus_curiosity"]
 
 
@@ -125,6 +126,8 @@ def prepare_rec(conn, tenant_id, rec_id, runner=None):
         raise LookupError("recommendation not found")
     if not r["asset_id"]:
         raise ValueError("this card isn't about a single video, so there is nothing to prepare")
+    if r["kind"] in NO_REPACKAGE:
+        raise ValueError("this card says keep the current title and thumbnail, so there is nothing to repackage")
     d = api.video_detail(conn, tenant_id, r["asset_id"])
     v = d["video"]
     kws = [k for k, _ in analytics.topic_keywords(conn, tenant_id)]

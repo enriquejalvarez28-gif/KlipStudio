@@ -619,7 +619,8 @@ class TestSpecV5(unittest.TestCase):
     def _rec(self, c):
         seed.seed_demo(c)
         analytics.growth_review(c, self.D)
-        return c.execute("SELECT * FROM recommendations WHERE tenant_id=? AND asset_id IS NOT NULL AND diagnosis!='' LIMIT 1",
+        return c.execute("SELECT * FROM recommendations WHERE tenant_id=? AND asset_id IS NOT NULL AND diagnosis!='' "
+                         "ORDER BY kind IN ('double_down','funnel') LIMIT 1",
                          (self.D,)).fetchone()
 
     def test_prepare_pack_and_states(self):
