@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m unittest:*)",
+      "Bash(python tools/healthcheck.py:*)",
+      "Bash(.venv/Scripts/python.exe -m unittest:*)",
+      "Bash(.venv/Scripts/python.exe tools/healthcheck.py:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
+    ],
+    "deny": [
+      "Read(./data/.secret.key)",
+      "Read(./data/*_client.json)",
+      "Read(./.env)",
+      "Edit(./data/**)",
+      "Write(./data/**)"
+    ]
+  }
+}

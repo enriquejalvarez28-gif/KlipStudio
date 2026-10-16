@@ -30,3 +30,18 @@ Read `PROJECT_STATE.md` and `git log -5` / `git diff`. Re-audit only if the stat
 ## Output each run
 (1) what changed, (2) proof/test, (3) blocker, (4) next task, (5) token/API usage. Max 12 lines unless an error needs detail.
 STOP only for Google/Meta authorization, publishing approval, or a real blocking decision. No paid upgrades.
+
+## Live install (Enrique's PC)
+- Runs from `C:\Users\enriq\Documents\KlipStudio\klip-growth-os` at http://127.0.0.1:8765. That folder is a copy of this repo, not a git checkout.
+- Self-update: the server watches its own code and relaunches ~30 s after a file changes (it waits for running jobs). Desktop "Klip Growth OS - restart.cmd" forces a restart.
+- `data/` holds the live DB, OAuth client and vault key. Never read secrets or edit the live DB; profile against a copy.
+- Brain notes for this project: `C:\Users\enriq\Documents\Brain\Projects\klip-growth-os\`.
+
+## Performance budget (a slow API call = a blank page)
+- Every read endpoint must answer in under 1 s on the live DB; `python tools/healthcheck.py` fails anything over 3 s.
+- Metrics self-joins must include `platform` (primary key is tenant, platform, asset, metric, grain, period). Index `metrics_by_grain` covers grain/metric/date filters.
+- After touching `api.py`, `analytics.py` or SQL: run `/verify`.
+
+## Project commands
+- `/verify`: tests + live health check, profile and fix slow endpoints.
+- `/status`: read-only one-screen status (freshness, jobs, alerts, open cards, monetization).
