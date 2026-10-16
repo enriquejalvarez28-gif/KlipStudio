@@ -197,7 +197,10 @@ section{position:relative}
 .studio-split img{width:100%;height:100%;object-fit:cover}
 .studio-copy{padding:clamp(30px,4vw,64px) clamp(26px,4vw,72px);display:flex;flex-direction:column;justify-content:center;gap:20px}
 .studio-copy .btn{align-self:flex-start;margin-top:8px}
-.rooms{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) minmax(180px,248px);gap:14px;margin-top:14px}
+/* The rooms are a main reason to choose KLIP, so they get real size:
+   2 x 2 on desktop, the amenities band underneath them. */
+.rooms{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}
+.rooms .room-img{aspect-ratio:16/10}
 .room{display:block}
 .room-img{aspect-ratio:4/3.1;overflow:hidden;background:#ddd}
 .room-img img{width:100%;height:100%;object-fit:cover;transition:transform .6s cubic-bezier(.2,.7,.2,1)}
@@ -222,11 +225,13 @@ section{position:relative}
   content:"";position:absolute;left:0;top:15px;
   width:5px;height:5px;border-radius:50%;background:var(--red);
 }
-.room-panel{background:var(--ink);color:#fff;padding:26px 24px;display:flex;flex-direction:column;gap:16px}
-.room-panel ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
+.room-panel{background:var(--ink);color:#fff;padding:26px 28px;margin-top:14px;
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:18px 32px}
+.room-panel ul{list-style:none;margin:0;padding:0;flex:1 1 560px;
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 28px}
 .room-panel li{display:flex;align-items:center;gap:12px;font-size:12.5px;color:#dcdcdc}
 .room-panel svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:1.4;flex:0 0 auto}
-.room-panel .btn{margin-top:auto;justify-content:center;padding:13px 16px;font-size:11px}
+.room-panel .btn{flex:0 0 auto;justify-content:center;padding:13px 20px;font-size:11px}
 
 /* photography */
 .photo-split{display:grid;grid-template-columns:minmax(0,38fr) minmax(0,62fr);gap:clamp(24px,3vw,56px);align-items:center}
@@ -306,9 +311,7 @@ section{position:relative}
 @media (max-width:1180px){
   :root{--gutter:28px}
   .services{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .rooms{grid-template-columns:repeat(2,minmax(0,1fr));}
-  .room-panel{grid-column:1/-1}
-  .room-panel ul{display:grid;grid-template-columns:repeat(2,1fr);gap:14px 24px}
+  .room-panel ul{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 24px}
 }
 @media (max-width:1024px){
   .nav,.header-cta{display:none}
@@ -353,8 +356,17 @@ section{position:relative}
   .studio-split--room .studio-copy{padding:24px 20px 28px;gap:16px}
   .studio-split--room .photo-actions{margin-top:18px}
   .studio-split--room .photo-actions .btn{flex:1 1 100%;justify-content:space-between}
-  .rooms{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  /* one large room at a time — a thumbnail sells nothing */
+  .rooms{
+    grid-auto-flow:column;grid-auto-columns:95%;grid-template-columns:none;
+    overflow-x:auto;scroll-snap-type:x mandatory;gap:12px;
+    margin:0 calc(var(--gutter)*-1);padding:0 var(--gutter) 6px;
+  }
+  .rooms .room{scroll-snap-align:start}
+  .rooms .room-img{aspect-ratio:4/3}
+  .room-panel{flex-direction:column;align-items:stretch;padding:22px 20px}
   .room-panel ul{grid-template-columns:1fr}
+  .room-panel .btn{width:100%}
   .photo-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .case-grid{grid-template-columns:minmax(0,1fr)}
   .sec-head{align-items:flex-start}
@@ -582,7 +594,9 @@ body.cursor-link .cursor-ring{width:58px;height:58px;margin:-29px 0 0 -29px}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* 07 selected work — asymmetric media grid */
-.work-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:clamp(140px,12.5vw,210px);gap:12px}
+/* three columns with one 2x2 feature: six tiles fill it exactly, and no
+   tile carries twice the visual weight of a studio room */
+.work-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:clamp(150px,13.5vw,230px);gap:12px}
 .w{position:relative;overflow:hidden;display:block;background:#ddd;grid-row:span 1}
 .w img{width:100%;height:100%;object-fit:cover;transition:transform .7s cubic-bezier(.2,.7,.2,1)}
 .w:hover img{transform:scale(1.05)}
@@ -719,7 +733,6 @@ body.cursor-link .cursor-ring{width:58px;height:58px;margin:-29px 0 0 -29px}
   .vis-form button{flex:1 1 100%;justify-content:center;padding:15px}
   .work-grid{grid-template-columns:minmax(0,1fr);grid-auto-rows:auto}
   .w,.w-wide,.w-tall,.w-span2{grid-column:auto;grid-row:auto;aspect-ratio:16/10}
-  .w-tall{aspect-ratio:3/4}
   .ind-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .pod-grid{grid-auto-columns:80%}
   .loc-cats{grid-template-columns:minmax(0,1fr)}
@@ -781,3 +794,19 @@ body.cursor-link .cursor-ring{width:58px;height:58px;margin:-29px 0 0 -29px}
 
 /* optional photographer headshot — only renders when one is supplied */
 .pg-shot{width:100%;aspect-ratio:4/5;object-fit:cover;margin-bottom:16px;background:var(--line)}
+
+/* phones under 430px: one service per row — nine cards in two narrow
+   columns wraps every title */
+@media (max-width:430px){
+  .svc-grid{grid-template-columns:minmax(0,1fr)}
+  .svc,.svc:nth-child(even){border-left:0;padding-left:0}
+}
+
+/* legal pages — long-form reading, same type system */
+.pagehero--legal{min-height:auto;padding:150px 0 clamp(46px,6vw,78px)}
+.pagehero--legal h1{max-width:16ch}
+.legal-body{max-width:70ch}
+.legal-body h2{font-size:clamp(20px,2.2vw,30px);margin-bottom:18px}
+.legal-body p{font-size:16px;line-height:1.7;color:#3a3a3a;margin:0 0 16px}
+.legal-body p:last-child{margin-bottom:0}
+.sec--paper + .sec--paper .legal-body{border-top:1px solid var(--line);padding-top:clamp(30px,4vw,48px)}

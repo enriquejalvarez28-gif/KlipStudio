@@ -9,7 +9,7 @@
     "body": "Podcasts. Video. Photography. Creator content. Courses. Live selling.",
     "cta": {
       "label": "Explore The Studio",
-      "href": "#studio"
+      "href": "studio.html"
     },
     "tourCta": {
       "label": "Tour The Studio",
@@ -31,7 +31,8 @@
           "Courses: multi-camera lessons, coaching and premium modules"
         ],
         "price": "",
-        "booking": "podcastRoom"
+        "booking": "podcastRoom",
+        "anchor": "klip-room"
       },
       {
         "name": "Kapture Room",
@@ -48,7 +49,8 @@
           "Courses: direct-to-camera lessons and short modules"
         ],
         "price": "",
-        "booking": "blackRoom"
+        "booking": "blackRoom",
+        "anchor": "kapture-room"
       },
       {
         "name": "Kreator Room",
@@ -65,7 +67,8 @@
           "Courses: green-screen training, presentations and virtual backgrounds"
         ],
         "price": "",
-        "booking": "greenRoom"
+        "booking": "greenRoom",
+        "anchor": "kreator-room"
       },
       {
         "name": "Kanvas Room",
@@ -82,7 +85,8 @@
           "Courses: demonstrations, product education and visual instruction"
         ],
         "price": "",
-        "booking": "kanvasRoom"
+        "booking": "kanvasRoom",
+        "anchor": "kanvas-room"
       }
     ],
     "features": [
@@ -113,7 +117,7 @@
     ],
     "featuresCta": {
       "label": "View All Rooms",
-      "booking": "studioRentals"
+      "href": "studio.html#rooms"
     }
   }
 }

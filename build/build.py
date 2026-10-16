@@ -29,6 +29,8 @@ PARTS = ['brand', 'navigation', 'hero', 'sections', 'studio', 'photography',
          'photographers', 'podcasts', 'clients', 'location', 'visibility',
          'booking', 'consultation']
 
+LEGAL = [('privacy.html', 'privacy', '/privacy/'), ('terms.html', 'terms', '/terms/')]
+
 PAGES = [
     ('index.html', 'home', '/'),
     ('media.html', 'media', '/media/'),
@@ -47,6 +49,8 @@ def load():
             d.update(json.load(fh))
     with open(os.path.join(DATA, 'pages.json'), encoding='utf-8') as fh:
         pages = json.load(fh)
+    with open(os.path.join(DATA, 'legal.json'), encoding='utf-8') as fh:
+        d.update(json.load(fh))
     try:
         with open(os.path.join(DATA, 'webp.json'), encoding='utf-8') as fh:
             R.WEBP = set(json.load(fh))
@@ -126,8 +130,10 @@ def footer(D, here):
         '<div class="socials">%s</div></div>'
         '<div class="foot-bottom"><span>%s &nbsp;&middot;&nbsp; %s</span><span>%s</span></div>'
         '</div></footer>'
-        % (R.esc(a['href']), a['attr'], R.esc(h['primaryCta']['label']),
-           R.esc(b['href']), b['attr'], R.esc(h['secondaryCta']['label']),
+        % (R.esc(a['href']), a['attr'],
+           R.esc(h['primaryCta'].get('mobileLabel') or h['primaryCta']['label']),
+           R.esc(b['href']), b['attr'],
+           R.esc(h['secondaryCta'].get('mobileLabel') or h['secondaryCta']['label']),
            R.esc(D['logo'].get('dark', '')), R.esc(D['logo'].get('alt', '')),
            ''.join('<a href="%s"%s>%s</a>' % (R.esc(l['href']), cur(l['href']), R.esc(l['label']))
                    for l in FO['links']),
@@ -236,7 +242,7 @@ def home_main(D):
            ''.join('<a class="pod fade" href="%s"%s><div class="pod-thumb">%s</div>'
                    '<div class="pod-meta"><div><span class="label">%s</span><h3>%s</h3></div>'
                    '<span class="pod-time">%s</span></div></a>'
-                   % (esc(c.get('video') or P['cta']['href']),
+                   % (esc(c.get('video') or 'podcasts.html'),
                       ' data-video="%s"' % esc(c['video']) if c.get('video') else '',
                       pic(c['image'], '%s: %s' % (c['show'], c['title']),
                           'loading="lazy" decoding="async" width="1000" height="700"'),
@@ -246,10 +252,11 @@ def home_main(D):
     T = D['studio']
     room_tiles = ''
     for r in T['rooms']:
-        ra = act(r)
-        room_tiles += ('<a class="room fade" href="%s"%s><div class="room-img">%s</div>'
+        # The card teaches; only BOOK THIS ROOM on the Studio page books.
+        href = 'studio.html#%s' % r.get('anchor', 'rooms')
+        room_tiles += ('<a class="room fade" href="%s"><div class="room-img">%s</div>'
                        '<h3>%s</h3><span>%s%s</span></a>'
-                       % (esc(ra['href']), ra['attr'],
+                       % (esc(href),
                           pic(r['image'], r['name'],
                               'loading="lazy" decoding="async" width="820" height="640"'),
                           esc(r['name']), esc(r.get('card') or r.get('use') or ''),
@@ -259,8 +266,8 @@ def home_main(D):
         '<div class="studio-split rv"><figure>%s</figure>'
         '<div class="studio-copy"><p class="eyebrow fade">%s</p><h2>%s</h2>'
         '<p class="lede fade">%s</p><div class="photo-actions">%s%s</div></div></div>'
-        '<div class="wrap"><div class="rooms rv">%s'
-        '<div class="room-panel fade"><ul>%s</ul>%s</div></div></div></section>'
+        '<div class="wrap"><div class="rooms rv">%s</div>'
+        '<div class="room-panel rv"><ul>%s</ul>%s</div></div></section>'
         % (pic(T['image'], T.get('imageAlt', ''),
                'loading="lazy" decoding="async" width="1700" height="1130"'),
            esc(T['eyebrow']), headline(T['headline']), esc(T['body']),
@@ -478,13 +485,39 @@ def build():
             fh.write(html)
         written.append((filename, len(html)))
 
+    # Privacy and Terms — plain readable pages, same chrome, same build
+    for filename, key, url in LEGAL:
+        L = D['legal'][key]
+        secs = ''.join(
+            '<section class="sec sec--paper"><div class="wrap legal-body">'
+            '<h2>%s</h2>%s</div></section>'
+            % (R.esc(sec['title']),
+               ''.join('<p>%s</p>' % R.esc(par) for par in sec['body']))
+            for sec in L['sections'])
+        main = (
+            '<section class="pagehero pagehero--legal" id="top"><div class="wrap">'
+            '<p class="eyebrow on-dark">Effective %s</p><h1>%s</h1>'
+            '<p class="lede on-dark" style="margin-top:20px">%s</p></div></section>'
+            % (R.esc(D['legal']['effective']), R.headline(L['heading']), R.esc(L['intro']))
+            + secs)
+        graph = [org_schema(D), breadcrumbs(L['heading'][0], url)]
+        body = (header(D, filename.lower()) + '\n<main>\n' + main + '\n</main>\n'
+                + footer(D, filename.lower()))
+        html = shell(L['title'], L['description'], SITE + url, body,
+                     json.dumps({"@context": "https://schema.org", "@graph": graph},
+                                indent=2, ensure_ascii=False),
+                     key, config=json.dumps(cfg, ensure_ascii=False, separators=(',', ':')))
+        with open(os.path.join(ROOT, filename), 'w', encoding='utf-8') as fh:
+            fh.write(html)
+        written.append((filename, len(html)))
+
     # sitemap from the same list, so it can never drift from the pages
     today = date.today().isoformat()
     urls = ''.join(
         '  <url><loc>%s%s</loc><lastmod>%s</lastmod><changefreq>%s</changefreq>'
         '<priority>%s</priority></url>\n'
         % (SITE, u, today, 'weekly' if u == '/' else 'monthly', '1.0' if u == '/' else '0.8')
-        for _, _, u in PAGES)
+        for _, _, u in PAGES + LEGAL)
     with open(os.path.join(ROOT, 'sitemap.xml'), 'w', encoding='utf-8') as fh:
         fh.write('<?xml version="1.0" encoding="UTF-8"?>\n'
                  '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n%s</urlset>\n' % urls)
@@ -492,7 +525,7 @@ def build():
     print('Built %d pages:' % len(written))
     for f, n in written:
         print('  %-20s %6d bytes' % (f, n))
-    print('  sitemap.xml          %d urls' % len(PAGES))
+    print('  sitemap.xml          %d urls' % (len(PAGES) + len(LEGAL)))
     return written
 
 

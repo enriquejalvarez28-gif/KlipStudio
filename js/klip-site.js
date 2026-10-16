@@ -95,9 +95,12 @@
       header.classList.toggle('is-stuck', window.scrollY>40);
       var h=document.documentElement.scrollHeight-window.innerHeight;
       progress.style.width=(h>0?(window.scrollY/h)*100:0)+'%';
-      var m=document.getElementById('mcta');
-      var ft=document.getElementById('contact').getBoundingClientRect().top;
-      m.classList.toggle('is-on', window.scrollY>600 && ft>window.innerHeight*0.6);
+      var m=document.getElementById('mcta'), c=document.getElementById('contact');
+      if(m){
+        // pages without a closing contact band (Privacy, Terms) just keep it on
+        var ft=c?c.getBoundingClientRect().top:Infinity;
+        m.classList.toggle('is-on', window.scrollY>600 && ft>window.innerHeight*0.6);
+      }
     }
     onScroll(); window.addEventListener('scroll', onScroll, {passive:true});
 

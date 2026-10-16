@@ -16,11 +16,13 @@
     "body": "Content, marketing and production working together to move your business forward.",
     "primaryCta": {
       "label": "Grow Your Business",
-      "consult": true
+      "consult": true,
+      "mobileLabel": "Let's Talk"
     },
     "secondaryCta": {
       "label": "Book The Studio",
-      "booking": "studioRentals"
+      "booking": "studioRentals",
+      "mobileLabel": "Book Studio"
     },
     "sideNote": [
       "More",

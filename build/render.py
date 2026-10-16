@@ -224,8 +224,11 @@ def rooms(b, D):
                 '<li>%s</li>' % esc(c) for c in r['capabilities'])
         copy += ('<div class="photo-actions"><a class="btn btn--dark" href="%s"%s>%s %s</a></div></div>'
                  % (esc(a['href']), a['attr'], esc(r.get('cta') or 'Book This Room'), AR))
-        out += ('<div class="studio-split studio-split--room%s rv">%s</div>'
-                % (' is-rev' if rev else '', (copy + fig) if rev else (fig + copy)))
+        anchor = r.get('anchor')
+        out += ('<div class="studio-split studio-split--room%s rv"%s>%s</div>'
+                % (' is-rev' if rev else '',
+                   ' id="%s"' % esc(anchor) if anchor else '',
+                   (copy + fig) if rev else (fig + copy)))
     return out + '</section>'
 
 

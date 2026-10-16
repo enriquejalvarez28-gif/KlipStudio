@@ -176,11 +176,6 @@
             "text": "Cameras, lighting and audio configured and tested before you arrive."
           },
           {
-            "icon": "sets",
-            "title": "Multiple Sets & Looks",
-            "text": "Switch rooms and backgrounds without rebuilding anything."
-          },
-          {
             "icon": "calendar",
             "title": "Easy Booking",
             "text": "Pick your room and your hour online. Confirmation is instant."
@@ -621,7 +616,7 @@
         "headline": [
           "Built For Your Business"
         ],
-        "body": "Content and marketing for businesses that need to be seen, trusted and remembered.",
+        "body": "Built for small businesses, brands, creators and professionals who want to show up better, create consistently and grow.",
         "items": [
           {
             "image": "img/ind1.jpg",
@@ -720,7 +715,7 @@
           },
           {
             "title": "KLIP Studio",
-            "text": "The production side — podcast, video, photography and on-location shoots."
+            "text": "The production side — Podcast, video, photography, creator content, courses, live selling and on-location production."
           },
           {
             "title": "Together",

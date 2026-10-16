@@ -95,48 +95,48 @@
     ],
     "cta": {
       "label": "View All Work",
-      "href": "#work"
+      "href": "work.html"
     },
     "items": [
       {
         "image": "img/work1.jpg",
         "title": "Branded Podcast Series",
         "category": "Podcast · Multicam",
-        "href": "#work",
+        "href": "work.html#projects",
         "size": "wide"
       },
       {
         "image": "img/work2.jpg",
         "title": "Business Content Shoot",
         "category": "Video · Social",
-        "href": "#work"
+        "href": "work.html#projects"
       },
       {
         "image": "img/work3.jpg",
         "title": "On-Location Production",
         "category": "Field Production",
-        "href": "#work"
+        "href": "work.html#projects"
       },
       {
         "image": "img/work4.jpg",
         "title": "Short-Form Social",
         "category": "Reels · Vertical",
-        "href": "#work",
-        "size": "tall"
+        "href": "work.html#projects",
+        "size": ""
       },
       {
         "image": "img/work5.jpg",
         "title": "Portrait & Branding",
         "category": "Photography",
-        "href": "#work",
-        "size": "tall"
+        "href": "work.html#projects",
+        "size": ""
       },
       {
         "image": "img/work6.jpg",
         "title": "Brand Campaign",
         "category": "Creative Direction",
-        "href": "#work",
-        "size": "span2"
+        "href": "work.html#projects",
+        "size": ""
       }
     ]
   },
@@ -193,7 +193,7 @@
     "body": "KLIP is a content and digital marketing company built to help businesses become more visible and grow — backed by our own production studio and on-location team.",
     "cta": {
       "label": "About KLIP",
-      "href": "#about-klip"
+      "href": "about.html"
     }
   },
   "finalCta": {
