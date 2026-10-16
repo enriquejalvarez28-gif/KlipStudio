@@ -299,6 +299,10 @@ MIGRATIONS = [
     UPDATE OR REPLACE metrics SET asset_id='ctype:VIDEO_ON_DEMAND' WHERE asset_id='ctype:VIDEOONDEMAND';
     UPDATE OR REPLACE metrics SET asset_id='ctype:LIVE_STREAM' WHERE asset_id='ctype:LIVESTREAM';
     """,
+    # v7 (2026-10-15): read-path index (KPI, CTR, cohort and freshness queries filter by grain/metric/date).
+    """
+    CREATE INDEX IF NOT EXISTS metrics_by_grain ON metrics (tenant_id, grain, metric_name, period_start);
+    """,
 ]
 
 

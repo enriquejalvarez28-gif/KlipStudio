@@ -876,9 +876,9 @@ def kpi_ctr(conn, tenant_id, days):
 
     def window(a, b):
         r = conn.execute("""SELECT SUM(i.value), SUM(i.value * COALESCE(c.value,0)) FROM metrics i LEFT JOIN metrics c
-                            ON c.tenant_id=i.tenant_id AND c.asset_id=i.asset_id AND c.grain=i.grain AND c.period_start=i.period_start
-                            AND c.metric_name='videoThumbnailImpressionsClickRate'
-                            WHERE i.tenant_id=? AND i.grain='day_video' AND i.metric_name='videoThumbnailImpressions'
+                            ON c.tenant_id=i.tenant_id AND c.platform=i.platform AND c.asset_id=i.asset_id AND c.grain=i.grain
+                            AND c.period_start=i.period_start AND c.metric_name='videoThumbnailImpressionsClickRate'
+                            WHERE i.tenant_id=? AND i.platform='youtube' AND i.grain='day_video' AND i.metric_name='videoThumbnailImpressions'
                             AND i.period_start BETWEEN ? AND ?""", (tenant_id, a, b)).fetchone()
         return ((r[1] / r[0]) if r and r[0] else None), (r[0] or 0) if r else 0
     e = date.fromisoformat(end)
