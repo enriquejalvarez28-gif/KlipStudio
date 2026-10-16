@@ -452,6 +452,28 @@
       });
     })();
 
+    /* ---------- Work page filters ----------
+       Every project is in the HTML; this only hides the ones that do not
+       match, so the page still works with JavaScript off. */
+    (function(){
+      var bar=document.querySelector('.work-filters'), grid=document.getElementById('work-grid');
+      if(!bar||!grid) return;
+      var cards=[].slice.call(grid.querySelectorAll('.w'));
+      bar.addEventListener('click', function(e){
+        var btn=e.target.closest('button[data-filter]'); if(!btn) return;
+        var key=btn.getAttribute('data-filter');
+        [].forEach.call(bar.querySelectorAll('button'), function(b){
+          b.setAttribute('aria-pressed', String(b===btn));
+        });
+        var shown=0;
+        cards.forEach(function(c){
+          var on=(key==='all')||(c.getAttribute('data-category')===key);
+          c.hidden=!on; if(on) shown++;
+        });
+        track('work_filter',{filter:key,results:shown});
+      });
+    })();
+
     /* ---------- reveal motion (CSS + IntersectionObserver) ---------- */
     function revealNow(sec){
       var els=sec.querySelectorAll('.ln>span, .fade');

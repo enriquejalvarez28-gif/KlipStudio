@@ -232,6 +232,29 @@ def rooms(b, D):
     return out + '</section>'
 
 
+def portfolio(b, D):
+    """The full Work page: filters, with reels two-up and landscape full width."""
+    filters = ''
+    if b.get('filters'):
+        filters = '<div class="work-filters" role="group" aria-label="Filter work">' + ''.join(
+            '<button type="button" data-filter="%s" aria-pressed="%s">%s</button>'
+            % (esc(f['key']), 'true' if i == 0 else 'false', esc(f['label']))
+            for i, f in enumerate(b['filters'])) + '</div>'
+    items = ''
+    for i in (b.get('items') or []):
+        a = act(i)
+        fmt = i.get('format') or 'landscape'
+        items += ('<a class="w fade w--%s" href="%s"%s data-category="%s">%s'
+                  '<span class="w-cap"><em>%s</em><h3>%s</h3></span></a>'
+                  % (esc(fmt), esc(a['href']), a['attr'], esc(i.get('category', '')),
+                     pic(i.get('image', ''), i.get('title', ''),
+                         'loading="lazy" decoding="async" width="1200" height="800"'),
+                     esc(i.get('sub', '')), esc(i.get('title', ''))))
+    return ('<section class="sec sec--paper"%s><div class="wrap">%s%s'
+            '<div class="work-grid work-grid--all rv" id="work-grid">%s</div></div></section>'
+            % (' id="%s"' % esc(b['id']) if b.get('id') else '', head_block(b), filters, items))
+
+
 def steps(b, D):
     items = ''.join(
         '<div class="step fade"><b>%02d</b><h3>%s</h3><p>%s</p></div>'
@@ -299,8 +322,8 @@ def cta(b, D):
 
 
 BLOCKS = {'pagehero': pagehero, 'editorial': editorial, 'split': split, 'cards': cards,
-          'rooms': rooms, 'steps': steps, 'facts': facts, 'clips': clips,
-          'visibility': visibility, 'cta': cta}
+          'rooms': rooms, 'portfolio': portfolio, 'steps': steps, 'facts': facts,
+          'clips': clips, 'visibility': visibility, 'cta': cta}
 
 
 def render_blocks(blocks, D):

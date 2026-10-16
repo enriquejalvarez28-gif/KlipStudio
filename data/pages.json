@@ -563,7 +563,7 @@
         ]
       },
       {
-        "type": "cards",
+        "type": "portfolio",
         "id": "projects",
         "eyebrow": "Projects",
         "headline": [
@@ -575,37 +575,75 @@
             "image": "img/work1.jpg",
             "title": "Branded Podcast Series",
             "sub": "Podcast · Multicam",
-            "href": "podcasts.html"
+            "href": "podcasts.html",
+            "category": "podcast",
+            "format": "landscape"
           },
           {
             "image": "img/work2.jpg",
             "title": "Business Content Shoot",
             "sub": "Video · Social",
-            "href": "media.html"
+            "href": "media.html",
+            "category": "video",
+            "format": "landscape"
           },
           {
             "image": "img/work3.jpg",
             "title": "On-Location Production",
             "sub": "Field Production",
-            "href": "studio.html"
+            "href": "studio.html",
+            "category": "video",
+            "format": "landscape"
           },
           {
             "image": "img/work4.jpg",
             "title": "Short-Form Social",
             "sub": "Reels · Vertical",
-            "href": "media.html"
+            "href": "media.html",
+            "category": "reels",
+            "format": "reel"
           },
           {
             "image": "img/work5.jpg",
             "title": "Portrait & Branding",
             "sub": "Photography",
-            "href": "photography.html"
+            "href": "photography.html",
+            "category": "photography",
+            "format": "reel"
           },
           {
             "image": "img/work6.jpg",
             "title": "Brand Campaign",
             "sub": "Creative Direction",
-            "href": "media.html"
+            "href": "media.html",
+            "category": "campaigns",
+            "format": "landscape"
+          }
+        ],
+        "filters": [
+          {
+            "key": "all",
+            "label": "All"
+          },
+          {
+            "key": "reels",
+            "label": "Reels & Short-Form"
+          },
+          {
+            "key": "video",
+            "label": "Video"
+          },
+          {
+            "key": "podcast",
+            "label": "Podcast"
+          },
+          {
+            "key": "photography",
+            "label": "Photography"
+          },
+          {
+            "key": "campaigns",
+            "label": "Campaigns"
           }
         ]
       },

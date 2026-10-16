@@ -99,43 +99,35 @@
     },
     "items": [
       {
-        "image": "img/work1.jpg",
-        "title": "Branded Podcast Series",
-        "category": "Podcast · Multicam",
-        "href": "work.html#projects",
-        "size": "wide"
-      },
-      {
-        "image": "img/work2.jpg",
-        "title": "Business Content Shoot",
-        "category": "Video · Social",
-        "href": "work.html#projects"
-      },
-      {
-        "image": "img/work3.jpg",
-        "title": "On-Location Production",
-        "category": "Field Production",
-        "href": "work.html#projects"
-      },
-      {
         "image": "img/work4.jpg",
         "title": "Short-Form Social",
         "category": "Reels · Vertical",
         "href": "work.html#projects",
-        "size": ""
+        "size": "",
+        "format": "reel"
       },
       {
         "image": "img/work5.jpg",
         "title": "Portrait & Branding",
         "category": "Photography",
         "href": "work.html#projects",
-        "size": ""
+        "size": "",
+        "format": "reel"
       },
       {
-        "image": "img/work6.jpg",
-        "title": "Brand Campaign",
-        "category": "Creative Direction",
+        "image": "img/work1.jpg",
+        "title": "Branded Podcast Series",
+        "category": "Podcast · Multicam",
         "href": "work.html#projects",
+        "size": "",
+        "format": "landscape"
+      },
+      {
+        "image": "img/work3.jpg",
+        "title": "On-Location Production",
+        "category": "Field Production",
+        "href": "work.html#projects",
+        "format": "landscape",
         "size": ""
       }
     ]

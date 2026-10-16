@@ -212,7 +212,10 @@ def home_main(D):
     K = D['work']
     tiles = ''
     for w in K['items']:
+        # format drives the mobile shape: reels pair up 2-across, landscape
+        # projects run full width. Nothing is a full-width 9:16 stack.
         cls = 'w fade' + {'wide': ' w-wide', 'tall': ' w-tall', 'span2': ' w-span2'}.get(w.get('size'), '')
+        cls += ' w--' + (w.get('format') or 'landscape')
         tiles += ('<a class="%s" href="%s">%s<span class="w-cap"><em>%s</em><h3>%s</h3>'
                   '<span class="go">View Project %s</span></span></a>'
                   % (cls, esc(w['href']),
@@ -254,13 +257,17 @@ def home_main(D):
     for r in T['rooms']:
         # The card teaches; only BOOK THIS ROOM on the Studio page books.
         href = 'studio.html#%s' % r.get('anchor', 'rooms')
+        # name, one short line, at most three capabilities — no equipment paragraph
+        caps = (r.get('capabilities') or [])[:3]
         room_tiles += ('<a class="room fade" href="%s"><div class="room-img">%s</div>'
-                       '<h3>%s</h3><span>%s%s</span></a>'
+                       '<h3>%s</h3><span>%s%s</span>%s</a>'
                        % (esc(href),
                           pic(r['image'], r['name'],
                               'loading="lazy" decoding="async" width="820" height="640"'),
-                          esc(r['name']), esc(r.get('card') or r.get('use') or ''),
-                          '<br>' + esc(r['price']) if r.get('price') else ''))
+                          esc(r['name']), esc(r.get('role') or r.get('card') or ''),
+                          '<br>' + esc(r['price']) if r.get('price') else '',
+                          ('<ul class="room-caps room-caps--mini">%s</ul>'
+                           % ''.join('<li>%s</li>' % esc(c) for c in caps)) if caps else ''))
     out.append(
         '<section id="studio" style="background:var(--paper);padding-bottom:clamp(44px,5vw,78px)">'
         '<div class="studio-split rv"><figure>%s</figure>'
