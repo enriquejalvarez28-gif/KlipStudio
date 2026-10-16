@@ -104,7 +104,9 @@
         "category": "Reels · Vertical",
         "href": "work.html#projects",
         "size": "",
-        "format": "reel"
+        "format": "reel",
+        "preview": "",
+        "previewMp4": ""
       },
       {
         "image": "img/work5.jpg",
@@ -112,7 +114,9 @@
         "category": "Photography",
         "href": "work.html#projects",
         "size": "",
-        "format": "reel"
+        "format": "reel",
+        "preview": "",
+        "previewMp4": ""
       },
       {
         "image": "img/work1.jpg",

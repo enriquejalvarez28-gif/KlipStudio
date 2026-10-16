@@ -452,6 +452,70 @@
       });
     })();
 
+    /* ---------- silent previews ----------
+       A card ships as a poster. Its video source is attached only when the
+       card is near the viewport, nothing is preloaded, and exactly one
+       preview plays at a time: on hover on desktop, on becoming the centred
+       card on a phone. prefers-reduced-motion gets the poster and nothing
+       else. */
+    (function(){
+      if(REDUCE) return;
+      var cards=[].slice.call(document.querySelectorAll('[data-preview],[data-preview-mp4]'));
+      if(!cards.length) return;
+      var playing=null;
+
+      function build(card){
+        if(card._v) return card._v;
+        var v=document.createElement('video');
+        v.muted=true; v.loop=true; v.playsInline=true; v.preload='none';
+        v.setAttribute('muted',''); v.setAttribute('playsinline','');
+        v.setAttribute('aria-hidden','true'); v.tabIndex=-1;
+        [['data-preview','video/webm'],['data-preview-mp4','video/mp4']].forEach(function(p){
+          var src=card.getAttribute(p[0]);
+          if(src){ var so=document.createElement('source'); so.src=src; so.type=p[1]; v.appendChild(so); }
+        });
+        var host=card.querySelector('.pod-thumb')||card;
+        host.appendChild(v); card._v=v; return v;
+      }
+
+      function stop(){
+        if(!playing) return;
+        try{ playing.pause(); }catch(e){}
+        playing.classList.remove('is-playing');
+        playing=null;
+      }
+      function start(card){
+        var v=card._v; if(!v || v===playing) return;
+        stop();
+        playing=v; v.classList.add('is-playing');
+        var go=v.play(); if(go&&go.catch) go.catch(function(){ v.classList.remove('is-playing'); });
+      }
+
+      /* attach the source only when the card comes close */
+      var near=new IntersectionObserver(function(en){
+        en.forEach(function(x){ if(x.isIntersecting){ build(x.target); near.unobserve(x.target); } });
+      },{rootMargin:'250px 0px'});
+      cards.forEach(function(c){ near.observe(c); });
+
+      if(window.matchMedia('(pointer:fine)').matches){
+        cards.forEach(function(c){
+          c.addEventListener('mouseenter', function(){ build(c); start(c); });
+          c.addEventListener('mouseleave', stop);
+        });
+      } else {
+        /* phone: whichever card is nearest the middle of the screen plays */
+        var centred=new IntersectionObserver(function(en){
+          var best=null, bestRatio=0;
+          en.forEach(function(x){ if(x.isIntersecting && x.intersectionRatio>bestRatio){ best=x.target; bestRatio=x.intersectionRatio; } });
+          if(best && bestRatio>0.6){ build(best); start(best); }
+          else if(!best) stop();
+        },{threshold:[0,0.6,0.9], rootMargin:'-20% 0px -20% 0px'});
+        cards.forEach(function(c){ centred.observe(c); });
+      }
+
+      document.addEventListener('visibilitychange', function(){ if(document.hidden) stop(); });
+    })();
+
     /* ---------- Work page filters ----------
        Every project is in the HTML; this only hides the ones that do not
        match, so the page still works with JavaScript off. */
@@ -511,8 +575,13 @@
         });
       },2500);
 
-      /* heavy layer: real site only, after first paint */
-      if(!IN_FRAME){
+      /* Heavy motion layer: desktop only, after first paint.
+         GSAP + ScrollTrigger + Lenis are ~137KB and every effect they drive
+         is already switched off below 761px, so a phone never downloads
+         them. Phones use native scrolling and CSS scroll-snap. */
+      var DESKTOP=window.matchMedia('(min-width:761px)').matches
+                  && !window.matchMedia('(pointer:coarse)').matches;
+      if(!IN_FRAME && DESKTOP && !REDUCE){
         var load=function(s){ return new Promise(function(res){ var t=document.createElement('script'); t.src=s; t.onload=res; t.onerror=res; document.body.appendChild(t); }); };
         load('js/gsap.min.js').then(function(){ return load('js/ScrollTrigger.min.js'); }).then(function(){ return load('js/lenis.min.js'); })
         .then(function(){

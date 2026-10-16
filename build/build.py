@@ -56,6 +56,11 @@ def load():
             R.WEBP = set(json.load(fh))
     except OSError:
         R.WEBP = set()
+    try:
+        with open(os.path.join(DATA, 'srcset.json'), encoding='utf-8') as fh:
+            R.SRCSET = json.load(fh)
+    except OSError:
+        R.SRCSET = {}
     R.BOOKING_BASE = (d.get('booking') or {}).get('base', '')
     return d, pages
 
@@ -151,23 +156,34 @@ def home_main(D):
     esc, btn, pic, icon, headline, act = R.esc, R.btn, R.pic, R.icon, R.headline, R.act
     H = D['hero']
     poster = H.get('videoPoster') or H.get('image')
+    poster_m = H.get('videoPosterMobile') or poster
+
+    # No <source> children in the HTML on purpose. A phone must never start
+    # the desktop file, and the `media` attribute on <source> inside <video>
+    # is not honoured by Chrome — tested: at 390px it fetched BOTH files and
+    # played the desktop one. So the element ships empty and this inline
+    # script, which runs before the next element is parsed, attaches exactly
+    # one pair. Nothing is requested until it does.
+    # The poster is the LCP element, so it is preloaded in <head> with a media
+    # query (honoured on <link>, unlike on <source>) and only assigned here —
+    # a poster="" attribute could not be made viewport-specific.
     video = (
-        '<video autoplay muted loop playsinline preload="metadata" poster="%s" '
-        'width="1920" height="1080">'
-        '<source src="%s" type="video/webm"><source src="%s" type="video/mp4"></video>'
-        % (esc(poster), esc(H.get('videoWebm', '')), esc(H.get('videoMp4', ''))))
-    # The phone file and the reduced-motion still have to be chosen before the
-    # browser starts downloading, so this runs inline, not in the deferred JS.
+        '<video id="hero-video" autoplay muted loop playsinline preload="metadata" '
+        'width="1920" height="1080"></video>')
     swap = (
-        '<script>(function(){var m=document.currentScript.previousElementSibling,'
-        'v=m.querySelector("video");if(!v)return;'
+        '<script>(function(){var v=document.getElementById("hero-video");if(!v)return;'
+        'var sm=matchMedia("(max-width:760px)").matches,p=sm?"%s":"%s";'
         'if(matchMedia("(prefers-reduced-motion: reduce)").matches){'
-        'm.innerHTML=\'<img src="%s" alt="%s" fetchpriority="high" width="1920" height="1080">\';return;}'
-        'if(matchMedia("(max-width:760px)").matches){var s=v.querySelectorAll("source");'
-        'if(s[0]&&"%s")s[0].src="%s";if(s[1]&&"%s")s[1].src="%s";v.load();}})();</script>'
-        % (R.esc(H.get('image', '')), R.esc(H.get('imageAlt', '')),
-           R.esc(H.get('videoMobileWebm', '')), R.esc(H.get('videoMobileWebm', '')),
-           R.esc(H.get('videoMobile', '')), R.esc(H.get('videoMobile', ''))))
+        'v.parentNode.innerHTML=\'<img src="\'+p+\'" alt="%s" fetchpriority="high" '
+        'width="1920" height="1080">\';return;}'
+        'v.poster=p;'
+        'var w=sm?"%s":"%s",m=sm?"%s":"%s";'
+        'function add(src,type){if(!src)return;var s=document.createElement("source");'
+        's.src=src;s.type=type;v.appendChild(s);}'
+        'add(w,"video/webm");add(m,"video/mp4");v.load();})();</script>'
+        % (esc(poster_m), esc(poster), esc(H.get('imageAlt', '')),
+           esc(H.get('videoMobileWebm', '')), esc(H.get('videoWebm', '')),
+           esc(H.get('videoMobile', '')), esc(H.get('videoMp4', ''))))
     out = [
         '<section class="hero" id="top">'
         '<div class="hero-media">%s</div>%s'
@@ -210,22 +226,34 @@ def home_main(D):
                                            '<section class="sec sec--paper" id="visibility" style="padding-top:0">'))
 
     K = D['work']
+    # A set of exactly two reels and two landscape projects tiles perfectly on
+    # desktop as reel|landscape over reel|landscape, with both aspect ratios
+    # intact. Any other mix falls back to the uniform band, so changing the
+    # featured items in /admin cannot leave holes in the grid.
+    fmts = [(w.get('format') or 'landscape') for w in K['items']]
+    mix = ' work-grid--mix22' if (len(fmts) == 4 and fmts.count('reel') == 2
+                                  and fmts.count('landscape') == 2) else ''
     tiles = ''
     for w in K['items']:
         # format drives the mobile shape: reels pair up 2-across, landscape
         # projects run full width. Nothing is a full-width 9:16 stack.
         cls = 'w fade' + {'wide': ' w-wide', 'tall': ' w-tall', 'span2': ' w-span2'}.get(w.get('size'), '')
         cls += ' w--' + (w.get('format') or 'landscape')
-        tiles += ('<a class="%s" href="%s">%s<span class="w-cap"><em>%s</em><h3>%s</h3>'
+        prev = ''
+        if w.get('preview') or w.get('previewMp4'):
+            prev = (' data-preview="%s" data-preview-mp4="%s"'
+                    % (esc(w.get('preview', '')), esc(w.get('previewMp4', ''))))
+        tiles += ('<a class="%s" href="%s"%s>%s<span class="w-cap"><em>%s</em><h3>%s</h3>'
                   '<span class="go">View Project %s</span></span></a>'
-                  % (cls, esc(w['href']),
+                  % (cls, esc(w['href']), prev,
                      pic(w['image'], w['title'], 'loading="lazy" decoding="async" width="1500" height="940"'),
                      esc(w['category']), esc(w['title']), R.AR))
     out.append(
         '<section class="sec sec--dark" id="work"><div class="wrap">'
         '<div class="sec-head rv"><div class="titles"><p class="eyebrow on-dark fade">%s</p><h2>%s</h2></div>'
-        '<div class="aside right">%s</div></div><div class="work-grid rv">%s</div></div></section>'
-        % (esc(K['eyebrow']), headline(K['headline']), btn(K.get('cta'), 'btn--ghost'), tiles))
+        '<div class="aside right">%s</div></div><div class="work-grid%s rv">%s</div></div></section>'
+        % (esc(K['eyebrow']), headline(K['headline']), btn(K.get('cta'), 'btn--ghost'),
+           mix, tiles))
 
     P = D['podcasts']
     out.append(
@@ -242,15 +270,7 @@ def home_main(D):
         '<div class="pod-grid rv" id="pod-grid">%s</div></div></section>'
         % (esc(P['eyebrow']), headline(P['headline']), esc(P['cta']['href']),
            esc(P['cta']['label']), R.AR,
-           ''.join('<a class="pod fade" href="%s"%s><div class="pod-thumb">%s</div>'
-                   '<div class="pod-meta"><div><span class="label">%s</span><h3>%s</h3></div>'
-                   '<span class="pod-time">%s</span></div></a>'
-                   % (esc(c.get('video') or 'podcasts.html'),
-                      ' data-video="%s"' % esc(c['video']) if c.get('video') else '',
-                      pic(c['image'], '%s: %s' % (c['show'], c['title']),
-                          'loading="lazy" decoding="async" width="1000" height="700"'),
-                      esc(c['show']), esc(c['title']), esc(c.get('time', '')))
-                   for c in P['items'])))
+           ''.join(pod_card(c) for c in P['items'])))
 
     T = D['studio']
     room_tiles = ''
@@ -259,11 +279,12 @@ def home_main(D):
         href = 'studio.html#%s' % r.get('anchor', 'rooms')
         # name, one short line, at most three capabilities — no equipment paragraph
         caps = (r.get('capabilities') or [])[:3]
+        focal = (' style="object-position:%s"' % esc(r['focal'])) if r.get('focal') else ''
         room_tiles += ('<a class="room fade" href="%s"><div class="room-img">%s</div>'
                        '<h3>%s</h3><span>%s%s</span>%s</a>'
                        % (esc(href),
                           pic(r['image'], r['name'],
-                              'loading="lazy" decoding="async" width="820" height="640"'),
+                              'loading="lazy" decoding="async" width="820" height="640"' + focal),
                           esc(r['name']), esc(r.get('role') or r.get('card') or ''),
                           '<br>' + esc(r['price']) if r.get('price') else '',
                           ('<ul class="room-caps room-caps--mini">%s</ul>'
@@ -340,6 +361,24 @@ def home_main(D):
 
 
 # ------------------------------------------------------------------ pages
+def pod_card(c):
+    """A podcast card. Episodes are 16:9, clips 9:16; a clip may carry a
+    silent preview that the page attaches only when it is on screen."""
+    kind = c.get('kind') or 'episode'
+    prev = ''
+    if c.get('preview') or c.get('previewMp4'):
+        prev = (' data-preview="%s" data-preview-mp4="%s"'
+                % (R.esc(c.get('preview', '')), R.esc(c.get('previewMp4', ''))))
+    return ('<a class="pod pod--%s fade" href="%s"%s%s><div class="pod-thumb">%s</div>'
+            '<div class="pod-meta"><div><span class="label">%s</span><h3>%s</h3></div>%s</div></a>'
+            % (R.esc(kind), R.esc(c.get('video') or 'podcasts.html'),
+               ' data-video="%s"' % R.esc(c['video']) if c.get('video') else '', prev,
+               R.pic(c['image'], '%s: %s' % (c.get('show', ''), c.get('title', '')),
+                     'loading="lazy" decoding="async" width="1000" height="700"'),
+               R.esc(c.get('show', '')), R.esc(c.get('title', '')),
+               '<span class="pod-time">%s</span>' % R.esc(c['time']) if c.get('time') else ''))
+
+
 def runtime_config(D):
     """The settings the behaviour needs, inlined so nothing is fetched at runtime.
     Content is already in the HTML; this is booking ids, schedulers and copy for
@@ -350,8 +389,8 @@ def runtime_config(D):
         'photographers': D.get('photographers', {}),
         'visibility': D.get('visibility', {}),
         'hero': {k: D['hero'].get(k) for k in
-                 ('image', 'videoPoster', 'videoMp4', 'videoWebm',
-                  'videoMobile', 'videoMobileWebm')},
+                 ('image', 'videoPoster', 'videoPosterMobile', 'videoMp4',
+                  'videoWebm', 'videoMobile', 'videoMobileWebm')},
         'webp': sorted(R.WEBP),
     }
 
@@ -382,7 +421,7 @@ def shell(title, desc, canonical, body, schema, page_key, extra_head='', config=
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/klip.css">
 %s
 <script type="application/ld+json">
@@ -468,7 +507,16 @@ def build():
             desc = D['site']['metaDescription']
             main = home_main(D)
             graph += video_schema(D)
+            hp = D['hero']
+            head = (
+                '<link rel="preload" as="image" href="%s" media="(max-width:760px)" '
+                'fetchpriority="high">\n'
+                '<link rel="preload" as="image" href="%s" media="(min-width:761px)" '
+                'fetchpriority="high">'
+                % (R.esc(hp.get('videoPosterMobile') or hp.get('videoPoster', '')),
+                   R.esc(hp.get('videoPoster', ''))))
         else:
+            head = ''
             page = pages[key]
             title = page['title']
             desc = page['description']
@@ -486,7 +534,7 @@ def build():
         body = (header(D, here) + '\n<main>\n' + main + '\n</main>\n' + footer(D, here))
         schema = json.dumps({"@context": "https://schema.org", "@graph": graph},
                             indent=2, ensure_ascii=False)
-        html = shell(title, desc, SITE + url, body, schema, key,
+        html = shell(title, desc, SITE + url, body, schema, key, extra_head=head,
                      config=json.dumps(cfg, ensure_ascii=False, separators=(',', ':')))
         with open(os.path.join(ROOT, filename), 'w', encoding='utf-8') as fh:
             fh.write(html)

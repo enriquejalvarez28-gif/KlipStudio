@@ -32,7 +32,8 @@
         ],
         "price": "",
         "booking": "podcastRoom",
-        "anchor": "klip-room"
+        "anchor": "klip-room",
+        "focal": "50% 38%"
       },
       {
         "name": "Kapture Room",
@@ -50,7 +51,8 @@
         ],
         "price": "",
         "booking": "blackRoom",
-        "anchor": "kapture-room"
+        "anchor": "kapture-room",
+        "focal": "50% 42%"
       },
       {
         "name": "Kreator Room",
@@ -68,7 +70,8 @@
         ],
         "price": "",
         "booking": "greenRoom",
-        "anchor": "kreator-room"
+        "anchor": "kreator-room",
+        "focal": "50% 45%"
       },
       {
         "name": "Kanvas Room",
@@ -86,7 +89,8 @@
         ],
         "price": "",
         "booking": "kanvasRoom",
-        "anchor": "kanvas-room"
+        "anchor": "kanvas-room",
+        "focal": "50% 44%"
       }
     ],
     "features": [

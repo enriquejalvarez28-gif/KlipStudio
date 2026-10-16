@@ -85,14 +85,24 @@ def lines(arr):
 WEBP = set()
 
 
-def pic(src, alt='', attrs=''):
-    """WebP only where one exists — a missing <source> breaks the image."""
+SRCSET = {}
+
+
+def pic(src, alt='', attrs='', sizes=None):
+    """WebP only where one exists — a missing <source> breaks the image —
+    plus the smaller widths from tools/make-sizes.py, so a phone downloads a
+    480px file rather than a desktop one."""
     tag = '<img src="%s" alt="%s" %s>' % (esc(src), esc(alt or ''), attrs)
     if not re.search(r'\.jpe?g$', str(src or ''), re.I):
         return tag
     webp = re.sub(r'\.jpe?g$', '.webp', src, flags=re.I)
     if WEBP and os.path.basename(webp) not in WEBP:
         return tag
+    entries = SRCSET.get(src)
+    if entries:
+        srcset = ', '.join('%s %dw' % (esc(u), w) for w, u in entries)
+        return ('<picture><source srcset="%s" sizes="%s" type="image/webp">%s</picture>'
+                % (srcset, esc(sizes or '(max-width:760px) 100vw, 50vw'), tag))
     return ('<picture><source srcset="%s" type="image/webp">%s</picture>'
             % (esc(webp), tag))
 
