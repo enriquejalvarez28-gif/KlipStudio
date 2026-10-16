@@ -88,7 +88,7 @@ def build_data(conn, tenant_id, start, end):
         """SELECT l.to_state, l.actor, l.note, l.at, r.title, r.result_json FROM action_ledger l JOIN recommendations r
            ON r.id=l.rec_id WHERE l.tenant_id=? AND l.at>=? AND l.at<? AND l.to_state IN
            ('approved','executed','verified','evaluated','reverted','blocked','failed') ORDER BY l.at""",
-        (tenant_id, start.isoformat(), (end + timedelta(days=1)).isoformat()))]
+        (tenant_id, start.isoformat(), (end + timedelta(days=2)).isoformat()))]  # ledger is UTC; period is local
     return {
         "actions": [{"state": analytics.STATE_LABELS.get(a["to_state"], a["to_state"]), "title": a["title"],
                      "at": a["at"][:10], "note": a["note"], "outcome": _outcome(a)} for a in acts],
