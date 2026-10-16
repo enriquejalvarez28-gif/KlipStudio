@@ -45,6 +45,23 @@ EDITING THE SITE — /admin
   Saving commits to GitHub, and Cloudflare Pages republishes in about
   a minute. No HTML, CSS, JavaScript or Python is ever involved.
 
+HOW A PAGE GETS BUILT  (new — read this one)
+  The .html files are no longer written by hand and are no longer
+  assembled in the browser. They are BUILT from data/*.json:
+
+      python3 build/build.py
+
+  Saving in /admin commits the JSON, GitHub runs that build, and
+  Cloudflare publishes the finished pages. You do not run anything.
+
+  Why it changed: a search engine reading the old pages saw 13 words
+  and no headings, because the text only appeared after JavaScript
+  fetched it. Now every heading, paragraph, link, address and alt
+  text is in the HTML before the browser does anything.
+
+  If you edit a .html file by hand, the next build overwrites it.
+  Change data/*.json (or /admin) instead.
+
 WHERE THE WORDS ACTUALLY LIVE
   data/*.json ...... one file per editor screen. The admin writes
                      these. You can also edit them by hand if you
@@ -56,14 +73,10 @@ WHERE THE WORDS ACTUALLY LIVE
   disturb another.
 
 PREVIEWING ON YOUR OWN MACHINE
-  Opening index.html by double-clicking will NOT work any more — a
-  browser refuses to read the data files that way. In the site folder
-  run:
+  Double-clicking index.html works again — the pages are complete
+  files now. To see content edits, run the build first:
 
-      npx serve
-
-  and open the address it prints. On the live site this is a
-  non-issue.
+      python3 build/build.py
 
 ADDING AN IMAGE
   Upload it in /admin like any other image and it works immediately.
@@ -75,10 +88,10 @@ ADDING AN IMAGE
 
 THE FILES YOU DO NOT NEED TO TOUCH
   css/klip.css ....... the whole design system, shared by every page.
-  js/klip-data.js .... loads the content files.
-  js/klip-site.js .... header, footer, menus, booking and Calendly
+  js/klip-site.js .... behaviour only: menus, booking and Calendly
                        modals, video lightbox, scroll and motion.
-  js/klip-page.js .... turns the blocks in pages.json into layouts.
+  build/build.py ..... turns the content into the finished pages.
+  build/render.py .... every component the pages are drawn with.
   js/gsap, lenis ..... motion libraries, loaded only on the live site.
   functions/api/ ..... the server code behind the Visibility Check
                        and the lead form.

@@ -1,15 +1,25 @@
 /* ============================================================
-   KLIP — shared site chrome and behaviour, loaded by every page.
-   Builds header, drawer, footer, the booking / consultation /
-   photographer modals and the video lightbox, then wires scroll,
-   reveals and motion.
-   A page supplies its own <main> sections and calls KLIPUI.start().
+   KLIP — site behaviour, loaded by every page.
+
+   The pages arrive complete: header, sections, footer and modal
+   shells are all in the HTML that the build wrote, so a crawler
+   (and a visitor on a slow phone) sees the finished page without
+   running any of this.
+
+   This file only makes it work: the drawer, booking and Calendly
+   modals, the photographer list, the video lightbox, the Visibility
+   Check, scroll reveals and motion. It renders no page content.
+
+   Settings it needs (booking ids, Calendly links, photographers)
+   are in the <script id="klip-config"> block the build inlines.
    ============================================================ */
-(window.KLIPREADY||function(f){f();})(function(){
-  var D=window.KLIP; if(!D) return;
+(function(){
+  var cfgEl=document.getElementById('klip-config');
+  var D=cfgEl?JSON.parse(cfgEl.textContent):null; if(!D) return;
   var ar='<span class="ar" aria-hidden="true">&#8594;</span>';
   var REDUCE=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var IN_FRAME=(window.self!==window.top);
+
 
   var ICON={
     megaphone:'<path d="M3 10v4h3l5 4V6l-5 4H3z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19.5 6a8.5 8.5 0 0 1 0 12"/>',
@@ -46,7 +56,7 @@
     var tag='<img src="'+esc(src)+'" alt="'+esc(alt||'')+'" '+attrs+'>';
     if(!/\.jpe?g$/i.test(src)) return tag;
     var webp=src.replace(/\.jpe?g$/i,'.webp');
-    var have=window.KLIP_WEBP;
+    var have=D.webp;
     if(have && have.indexOf(webp.split('/').pop())===-1) return tag;
     return '<picture><source srcset="'+esc(webp)+'" type="image/webp">'+tag+'</picture>';
   }
@@ -74,93 +84,9 @@
   }
 
   
-  /* ---------- inject shared chrome ---------- */
-  var _top=document.createElement('div'); _top.innerHTML=`<a class="skip" href="#top">Skip to content</a>
-<div class="progress" id="progress" aria-hidden="true"></div>
-<div class="cursor" id="cursor" aria-hidden="true"></div>
-<div class="cursor-ring" id="cursor-ring" aria-hidden="true"><b>PLAY</b></div>
-<header class="site-header" id="header">
-  <div class="wrap">
-    <a class="brand" id="brand-link" href="index.html" aria-label="KLIP home"><img id="logo-light" src="" alt=""></a>
-    <nav class="nav" id="nav" aria-label="Primary"></nav>
-    <a class="btn btn--ghost header-cta" id="header-cta" href="#contact"></a>
-    <button class="burger" id="burger" aria-label="Open menu" aria-expanded="false" aria-controls="drawer"><span></span></button>
-  </div>
-</header>
-<div class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="Menu">
-  <div class="drawer-top">
-    <img id="logo-light-2" src="" alt="">
-    <button id="drawer-close" aria-label="Close menu" style="color:#fff;font-size:30px;line-height:1">&times;</button>
-  </div>
-  <nav id="drawer-nav" aria-label="Mobile"></nav>
-  <a class="btn btn--solid" id="drawer-cta" href="#contact"></a>
-</div>`;
-  while(_top.lastChild) document.body.insertBefore(_top.lastChild, document.body.firstChild);
-  var _end=document.createElement('div'); _end.innerHTML=`<div class="mcta" id="mcta"></div>
-<div class="mdl" id="booking-modal" role="dialog" aria-modal="true" aria-labelledby="booking-title">
-  <div class="mdl-box mdl-box--wide">
-    <div class="mdl-top"><h2 id="booking-title">Book with KLIP</h2>
-      <button class="mdl-close" data-mdl-close aria-label="Close booking">&times;</button></div>
-    <div class="mdl-body" id="booking-body"></div>
-    <div class="mdl-foot"><span id="booking-note"></span><a id="booking-fallback" href="#" target="_blank" rel="noopener"></a></div>
-  </div>
-</div>
-<div class="mdl" id="consult-modal" role="dialog" aria-modal="true" aria-labelledby="consult-title">
-  <div class="mdl-box">
-    <div class="mdl-top"><h2 id="consult-title">Book a marketing call</h2>
-      <button class="mdl-close" data-mdl-close aria-label="Close scheduler">&times;</button></div>
-    <div class="mdl-body" id="consult-body"></div>
-  </div>
-</div>
-<div class="mdl" id="pg-modal" role="dialog" aria-modal="true" aria-labelledby="pg-title">
-  <div class="mdl-box mdl-box--wide">
-    <div class="mdl-top"><h2 id="pg-title">KLIP Photographers</h2>
-      <button class="mdl-close" data-mdl-close aria-label="Close photographers">&times;</button></div>
-    <div class="mdl-body" id="pg-body"></div>
-  </div>
-</div>
-<div class="lb" id="lightbox" role="dialog" aria-modal="true" aria-label="Video player">
-  <div class="lb-inner" id="lb-inner"><button class="lb-close" id="lb-close" aria-label="Close video">&times;</button></div>
-</div>
-<footer class="site-footer" id="site-footer"></footer>`;
-  while(_end.firstChild) document.body.appendChild(_end.firstChild);
-
-/* ---------- header ---------- */
-  document.title=D.site.title;
-  var md=document.querySelector('meta[name=description]'); if(md) md.setAttribute('content',D.site.metaDescription);
-  ['logo-light','logo-light-2'].forEach(function(id){ var e=document.getElementById(id); e.src=(D.logo.mark||D.logo.light); e.alt=D.logo.alt; });
-  var here=(location.pathname.split('/').pop()||'index.html').toLowerCase();
-  function cur(h){ var f=String(h).split('/').pop().toLowerCase(); return (f===here)?' aria-current="page"':''; }
-  var navHtml=D.nav.links.map(function(l){ return '<a href="'+esc(l.href)+'"'+cur(l.href)+'>'+esc(l.label)+'</a>'; }).join('');
-  document.getElementById('nav').innerHTML=navHtml;
-  document.getElementById('drawer-nav').innerHTML=navHtml;
-  ['header-cta','drawer-cta'].forEach(function(id){
-    var e=document.getElementById(id), a=act(D.nav.cta);
-    e.innerHTML=esc(D.nav.cta.label)+' '+ar; e.setAttribute('href',a.href);
-    if(D.nav.cta.consult) e.setAttribute('data-consult','1');
-  });
-
-  /* ---------- footer ---------- */
-  var FO=D.footer;
-  document.getElementById('site-footer').innerHTML='<div class="wrap">'+
-    '<div class="foot-top"><a href="#top" aria-label="Home"><img class="logo" src="'+esc(D.logo.dark)+'" alt="'+esc(D.logo.alt)+'"></a>'+
-    '<nav class="foot-nav" aria-label="Footer">'+FO.links.map(function(l){ return '<a href="'+esc(l.href)+'"'+cur(l.href)+'>'+esc(l.label)+'</a>'; }).join('')+'</nav>'+
-    '<div class="socials">'+FO.socials.map(function(s){
-      return '<a href="'+esc(s.href)+'" aria-label="'+esc(s.label)+'"'+ext(s.href)+'><svg viewBox="0 0 24 24" aria-hidden="true">'+(SOCIAL[s.icon]||'')+'</svg></a>';
-    }).join('')+'</div></div>'+
-    '<div class="foot-bottom"><span>'+esc(FO.copyright)+' &nbsp;&middot;&nbsp; '+
-    FO.legal.map(function(l){ return '<a href="'+esc(l.href)+'">'+esc(l.label)+'</a>'; }).join(' &nbsp;&middot;&nbsp; ')+
-    '</span><span>'+esc(FO.tagline)+'</span></div></div>';
-  (function(){ var a=act(D.hero.primaryCta), b2=act(D.hero.secondaryCta);
-    document.getElementById('mcta').innerHTML=
-      '<a class="btn btn--solid" href="'+esc(a.href)+'"'+a.attr+'>'+esc(D.hero.primaryCta.label)+'</a>'+
-      '<a class="btn btn--ghost" href="'+esc(b2.href)+'"'+b2.attr+'>'+esc(D.hero.secondaryCta.label)+'</a>';
-  })();
-
-  
-
-  window.KLIPUI={esc:esc,ext:ext,act:act,btn:btn,icon:icon,headline:headline,lines:lines,ar:ar,pic:pic,
-                 start:function(){ boot(); }};
+  if(document.readyState==='loading')
+    document.addEventListener('DOMContentLoaded', boot);
+  else boot();
 
   function boot(){
 /* ================= behaviour ================= */
@@ -602,4 +528,4 @@
       }
     }
   }
-});
+})();

@@ -1,0 +1,46 @@
+name: Build site
+
+# Someone saved an edit in /admin (which commits to data/), so the pages are
+# rebuilt from that content and committed back. Cloudflare Pages then deploys
+# the finished HTML. Nobody has to run anything by hand.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'data/**'
+      - 'build/**'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-site
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build pages from CMS content
+        run: python3 build/build.py
+
+      - name: Commit the rebuilt pages
+        run: |
+          git config user.name "KLIP site build"
+          git config user.email "noreply@theklipstudio.com"
+          git add -A '*.html' sitemap.xml
+          if git diff --cached --quiet; then
+            echo "Pages already match the content — nothing to commit."
+          else
+            git commit -m "Rebuild pages from content [skip ci]"
+            git push
+          fi

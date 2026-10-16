@@ -1,0 +1,500 @@
+#!/usr/bin/env python3
+"""
+KLIP — site build.
+
+    python build/build.py
+
+Reads the CMS content in data/*.json and writes a complete HTML file for
+every page: headings, copy, links, image alt text, address and structured
+data are all in the delivered HTML. Nothing a search engine needs waits for
+JavaScript.
+
+Editing stays where it was: /admin writes the JSON, this build turns it into
+pages. Run it after any content change (Cloudflare Pages runs it on deploy).
+"""
+import json
+import os
+import re
+import sys
+from datetime import date
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import render as R  # noqa: E402
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA = os.path.join(ROOT, 'data')
+SITE = 'https://theklipstudio.com'
+
+PARTS = ['brand', 'navigation', 'hero', 'sections', 'studio', 'photography',
+         'photographers', 'podcasts', 'clients', 'location', 'visibility',
+         'booking', 'consultation']
+
+PAGES = [
+    ('index.html', 'home', '/'),
+    ('media.html', 'media', '/media/'),
+    ('studio.html', 'studio', '/studio/'),
+    ('photography.html', 'photography', '/photography/'),
+    ('podcasts.html', 'podcasts', '/podcasts/'),
+    ('work.html', 'work', '/work/'),
+    ('about.html', 'about', '/about/'),
+]
+
+
+def load():
+    d = {}
+    for p in PARTS:
+        with open(os.path.join(DATA, p + '.json'), encoding='utf-8') as fh:
+            d.update(json.load(fh))
+    with open(os.path.join(DATA, 'pages.json'), encoding='utf-8') as fh:
+        pages = json.load(fh)
+    try:
+        with open(os.path.join(DATA, 'webp.json'), encoding='utf-8') as fh:
+            R.WEBP = set(json.load(fh))
+    except OSError:
+        R.WEBP = set()
+    R.BOOKING_BASE = (d.get('booking') or {}).get('base', '')
+    return d, pages
+
+
+# ----------------------------------------------------------------- chrome
+def header(D, here):
+    def cur(h):
+        return ' aria-current="page"' if str(h).split('/')[-1].lower() == here else ''
+
+    nav = ''.join('<a href="%s"%s>%s</a>' % (R.esc(l['href']), cur(l['href']), R.esc(l['label']))
+                  for l in D['nav']['links'])
+    a = R.act(D['nav']['cta'])
+    cta_attr = ' data-consult="1"' if D['nav']['cta'].get('consult') else ''
+    logo = D['logo'].get('mark') or D['logo'].get('light')
+    return (
+        '<a class="skip" href="#top">Skip to content</a>\n'
+        '<div class="progress" id="progress" aria-hidden="true"></div>\n'
+        '<div class="cursor" id="cursor" aria-hidden="true"></div>\n'
+        '<div class="cursor-ring" id="cursor-ring" aria-hidden="true"><b>PLAY</b></div>\n'
+        '<header class="site-header" id="header"><div class="wrap">'
+        '<a class="brand" id="brand-link" href="index.html" aria-label="KLIP home">'
+        '<img id="logo-light" src="%s" alt="%s" width="104" height="38"></a>'
+        '<nav class="nav" id="nav" aria-label="Primary">%s</nav>'
+        '<a class="btn btn--ghost header-cta" id="header-cta" href="%s"%s>%s %s</a>'
+        '<button class="burger" id="burger" aria-label="Open menu" aria-expanded="false" '
+        'aria-controls="drawer"><span></span></button>'
+        '</div></header>\n'
+        '<div class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="Menu">'
+        '<div class="drawer-top"><img id="logo-light-2" src="%s" alt="%s" width="104" height="38">'
+        '<button id="drawer-close" aria-label="Close menu" '
+        'style="color:#fff;font-size:30px;line-height:1">&times;</button></div>'
+        '<nav id="drawer-nav" aria-label="Mobile">%s</nav>'
+        '<a class="btn btn--solid" id="drawer-cta" href="%s"%s>%s %s</a></div>'
+        % (R.esc(logo), R.esc(D['logo'].get('alt', '')), nav,
+           R.esc(a['href']), cta_attr, R.esc(D['nav']['cta']['label']), R.AR,
+           R.esc(logo), R.esc(D['logo'].get('alt', '')), nav,
+           R.esc(a['href']), cta_attr, R.esc(D['nav']['cta']['label']), R.AR))
+
+
+def footer(D, here):
+    def cur(h):
+        return ' aria-current="page"' if str(h).split('/')[-1].lower() == here else ''
+
+    FO = D['footer']
+    h = D['hero']
+    a, b = R.act(h['primaryCta']), R.act(h['secondaryCta'])
+    return (
+        '<div class="mcta" id="mcta">'
+        '<a class="btn btn--solid" href="%s"%s>%s</a>'
+        '<a class="btn btn--ghost" href="%s"%s>%s</a></div>\n'
+        '<div class="mdl" id="booking-modal" role="dialog" aria-modal="true" aria-labelledby="booking-title">'
+        '<div class="mdl-box mdl-box--wide"><div class="mdl-top"><h2 id="booking-title">Book with KLIP</h2>'
+        '<button class="mdl-close" data-mdl-close aria-label="Close booking">&times;</button></div>'
+        '<div class="mdl-body" id="booking-body"></div>'
+        '<div class="mdl-foot"><span id="booking-note"></span>'
+        '<a id="booking-fallback" href="#" target="_blank" rel="noopener"></a></div></div></div>\n'
+        '<div class="mdl" id="consult-modal" role="dialog" aria-modal="true" aria-labelledby="consult-title">'
+        '<div class="mdl-box"><div class="mdl-top"><h2 id="consult-title">Book a marketing call</h2>'
+        '<button class="mdl-close" data-mdl-close aria-label="Close scheduler">&times;</button></div>'
+        '<div class="mdl-body" id="consult-body"></div></div></div>\n'
+        '<div class="mdl" id="pg-modal" role="dialog" aria-modal="true" aria-labelledby="pg-title">'
+        '<div class="mdl-box mdl-box--wide"><div class="mdl-top"><h2 id="pg-title">KLIP Photographers</h2>'
+        '<button class="mdl-close" data-mdl-close aria-label="Close photographers">&times;</button></div>'
+        '<div class="mdl-body" id="pg-body"></div></div></div>\n'
+        '<div class="lb" id="lightbox" role="dialog" aria-modal="true" aria-label="Video player">'
+        '<div class="lb-inner" id="lb-inner">'
+        '<button class="lb-close" id="lb-close" aria-label="Close video">&times;</button></div></div>\n'
+        '<footer class="site-footer" id="site-footer"><div class="wrap">'
+        '<div class="foot-top"><a href="#top" aria-label="Home">'
+        '<img class="logo" src="%s" alt="%s" width="150" height="56"></a>'
+        '<nav class="foot-nav" aria-label="Footer">%s</nav>'
+        '<div class="socials">%s</div></div>'
+        '<div class="foot-bottom"><span>%s &nbsp;&middot;&nbsp; %s</span><span>%s</span></div>'
+        '</div></footer>'
+        % (R.esc(a['href']), a['attr'], R.esc(h['primaryCta']['label']),
+           R.esc(b['href']), b['attr'], R.esc(h['secondaryCta']['label']),
+           R.esc(D['logo'].get('dark', '')), R.esc(D['logo'].get('alt', '')),
+           ''.join('<a href="%s"%s>%s</a>' % (R.esc(l['href']), cur(l['href']), R.esc(l['label']))
+                   for l in FO['links']),
+           ''.join('<a href="%s" aria-label="%s"%s><svg viewBox="0 0 24 24" aria-hidden="true">%s</svg></a>'
+                   % (R.esc(s['href']), R.esc(s['label']), R.ext(s['href']),
+                      R.SOCIAL.get(s['icon'], '')) for s in FO['socials']),
+           R.esc(FO['copyright']),
+           ' &nbsp;&middot;&nbsp; '.join('<a href="%s">%s</a>' % (R.esc(l['href']), R.esc(l['label']))
+                                         for l in FO['legal']),
+           R.esc(FO['tagline'])))
+
+
+# --------------------------------------------------------------- homepage
+def home_main(D):
+    esc, btn, pic, icon, headline, act = R.esc, R.btn, R.pic, R.icon, R.headline, R.act
+    H = D['hero']
+    poster = H.get('videoPoster') or H.get('image')
+    video = (
+        '<video autoplay muted loop playsinline preload="metadata" poster="%s" '
+        'width="1920" height="1080">'
+        '<source src="%s" type="video/webm"><source src="%s" type="video/mp4"></video>'
+        % (esc(poster), esc(H.get('videoWebm', '')), esc(H.get('videoMp4', ''))))
+    # The phone file and the reduced-motion still have to be chosen before the
+    # browser starts downloading, so this runs inline, not in the deferred JS.
+    swap = (
+        '<script>(function(){var m=document.currentScript.previousElementSibling,'
+        'v=m.querySelector("video");if(!v)return;'
+        'if(matchMedia("(prefers-reduced-motion: reduce)").matches){'
+        'm.innerHTML=\'<img src="%s" alt="%s" fetchpriority="high" width="1920" height="1080">\';return;}'
+        'if(matchMedia("(max-width:760px)").matches){var s=v.querySelectorAll("source");'
+        'if(s[0]&&"%s")s[0].src="%s";if(s[1]&&"%s")s[1].src="%s";v.load();}})();</script>'
+        % (R.esc(H.get('image', '')), R.esc(H.get('imageAlt', '')),
+           R.esc(H.get('videoMobileWebm', '')), R.esc(H.get('videoMobileWebm', '')),
+           R.esc(H.get('videoMobile', '')), R.esc(H.get('videoMobile', ''))))
+    out = [
+        '<section class="hero" id="top">'
+        '<div class="hero-media">%s</div>%s'
+        '<div class="hero-scrim" aria-hidden="true"></div>'
+        '<div class="wrap"><div class="hero-copy">'
+        '<p class="eyebrow on-dark fade">%s</p><h1>%s</h1>'
+        '<p class="lede fade">%s</p>'
+        '<div class="hero-actions">%s%s</div></div>'
+        '<div class="hero-proof">%s</div></div>'
+        '<div class="hero-aside" aria-hidden="true">%s</div></section>'
+        % (video, swap,
+           esc(H.get('eyebrow', '')), headline(H['headline']), esc(H.get('body', '')),
+           btn(H['primaryCta'], 'btn--solid'), btn(H['secondaryCta'], 'btn--ghost'),
+           ''.join('<span class="fade">%s</span>' % esc(p) for p in H.get('proof', [])),
+           R.lines(H.get('sideNote', [])))]
+
+    S = D['services']
+    out.append(
+        '<section class="sec sec--paper" id="services"><div class="wrap">'
+        '<div class="sec-head rv"><div class="titles"><p class="eyebrow fade">%s</p><h2>%s</h2></div>'
+        '<div class="aside"><p class="lede fade">%s</p>%s</div></div>'
+        '<div class="svc-grid rv">%s</div></div></section>'
+        % (esc(S['eyebrow']), headline(S['headline']), esc(S['body']),
+           btn(S.get('cta'), 'btn--outline'),
+           ''.join('<a class="svc fade" href="%s">%s<h3>%s</h3><p>%s</p></a>'
+                   % (esc(i['href']), icon(i['icon']), esc(i['title']), esc(i['text']))
+                   for i in S['items'])))
+
+    W = D['why']
+    out.append(
+        '<section class="sec sec--paper" id="why" style="padding-top:0"><div class="wrap">'
+        '<div class="why-split rv"><div><h2>%s</h2>'
+        '<p class="lede fade" style="margin-top:20px">%s</p></div>'
+        '<div class="why-points">%s</div></div></div></section>'
+        % (headline(W['headline']), esc(W['body']),
+           ''.join('<div class="why-point fade"><b>%s</b><span>%s</span></div>'
+                   % (esc(p['title']), esc(p['text'])) for p in W['points'])))
+
+    out.append(R.visibility({}, D).replace('<section class="sec sec--paper" id="visibility">',
+                                           '<section class="sec sec--paper" id="visibility" style="padding-top:0">'))
+
+    K = D['work']
+    tiles = ''
+    for w in K['items']:
+        cls = 'w fade' + {'wide': ' w-wide', 'tall': ' w-tall', 'span2': ' w-span2'}.get(w.get('size'), '')
+        tiles += ('<a class="%s" href="%s">%s<span class="w-cap"><em>%s</em><h3>%s</h3>'
+                  '<span class="go">View Project %s</span></span></a>'
+                  % (cls, esc(w['href']),
+                     pic(w['image'], w['title'], 'loading="lazy" decoding="async" width="1500" height="940"'),
+                     esc(w['category']), esc(w['title']), R.AR))
+    out.append(
+        '<section class="sec sec--dark" id="work"><div class="wrap">'
+        '<div class="sec-head rv"><div class="titles"><p class="eyebrow on-dark fade">%s</p><h2>%s</h2></div>'
+        '<div class="aside right">%s</div></div><div class="work-grid rv">%s</div></div></section>'
+        % (esc(K['eyebrow']), headline(K['headline']), btn(K.get('cta'), 'btn--ghost'), tiles))
+
+    P = D['podcasts']
+    out.append(
+        '<section class="sec sec--paper" id="podcasts"><div class="wrap">'
+        '<div class="sec-head rv"><div class="titles"><p class="eyebrow fade">%s</p><h2>%s</h2></div>'
+        '<div class="aside right"><div style="display:flex;align-items:center;gap:26px" class="fade">'
+        '<a class="link" href="%s">%s %s</a><div class="carousel-ctl">'
+        '<button class="circ" data-dir="-1" aria-label="Previous clips"><svg width="14" height="14" '
+        'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">'
+        '<path d="M15 5l-7 7 7 7"/></svg></button>'
+        '<button class="circ" data-dir="1" aria-label="Next clips"><svg width="14" height="14" '
+        'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">'
+        '<path d="M9 5l7 7-7 7"/></svg></button></div></div></div></div>'
+        '<div class="pod-grid rv" id="pod-grid">%s</div></div></section>'
+        % (esc(P['eyebrow']), headline(P['headline']), esc(P['cta']['href']),
+           esc(P['cta']['label']), R.AR,
+           ''.join('<a class="pod fade" href="%s"%s><div class="pod-thumb">%s</div>'
+                   '<div class="pod-meta"><div><span class="label">%s</span><h3>%s</h3></div>'
+                   '<span class="pod-time">%s</span></div></a>'
+                   % (esc(c.get('video') or P['cta']['href']),
+                      ' data-video="%s"' % esc(c['video']) if c.get('video') else '',
+                      pic(c['image'], '%s: %s' % (c['show'], c['title']),
+                          'loading="lazy" decoding="async" width="1000" height="700"'),
+                      esc(c['show']), esc(c['title']), esc(c.get('time', '')))
+                   for c in P['items'])))
+
+    T = D['studio']
+    room_tiles = ''
+    for r in T['rooms']:
+        ra = act(r)
+        room_tiles += ('<a class="room fade" href="%s"%s><div class="room-img">%s</div>'
+                       '<h3>%s</h3><span>%s%s</span></a>'
+                       % (esc(ra['href']), ra['attr'],
+                          pic(r['image'], r['name'],
+                              'loading="lazy" decoding="async" width="820" height="640"'),
+                          esc(r['name']), esc(r.get('card') or r.get('use') or ''),
+                          '<br>' + esc(r['price']) if r.get('price') else ''))
+    out.append(
+        '<section id="studio" style="background:var(--paper);padding-bottom:clamp(44px,5vw,78px)">'
+        '<div class="studio-split rv"><figure>%s</figure>'
+        '<div class="studio-copy"><p class="eyebrow fade">%s</p><h2>%s</h2>'
+        '<p class="lede fade">%s</p><div class="photo-actions">%s%s</div></div></div>'
+        '<div class="wrap"><div class="rooms rv">%s'
+        '<div class="room-panel fade"><ul>%s</ul>%s</div></div></div></section>'
+        % (pic(T['image'], T.get('imageAlt', ''),
+               'loading="lazy" decoding="async" width="1700" height="1130"'),
+           esc(T['eyebrow']), headline(T['headline']), esc(T['body']),
+           btn(T.get('cta'), 'btn--dark'), btn(T.get('tourCta'), 'btn--outline'), room_tiles,
+           ''.join('<li>%s %s</li>' % (icon(f['icon']), esc(f['label'])) for f in T['features']),
+           btn(T.get('featuresCta'), 'btn--ghost')))
+
+    F = D['photography']
+    out.append(
+        '<section class="sec" id="photography" style="background:var(--paper);'
+        'padding-top:clamp(30px,3vw,46px)"><div class="wrap"><div class="photo-split rv">'
+        '<div><p class="eyebrow fade">%s</p><h2>%s</h2>'
+        '<p class="lede fade" style="margin-top:18px">%s</p>'
+        '<div class="photo-actions">%s%s</div>'
+        '<p class="fade" style="margin:20px 0 0"><a class="link" href="#photography" '
+        'data-photographers="1">%s %s</a></p></div><div class="photo-grid">%s</div></div></div></section>'
+        % (esc(F['eyebrow']), headline(F['headline']), esc(F['body']),
+           btn(F['primaryCta'], 'btn--dark'), btn(F['secondaryCta'], 'btn--outline'),
+           esc(F['smallLink']['label']), R.AR,
+           ''.join('<figure class="ph fade">%s<figcaption>%s</figcaption></figure>'
+                   % (pic(p['image'], p.get('alt', ''),
+                          'loading="lazy" decoding="async" width="780" height="1030"'),
+                      esc(p['label'])) for p in F['items'])))
+
+    L = D['location']
+    out.append(
+        '<section class="location" id="on-location"><div class="bg">%s</div>'
+        '<div class="scrim" aria-hidden="true"></div><div class="wrap">'
+        '<div class="loc-copy rv"><h2>%s</h2>'
+        '<p class="lede on-dark fade" style="margin-top:20px">%s</p>%s</div>'
+        '<div class="loc-panel rv">%s</div></div></section>'
+        % (pic(L['image'], L.get('imageAlt', ''),
+               'loading="lazy" decoding="async" width="2000" height="1150"'),
+           headline(L['headline']), esc(L['body']), btn(L.get('cta'), 'btn--ghost'),
+           ''.join('<div class="fade">%s</div>' % esc(c) for c in L['categories'])))
+
+    I = D['industries']
+    out.append(
+        '<section class="sec sec--paper" id="industries"><div class="wrap">'
+        '<div class="sec-head rv"><div class="titles"><h2>%s</h2></div>'
+        '<div class="aside"><p class="lede fade">%s</p></div></div>'
+        '<div class="ind-grid rv">%s</div></div></section>'
+        % (headline(I['headline']), esc(I['body']),
+           ''.join('<a class="ind fade" href="%s">%s<figcaption><b>%s</b><span>%s</span>'
+                   '</figcaption></a>'
+                   % (esc(t['href']),
+                      pic(t['image'], t['title'],
+                          'loading="lazy" decoding="async" width="720" height="900"'),
+                      esc(t['title']), esc(t['examples'])) for t in I['items'])))
+
+    A = D['about']
+    out.append(
+        '<section class="sec sec--paper" id="about-klip" style="padding-top:0"><div class="wrap">'
+        '<div class="about-split rv"><figure>%s</figure><div><h2>%s</h2>'
+        '<p class="lede fade" style="margin-top:20px">%s</p>'
+        '<div style="margin-top:28px">%s</div></div></div></div></section>'
+        % (pic(A['image'], A.get('imageAlt', ''),
+               'loading="lazy" decoding="async" width="1400" height="933"'),
+           headline(A['headline']), esc(A['body']), btn(A.get('cta'), 'btn--dark')))
+
+    out.append(R.cta({}, D))
+    return '\n'.join(out)
+
+
+# ------------------------------------------------------------------ pages
+def runtime_config(D):
+    """The settings the behaviour needs, inlined so nothing is fetched at runtime.
+    Content is already in the HTML; this is booking ids, schedulers and copy for
+    the interactive pieces only. No secrets — those are Cloudflare env vars."""
+    return {
+        'booking': D.get('booking', {}),
+        'consultation': D.get('consultation', {}),
+        'photographers': D.get('photographers', {}),
+        'visibility': D.get('visibility', {}),
+        'hero': {k: D['hero'].get(k) for k in
+                 ('image', 'videoPoster', 'videoMp4', 'videoWebm',
+                  'videoMobile', 'videoMobileWebm')},
+        'webp': sorted(R.WEBP),
+    }
+
+
+def shell(title, desc, canonical, body, schema, page_key, extra_head='', config='{}'):
+    return """<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>%s</title>
+<meta name="description" content="%s">
+<link rel="canonical" href="%s">
+<meta name="theme-color" content="#1d1d1c">
+<link rel="icon" type="image/png" href="img/favicon.png?v=2">
+<link rel="apple-touch-icon" href="img/favicon.png?v=2">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="KLIP">
+<meta property="og:title" content="%s">
+<meta property="og:description" content="%s">
+<meta property="og:url" content="%s">
+<meta property="og:image" content="%s/img/hero.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="%s">
+<meta name="twitter:description" content="%s">
+<meta name="twitter:image" content="%s/img/hero.jpg">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/klip.css">
+%s
+<script type="application/ld+json">
+%s
+</script>
+</head>
+<body class="js-motion" data-page="%s">
+%s
+<script type="application/json" id="klip-config">%s</script>
+<script src="js/klip-site.js" defer></script>
+</body>
+</html>
+""" % (R.esc(title), R.esc(desc), canonical, R.esc(title), R.esc(desc), canonical, SITE,
+       R.esc(title), R.esc(desc), SITE, extra_head, schema, page_key, body, config)
+
+
+def org_schema(D):
+    site = D.get('site', {})
+    return {
+        "@type": "Organization",
+        "@id": SITE + "/#klip",
+        "name": D['brand']['parent'],
+        "alternateName": ["Klip", D['brand']['media'], D['brand']['studio']],
+        "description": site.get('metaDescription', ''),
+        "url": SITE + "/",
+        "telephone": "+1-954-541-3708",
+        "email": "info@theklipstudio.com",
+        "logo": SITE + "/img/logo-dark.png",
+        "address": {"@type": "PostalAddress", "streetAddress": "2145 Davie Blvd, Suite 204",
+                    "addressLocality": "Fort Lauderdale", "addressRegion": "FL",
+                    "postalCode": "33312", "addressCountry": "US"},
+        "sameAs": [s['href'] for s in D['footer']['socials']],
+        "subOrganization": [
+            {"@type": "Organization", "@id": SITE + "/#klipmedia", "name": D['brand']['media'],
+             "url": SITE + "/media", "parentOrganization": {"@id": SITE + "/#klip"}},
+            {"@type": "LocalBusiness", "@id": SITE + "/#klipstudio", "name": D['brand']['studio'],
+             "url": SITE + "/studio", "telephone": "+1-954-541-3708",
+             "email": "info@theklipstudio.com", "image": SITE + "/img/studio-main.jpg",
+             "address": {"@type": "PostalAddress", "streetAddress": "2145 Davie Blvd, Suite 204",
+                         "addressLocality": "Fort Lauderdale", "addressRegion": "FL",
+                         "postalCode": "33312", "addressCountry": "US"},
+             "areaServed": ["Fort Lauderdale", "Broward County", "Miami-Dade County", "South Florida"],
+             "parentOrganization": {"@id": SITE + "/#klip"}}]}
+
+
+def breadcrumbs(name, url):
+    return {"@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": "Home", "item": SITE + "/"},
+        {"@type": "ListItem", "position": 2, "name": name, "item": SITE + url}]}
+
+
+SERVICE_PAGES = {
+    'media': ("Digital Marketing", "Google Ads, Meta Ads, SEO, GEO and AI search, social media, branding, websites and AI automation."),
+    'studio': ("Studio Rental & Production", "Podcast, video, photography, live streaming and course production in Fort Lauderdale."),
+    'photography': ("Photography", "Headshots, lifestyle, personal branding and product photography."),
+    'podcasts': ("Podcast Production", "Multicam podcast recording, editing and short-form clips."),
+}
+
+
+def video_schema(D):
+    """VideoObject for the podcast clips that have a real link."""
+    out = []
+    for c in D['podcasts']['items']:
+        if not c.get('video'):
+            continue
+        out.append({"@type": "VideoObject", "name": c['title'],
+                    "description": "%s — %s, produced at Klip Studio." % (c['show'], c['title']),
+                    "thumbnailUrl": SITE + "/" + c['image'], "contentUrl": c['video'],
+                    "uploadDate": c.get('uploadDate') or date.today().isoformat(),
+                    "publisher": {"@id": SITE + "/#klip"}})
+    return out
+
+
+def build():
+    D, pages = load()
+    cfg = runtime_config(D)
+    written = []
+    for filename, key, url in PAGES:
+        here = filename.lower()
+        graph = [org_schema(D)]
+        if key == 'home':
+            title = D['site']['title']
+            desc = D['site']['metaDescription']
+            main = home_main(D)
+            graph += video_schema(D)
+        else:
+            page = pages[key]
+            title = page['title']
+            desc = page['description']
+            main = R.render_blocks(page.get('blocks'), D)
+            graph.append(breadcrumbs(page['title'].split('—')[0].strip(), url))
+            if key in SERVICE_PAGES:
+                nm, sd = SERVICE_PAGES[key]
+                graph.append({"@type": "Service", "name": nm, "description": sd,
+                              "serviceType": nm, "provider": {"@id": SITE + "/#klip"},
+                              "areaServed": {"@type": "Place", "name": "South Florida"},
+                              "url": SITE + url})
+            if key == 'podcasts':
+                graph += video_schema(D)
+
+        body = (header(D, here) + '\n<main>\n' + main + '\n</main>\n' + footer(D, here))
+        schema = json.dumps({"@context": "https://schema.org", "@graph": graph},
+                            indent=2, ensure_ascii=False)
+        html = shell(title, desc, SITE + url, body, schema, key,
+                     config=json.dumps(cfg, ensure_ascii=False, separators=(',', ':')))
+        with open(os.path.join(ROOT, filename), 'w', encoding='utf-8') as fh:
+            fh.write(html)
+        written.append((filename, len(html)))
+
+    # sitemap from the same list, so it can never drift from the pages
+    today = date.today().isoformat()
+    urls = ''.join(
+        '  <url><loc>%s%s</loc><lastmod>%s</lastmod><changefreq>%s</changefreq>'
+        '<priority>%s</priority></url>\n'
+        % (SITE, u, today, 'weekly' if u == '/' else 'monthly', '1.0' if u == '/' else '0.8')
+        for _, _, u in PAGES)
+    with open(os.path.join(ROOT, 'sitemap.xml'), 'w', encoding='utf-8') as fh:
+        fh.write('<?xml version="1.0" encoding="UTF-8"?>\n'
+                 '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n%s</urlset>\n' % urls)
+
+    print('Built %d pages:' % len(written))
+    for f, n in written:
+        print('  %-20s %6d bytes' % (f, n))
+    print('  sitemap.xml          %d urls' % len(PAGES))
+    return written
+
+
+if __name__ == '__main__':
+    build()
