@@ -38,49 +38,68 @@
           {
             "icon": "target",
             "title": "Google Ads",
-            "text": "Capture the people already searching for what you do. Search, Performance Max and local campaigns, managed against cost per lead rather than clicks."
+            "text": "Capture the people already searching for what you do. Search, Performance Max and local campaigns, managed against cost per lead rather than clicks.",
+            "outcome": "Capture demand",
+            "featured": false
           },
           {
             "icon": "chart",
             "title": "Meta Ads",
-            "text": "Facebook and Instagram campaigns built around creative that actually stops the scroll — because we shoot it ourselves."
+            "text": "Facebook and Instagram campaigns built around creative that actually stops the scroll — because we shoot it ourselves.",
+            "outcome": "Create demand",
+            "featured": false
           },
           {
             "icon": "search",
             "title": "SEO",
-            "text": "Technical fixes, on-page structure, service and location pages, and the content that earns rankings over time."
+            "text": "Technical fixes, on-page structure, service and location pages, and the content that earns rankings over time.",
+            "outcome": "Build discoverability",
+            "featured": true
           },
           {
             "icon": "globe",
             "title": "GEO / AI Search",
-            "text": "Get found inside AI answers. Entity clarity, structured data, crawler access and answer-ready content. GEO complements SEO — it does not replace it."
+            "text": "Get found inside AI answers. Entity clarity, structured data, crawler access and answer-ready content. GEO complements SEO — it does not replace it.",
+            "outcome": "Get found in AI answers",
+            "featured": false
           },
           {
             "icon": "megaphone",
             "title": "Social Media",
-            "text": "Planning, production, publishing and community management. Consistent presence without you running the account."
+            "text": "Planning, production, publishing and community management. Consistent presence without you running the account.",
+            "outcome": "Stay in front of people",
+            "featured": false
           },
           {
             "icon": "badge",
             "title": "Branding",
-            "text": "Positioning, identity, messaging and the visual system that makes you recognisable across every channel."
+            "text": "Positioning, identity, messaging and the visual system that makes you recognisable across every channel.",
+            "outcome": "Be recognised",
+            "featured": true
           },
           {
             "icon": "window",
             "title": "Website Design",
-            "text": "Fast, modern sites built to convert and to be found, with the technical foundations search and AI both need."
+            "text": "Fast, modern sites built to convert and to be found, with the technical foundations search and AI both need.",
+            "outcome": "Convert the visit",
+            "featured": false
           },
           {
             "icon": "chip",
             "title": "AI Solutions",
-            "text": "Automation and AI workflows for follow-up, lead routing, reporting and the busywork that eats your week."
+            "text": "Automation and AI workflows for follow-up, lead routing, reporting and the busywork that eats your week.",
+            "outcome": "Remove the manual work",
+            "featured": false
           },
           {
             "icon": "doc",
             "title": "Content Strategy",
-            "text": "A clear plan for what to create, where to publish and why — tied to business goals, not vanity metrics."
+            "text": "A clear plan for what to create, where to publish and why — tied to business goals, not vanity metrics.",
+            "outcome": "Know what to make",
+            "featured": true
           }
-        ]
+        ],
+        "variant": "services"
       },
       {
         "type": "steps",
@@ -612,7 +631,8 @@
       {
         "type": "checklist",
         "id": "guidance",
-        "source": "guidance"
+        "source": "guidance",
+        "mode": "sec--warm"
       },
       {
         "type": "notePanel",

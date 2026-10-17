@@ -1616,3 +1616,336 @@ figure.has-gallery{position:relative}
   .vp-btn--lg{flex:1 1 100%;min-height:56px}
   .room-book{flex:1 1 100%;margin-left:0;min-height:56px;width:100%}
 }
+
+/* ==================================================================
+   GLOBAL VISUAL SYSTEM — KLIP_GLOBAL §2, §3, §14
+   ------------------------------------------------------------------
+   The problem this solves: white background + thin grey border + black
+   heading + grey paragraph, repeated until every page reads as the
+   same template. The answer is a small set of deliberate modes and
+   card weights, not one-off styling per section.
+
+   Five section modes. Every major section picks one, and the build
+   refuses to put two light modes back to back (see assign_modes in
+   build.py).
+     1 DARK CINEMATIC   .sec--dark
+     2 WARM PAPER       .sec--warm
+     3 IMAGE-LED        .sec--image
+     4 STRUCTURED GRID  .sec--grid
+     5 FEATURE BAND     .sec--band
+   Brand colours and Montserrat are untouched; red stays an accent for
+   labels, rules, active states and conversion cues, never body copy.
+================================================================== */
+:root{
+  --warm:#f3f1ed;          /* warm paper surface */
+  --warm-2:#e8e5df;        /* warm card surface */
+  --char:#232322;          /* charcoal for premium cards */
+  --rule:1.5px;            /* structural border weight */
+}
+
+.sec--warm{background:var(--warm)}
+.sec--grid{background:var(--white)}
+.sec--grid .wrap{border-top:var(--rule) solid var(--ink);padding-top:clamp(26px,3vw,44px)}
+.sec--image{position:relative;background:var(--ink);color:#fff;overflow:hidden}
+.sec--image>.wrap{position:relative;z-index:2}
+.sec--image .sec-bg{position:absolute;inset:0;z-index:0}
+.sec--image .sec-bg img{width:100%;height:100%;object-fit:cover;opacity:.3}
+.sec--image::after{content:"";position:absolute;inset:0;z-index:1;
+  background:linear-gradient(180deg,rgba(18,18,17,.55),rgba(18,18,17,.82))}
+.sec--image h2,.sec--image h3,.sec--image p,.sec--image .eyebrow{color:#fff}
+.sec--band{background:var(--char);color:#fff;padding:clamp(34px,4vw,56px) 0}
+.sec--band h2,.sec--band h3,.sec--band p{color:#fff}
+.sec--band .eyebrow{color:var(--red)}
+
+/* A red rule under a section eyebrow gives the editorial structure the
+   thin grey borders were failing to provide. */
+.sec--warm .sec-head .eyebrow::after,
+.sec--grid .sec-head .eyebrow::after{content:"";display:block;width:34px;
+  height:2px;background:var(--red);margin-top:9px}
+
+/* ------------------------------------------------------------------
+   CARD WEIGHTS. Five levels, so a package, a service and a note never
+   look equally important again.
+------------------------------------------------------------------ */
+.k-card{position:relative;display:flex;flex-direction:column;gap:10px;
+  padding:clamp(20px,2.1vw,30px);background:var(--warm-2);
+  border:var(--rule) solid #cfcbc3;transition:border-color .25s ease,
+  transform .25s ease,background .25s ease}
+.k-card:hover{border-color:var(--ink);transform:translateY(-2px)}
+.k-card:focus-within{outline:2px solid var(--red);outline-offset:2px}
+
+.k-card--priority{background:var(--white);border:2px solid var(--ink)}
+.k-card--priority::before{content:"";position:absolute;top:-2px;left:-2px;
+  right:-2px;height:3px;background:var(--red)}
+
+.k-card--premium{background:var(--char);border-color:var(--char);color:#fff}
+.k-card--premium h3,.k-card--premium h4{color:#fff}
+.k-card--premium p,.k-card--premium li{color:#c9c7c3}
+.k-card--premium:hover{border-color:var(--red)}
+.k-card--premium .k-num{color:var(--red)}
+
+.k-card--featured{background:var(--white);border:2.5px solid var(--ink);
+  box-shadow:0 14px 34px rgba(0,0,0,.09)}
+.k-card--featured:hover{transform:translateY(-3px)}
+
+/* numbered sequences: 01 / 02 / 03 / 04 */
+.k-num{font-family:'Montserrat',sans-serif;font-size:11px;font-weight:800;
+  letter-spacing:.2em;color:var(--gray-2)}
+.k-flag{position:absolute;top:0;right:0;background:var(--red);color:#fff;
+  font-family:'Montserrat',sans-serif;font-size:9.5px;font-weight:800;
+  letter-spacing:.18em;text-transform:uppercase;padding:6px 11px}
+.k-card--featured .k-flag{top:-2.5px;right:-2.5px}
+
+/* the short bold outcome line that sits under a service title */
+.k-outcome{font-family:'Montserrat',sans-serif;font-weight:700;
+  font-size:clamp(13.5px,1.05vw,15px);line-height:1.4;color:var(--ink)}
+.k-card--premium .k-outcome{color:#fff}
+.k-card p{font-size:14.5px;line-height:1.6;color:#55534f}
+
+/* a price used as a visual anchor (§13) */
+.k-price{font-family:'Montserrat',sans-serif;font-size:clamp(24px,2.3vw,32px);
+  font-weight:800;line-height:1;color:var(--ink)}
+.k-price s{font-size:16px;font-weight:500;color:var(--gray-2);margin-right:8px}
+.k-card--premium .k-price{color:#fff}
+.k-price--red{color:var(--red)}
+
+/* ------------------------------------------------------------------
+   SPACING (§14). Sections with little content stop reserving the same
+   cathedral of white space as sections carrying a room photograph.
+------------------------------------------------------------------ */
+.sec--tight{padding-top:clamp(34px,3.6vw,56px);padding-bottom:clamp(34px,3.6vw,56px)}
+.sec--roomy{padding-top:clamp(64px,7vw,116px);padding-bottom:clamp(64px,7vw,116px)}
+.sec-head{margin-bottom:clamp(20px,2.4vw,34px)}
+
+/* ------------------------------------------------------------------
+   ACCESSIBILITY (§15). One visible focus treatment everywhere, so no
+   critical action depends on hover and keyboard users can see where
+   they are.
+------------------------------------------------------------------ */
+a:focus-visible,button:focus-visible,summary:focus-visible,
+input:focus-visible,[tabindex]:focus-visible{
+  outline:2px solid var(--red);outline-offset:3px}
+.sec--dark a:focus-visible,.sec--image a:focus-visible,
+.sec--band a:focus-visible,.sec--dark button:focus-visible{
+  outline-color:#fff}
+
+/* Media services (§5): 3 / 2 / 1 columns, a number and icon area, an
+   outcome line, a red rule on hover, one charcoal card per row. */
+.svc-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.svc-card{gap:9px}
+.svc-card::after{content:"";position:absolute;left:0;right:0;top:0;height:3px;
+  background:var(--red);transform:scaleX(0);transform-origin:left;
+  transition:transform .3s cubic-bezier(.16,1,.3,1)}
+.svc-card:hover::after,.svc-card:focus-within::after{transform:scaleX(1)}
+.svc-top{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin-bottom:4px}
+.svc-top svg{width:26px;height:26px;color:var(--red);flex:0 0 auto}
+.svc-card h3{font-size:clamp(17px,1.4vw,21px);line-height:1.15}
+.svc-card .k-outcome{margin-top:-2px}
+@media (max-width:1024px){
+  .svc-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:430px){
+  .svc-cards{grid-template-columns:minmax(0,1fr);gap:11px}
+}
+
+/* The four podcast packages (§7) inherit the global card weights and
+   only add what a price ladder needs. */
+.tier{gap:11px}
+.tier h3{font-size:clamp(18px,1.5vw,22px);line-height:1.12;padding-right:76px}
+.tier .k-num{margin-bottom:-4px}
+.tier-pos{font-size:14px;line-height:1.55;color:#6a6a66}
+.k-card--premium .tier-pos{color:#b9b7b3}
+.tier-inc{display:flex;flex-direction:column;gap:8px;flex:1;margin-top:2px}
+.tier-inc li{position:relative;padding-left:19px;font-size:14px;line-height:1.5;
+  color:#4a4a47}
+.k-card--premium .tier-inc li{color:#c9c7c3}
+.tier-inc li::before{content:"";position:absolute;left:0;top:8px;width:7px;height:7px;
+  border-left:1.5px solid var(--red);border-bottom:1.5px solid var(--red);
+  transform:rotate(-45deg)}
+.tier .btn{margin-top:6px;justify-content:space-between}
+@media (max-width:760px){
+  .tier h3{padding-right:0}
+  .tier .k-flag{position:static;align-self:flex-start}
+}
+
+/* Three structured modules instead of one open checkmark field (§7). */
+.mod-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.mod{gap:9px}
+.mod h3{font-size:clamp(17px,1.35vw,20px);line-height:1.15}
+.mod>p{font-size:14px;color:#6a6a66}
+.mod-list{display:flex;flex-direction:column;gap:9px;margin-top:4px}
+.mod-list li{display:flex;align-items:flex-start;gap:10px;font-size:14.5px;
+  line-height:1.45;color:var(--ink)}
+.mod-list svg{flex:0 0 auto;width:16px;height:16px;margin-top:2px;color:var(--red)}
+@media (max-width:1024px){ .mod-grid{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:760px){
+  .mod-grid{grid-template-columns:minmax(0,1fr);gap:11px}
+  .chk-cta .btn{width:100%}
+}
+
+/* The offer modal is image-led and dark, not another flat white box
+   (KLIP_GLOBAL §13). Mobile stays a compact sheet. */
+.sp-box{background:var(--char);color:#fff;border:0}
+.sp-copy h2{color:#fff}
+.sp-text{color:#c9c7c3}
+.sp-price{display:flex;align-items:baseline;gap:10px}
+.sp-price s{color:#8a8884;font-size:17px}
+.sp-price b{color:#fff;font-size:clamp(32px,3.4vw,44px);font-weight:800;line-height:1}
+.sp-badge{background:var(--red)}
+.sp-close{background:rgba(255,255,255,.12);color:#fff}
+.sp-close:hover{background:var(--red)}
+.sp-img{position:relative}
+.sp-img::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(35,35,34,0) 45%,rgba(35,35,34,.95))}
+.sp-cta{background:var(--red);border-color:var(--red);color:#fff}
+.sp-cta:hover{background:#fff;border-color:#fff;color:var(--ink)}
+.sp-mail input{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.22);
+  color:#fff}
+.sp-mail input::placeholder{color:#8a8884}
+.sp-mail .btn--outline{border-color:rgba(255,255,255,.4);color:#fff}
+.sp-mail .btn--outline:hover{background:#fff;color:var(--ink)}
+.sp-note{color:#8a8884}
+
+/* Contrast on charcoal cards. The generic .k-card p rule sits later in the
+   file and was winning, dropping dark-card body copy to #55534f on #232322
+   — about 1.2:1. These rules restore it. KLIP_GLOBAL §15 requires strong
+   text contrast on dark backgrounds, and this is the one place the global
+   card system could quietly break it. */
+.k-card--premium p,
+.k-card--premium li,
+.k-card--premium .tier-pos,
+.k-card--premium .mod-list li{color:#d5d3cf}
+.k-card--premium .k-outcome{color:#fff}
+.k-card--premium .k-num{color:var(--red)}
+.sec--image .k-card--premium p{color:#d5d3cf}
+
+/* No empty light strip between two sections. The structured-grid rule is a
+   divider above real content, not a band of its own. */
+.sec--grid+.sec--grid>.wrap{border-top:0;padding-top:0}
+.sec--grid>.wrap:empty{display:none}
+.sec--dark+.sec--grid>.wrap{border-top:0}
+
+/* ------------------------------------------------------------------
+   Dark-surface text, stated once and completely.
+
+   The mode system can turn a section that was designed light into a
+   charcoal band. Anything that carries its own colour — .lede, .eyebrow,
+   captions, list text — then keeps a dark colour on a dark background.
+   Measured before this block: two sections at 1.0:1, i.e. text exactly
+   the colour of what it sat on. These selectors cover every text element
+   a section can contain, so a mode change can never hide copy again.
+------------------------------------------------------------------ */
+.sec--band,.sec--dark,.sec--image,.sec--ink{color:#fff}
+.sec--band h1,.sec--band h2,.sec--band h3,.sec--band h4,
+.sec--dark h1,.sec--dark h2,.sec--dark h3,.sec--dark h4,
+.sec--image h1,.sec--image h2,.sec--image h3,.sec--image h4,
+.sec--ink h1,.sec--ink h2,.sec--ink h3,.sec--ink h4{color:#fff}
+.sec--band p,.sec--band li,.sec--band span,.sec--band time,
+.sec--dark p,.sec--dark li,.sec--dark span,.sec--dark time,
+.sec--image p,.sec--image li,.sec--image span,.sec--image time,
+.sec--ink p,.sec--ink li,.sec--ink span,.sec--ink time{color:#d5d3cf}
+.sec--band .lede,.sec--dark .lede,.sec--image .lede,.sec--ink .lede{color:#d5d3cf}
+.sec--band .eyebrow,.sec--dark .eyebrow,
+.sec--image .eyebrow,.sec--ink .eyebrow{color:#ff5a68}
+.sec--band a:not(.btn),.sec--dark a:not(.btn),
+.sec--image a:not(.btn),.sec--ink a:not(.btn){color:#fff}
+.sec--band .dot,.sec--dark .dot,.sec--image .dot,.sec--ink .dot{color:var(--red)}
+/* a light card dropped into a dark section keeps its own dark text */
+.sec--band .k-card:not(.k-card--premium),
+.sec--dark .k-card:not(.k-card--premium),
+.sec--image .k-card:not(.k-card--premium),
+.sec--ink .k-card:not(.k-card--premium){color:var(--ink)}
+.sec--band .k-card:not(.k-card--premium) h3,
+.sec--dark .k-card:not(.k-card--premium) h3,
+.sec--ink .k-card:not(.k-card--premium) h3{color:var(--ink)}
+.sec--band .k-card:not(.k-card--premium) p,
+.sec--band .k-card:not(.k-card--premium) li,
+.sec--dark .k-card:not(.k-card--premium) p,
+.sec--dark .k-card:not(.k-card--premium) li,
+.sec--ink .k-card:not(.k-card--premium) p,
+.sec--ink .k-card:not(.k-card--premium) li{color:#55534f}
+/* images and room photos must not be tinted by the section colour */
+.sec--band img,.sec--dark img,.sec--image img,.sec--ink img{color:initial}
+
+/* ------------------------------------------------------------------
+   Light panels keep dark text whatever section they sit in.
+
+   The rules above colour text for dark sections. Several components
+   carry their own light background (a room copy panel, a photography
+   path, a photographer card), so inside those the section rule produced
+   light text on a light surface — measured at 1.25:1. This block states
+   the opposite and wins on specificity, so each surface decides its own
+   text colour rather than inheriting the section's.
+------------------------------------------------------------------ */
+.sec--band .studio-copy,.sec--dark .studio-copy,
+.sec--image .studio-copy,.sec--ink .studio-copy,
+.sec--band .duo-panel,.sec--dark .duo-panel,
+.sec--image .duo-panel,.sec--ink .duo-panel,
+.sec--band .pg-card,.sec--dark .pg-card,
+.sec--image .pg-card,.sec--ink .pg-card,
+.sec--band .room-text,.sec--dark .room-text,
+.sec--image .room-text,.sec--ink .room-text,
+.sec--band .pg-first,.sec--dark .pg-first,
+.sec--band .faq,.sec--dark .faq,
+.sec--band .ins-card,.sec--dark .ins-card{color:var(--ink)}
+
+.sec--band .studio-copy h2,.sec--band .studio-copy h3,
+.sec--dark .studio-copy h2,.sec--dark .studio-copy h3,
+.sec--image .studio-copy h2,.sec--image .studio-copy h3,
+.sec--ink .studio-copy h2,.sec--ink .studio-copy h3,
+.sec--band .duo-panel h3,.sec--dark .duo-panel h3,
+.sec--image .duo-panel h3,.sec--ink .duo-panel h3,
+.sec--band .pg-card h3,.sec--dark .pg-card h3,
+.sec--band .room-text h3,.sec--dark .room-text h3,
+.sec--image .room-text h3,.sec--ink .room-text h3,
+.sec--band .ins-card h3,.sec--dark .ins-card h3{color:var(--ink)}
+
+.sec--band .studio-copy p,.sec--band .studio-copy li,
+.sec--band .studio-copy span,.sec--dark .studio-copy p,
+.sec--dark .studio-copy li,.sec--dark .studio-copy span,
+.sec--image .studio-copy p,.sec--image .studio-copy li,
+.sec--image .studio-copy span,.sec--ink .studio-copy p,
+.sec--ink .studio-copy li,.sec--ink .studio-copy span,
+.sec--band .duo-panel p,.sec--band .duo-panel li,
+.sec--dark .duo-panel p,.sec--dark .duo-panel li,
+.sec--image .duo-panel p,.sec--image .duo-panel li,
+.sec--ink .duo-panel p,.sec--ink .duo-panel li,
+.sec--band .pg-card p,.sec--dark .pg-card p,
+.sec--band .room-text p,.sec--band .room-text span,
+.sec--dark .room-text p,.sec--dark .room-text span,
+.sec--image .room-text p,.sec--image .room-text span,
+.sec--ink .room-text p,.sec--ink .room-text span,
+.sec--band .pg-first p,.sec--dark .pg-first p,
+.sec--band .faq p,.sec--dark .faq p,
+.sec--band .ins-card p,.sec--dark .ins-card p{color:#55534f}
+
+.sec--band .studio-copy .lede,.sec--dark .studio-copy .lede,
+.sec--image .studio-copy .lede,.sec--ink .studio-copy .lede{color:#4a4a47}
+.sec--band .studio-copy .eyebrow,.sec--dark .studio-copy .eyebrow,
+.sec--image .studio-copy .eyebrow,.sec--ink .studio-copy .eyebrow,
+.sec--band .duo-panel .eyebrow,.sec--dark .duo-panel .eyebrow,
+.sec--image .duo-panel .eyebrow,.sec--ink .duo-panel .eyebrow{color:var(--red)}
+.sec--band .room-link,.sec--dark .room-link,
+.sec--image .room-link,.sec--ink .room-link{color:var(--ink)}
+.sec--band .vp-btn,.sec--dark .vp-btn,
+.sec--image .vp-btn,.sec--ink .vp-btn{color:var(--ink);border-color:var(--ink)}
+.sec--band .vp-btn--lg,.sec--dark .vp-btn--lg{color:var(--red);border-color:var(--red)}
+
+/* Lists inside cards draw their own marker, so the browser's disc must go.
+   Without this each inclusion showed two bullets — a disc and the red
+   tick — which reads as a mistake at card size. */
+.tier-inc,.mod-list,.chk,.duo-pts,.room-caps,.room-caps--mini{list-style:none;
+  padding-left:0;margin-left:0}
+.tier-inc li,.mod-list li,.chk li,.duo-pts li{list-style:none}
+.tier-inc li::marker,.mod-list li::marker,.chk li::marker,
+.duo-pts li::marker{content:""}
+
+/* A checkmark needs unequal arms. Equal arms with border-left+bottom make
+   a V, which at list size read as a chevron pointing down rather than a
+   tick. Right+bottom at 45deg with a 5x9 box is the real shape. */
+.tier-inc li::before,.duo-pts li::before{
+  width:5px;height:9px;top:6px;
+  border-left:0;border-bottom:1.6px solid var(--red);
+  border-right:1.6px solid var(--red);
+  transform:rotate(45deg)}

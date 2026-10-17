@@ -155,6 +155,28 @@ def pagehero(b, D):
 
 
 def editorial(b, D):
+    """A list of services. The `services` variant gives each one a number,
+    an outcome line and a card weight, so nine services stop reading as
+    nine identical text boxes (KLIP_GLOBAL §5)."""
+    if b.get('variant') == 'services':
+        items = ''
+        for n, i in enumerate(b.get('items') or [], 1):
+            tag = 'a' if i.get('href') else 'div'
+            href = ' href="%s"' % esc(i['href']) if i.get('href') else ''
+            cls = 'k-card svc-card fade' + (' k-card--premium' if i.get('featured') else '')
+            items += ('<%s class="%s"%s><div class="svc-top">'
+                      '<span class="k-num">%02d</span>%s</div>'
+                      '<h3>%s</h3>%s<p>%s</p></%s>'
+                      % (tag, cls, href, n, icon(i.get('icon', '')),
+                         esc(i.get('title', '')),
+                         '<p class="k-outcome">%s</p>' % esc(i['outcome'])
+                         if i.get('outcome') else '',
+                         esc(i.get('text', '')), tag))
+        return ('<section class="sec sec--grid"%s><div class="wrap">%s'
+                '<div class="svc-cards rv">%s</div></div></section>'
+                % (' id="%s"' % esc(b['id']) if b.get('id') else '',
+                   head_block(b), items))
+
     items = ''
     for i in (b.get('items') or []):
         tag = 'a' if i.get('href') else 'div'
@@ -251,6 +273,65 @@ def cards(b, D):
             '<div class="%s rv" style="%s">%s</div></div></section>'
             % (' id="%s"' % esc(b['id']) if b.get('id') else '', head_block(b),
                cls, style, items))
+
+
+LIGHT_MODES = ('sec--paper', 'sec--warm', 'sec--grid', '')
+DARK_MODES = ('sec--dark', 'sec--image', 'sec--band', 'sec--ink')
+
+
+def assign_modes(html):
+    """Enforce the global rhythm rule after the page is built.
+
+    KLIP_GLOBAL §2: no more than two light sections back to back, and
+    adjacent sections should not repeat the same mode by default. Doing
+    this on the finished markup rather than per block means a page cannot
+    drift out of rhythm when someone reorders sections in /admin — the
+    rule is applied to whatever order the page ends up in.
+
+    A section that already names a dark mode, or carries its own explicit
+    mode, is left exactly as it is. Only the undifferentiated light ones
+    get alternated, and only between paper, warm and grid, so this never
+    changes a colour the brand has decided on.
+    """
+    parts = re.split(r'(<section[^>]*>)', html)
+    run = 0
+    cycle = ('sec--paper', 'sec--warm', 'sec--grid')
+    at = 0
+    for i, chunk in enumerate(parts):
+        if not chunk.startswith('<section'):
+            continue
+        if any(m in chunk for m in DARK_MODES):
+            run = 0
+            continue
+        if 'sec--keep' in chunk:
+            run = 0
+            continue
+        # A section carrying an inline background has already decided what
+        # it is, and an inline style beats a class — adding a dark mode to
+        # it would set white text on a light background. Leave it alone.
+        if re.search(r'style="[^"]*background', chunk):
+            run += 1
+            continue
+        run += 1
+        # Break a run of light sections with a charcoal band — but only on a
+        # short section. Promoting a room block or a nine-card grid to a dark
+        # band would cost far more in legibility than the rhythm is worth, so
+        # the break lands on a small section or not at all.
+        body_len = len(parts[i + 1]) if i + 1 < len(parts) else 0
+        if run >= 3 and body_len < 2600:
+            want = 'sec--band'
+            run = 0
+        else:
+            want = cycle[at % len(cycle)]
+            at += 1
+        for m in ('sec--paper', 'sec--warm', 'sec--grid'):
+            if m in chunk:
+                chunk = chunk.replace(m, want)
+                break
+        else:
+            chunk = chunk.replace('class="sec', 'class="sec %s' % want, 1)
+        parts[i] = chunk
+    return ''.join(parts)
 
 
 def room_shots(r):
@@ -571,63 +652,103 @@ def photographers(b, D):
 
 
 def tiers(b, D):
-    """The service ladder. A tier is published only when it is active, and a
-    price only when it has actually been filled in — an empty price shows
-    nothing rather than a placeholder, because SimplyBook is the source of
-    truth for price and a guess would be published to real customers."""
+    """The service ladder, four visibly different weights (KLIP_GLOBAL §7):
+        01 Self-Service  warm-gray
+        02 Technician    white + red top rule
+        03 Full-Service  thicker border + BEST VALUE flag
+        04 Premium       charcoal, white type
+
+    A tier is published only when it is active, and a price only when it
+    has actually been filled in — an empty price shows nothing rather than
+    a placeholder, because SimplyBook is the source of truth.
+    """
     src = (D.get('podcastPage') or {}).get(b.get('source') or '', {}) \
         if b.get('source') else b
     items = [t for t in (src.get('items') or []) if t.get('active')]
     if not items:
         return ''
+    # weight by position, overridden by an explicit bestValue flag
+    weights = ['', 'k-card--priority', 'k-card--featured', 'k-card--premium']
     cards = ''
-    for t in items:
+    for n, t in enumerate(items):
         a = act({'booking': t['booking']}) if t.get('booking') else \
             act({'consult': 'podcast'})
-        price = ('<p class="tier-price">%s</p>' % esc(t['price'])) if t.get('price') else ''
-        inc = ''.join('<li>%s</li>' % esc(i) for i in (t.get('includes') or []))
-        cards += ('<article class="tier fade%s">%s<h3>%s</h3>'
+        weight = weights[n] if n < len(weights) else ''
+        if t.get('bestValue'):
+            weight = 'k-card--featured'
+        price = ''
+        if t.get('price'):
+            price = '<p class="k-price">%s</p>' % esc(t['price'])
+        inc = ''.join('<li>%s</li>' % esc(i) for i in (t.get('includes') or [])[:6])
+        btn_cls = 'btn--solid' if 'premium' in weight else 'btn--dark'
+        cards += ('<article class="k-card tier fade %s">%s'
+                  '<span class="k-num">%02d</span><h3>%s</h3>'
                   '<p class="tier-pos">%s</p>%s<ul class="tier-inc">%s</ul>'
-                  '<a class="btn btn--dark" href="%s"%s>%s %s</a></article>'
-                  % (' is-best' if t.get('bestValue') else '',
-                     '<span class="tier-flag">Best Value</span>' if t.get('bestValue') else '',
-                     esc(t.get('name', '')), esc(t.get('positioning', '')), price, inc,
-                     esc(a['href']), a['attr'], esc(t.get('cta') or 'Book Room'), AR))
+                  '<a class="btn %s" href="%s"%s>%s %s</a></article>'
+                  % (weight,
+                     '<span class="k-flag">Best Value</span>'
+                     if t.get('bestValue') else '',
+                     n + 1, esc(t.get('name', '')), esc(t.get('positioning', '')),
+                     price, inc, btn_cls, esc(a['href']), a['attr'],
+                     esc(t.get('cta') or 'Book Room'), AR))
     note = ('<p class="tier-note fade">%s</p>' % esc(src['note'])) if src.get('note') else ''
     head = head_block(dict(b, eyebrow=b.get('eyebrow') or src.get('eyebrow'),
                            headline=b.get('headline') or src.get('headline'),
                            body=b.get('body') or src.get('body')))
-    return ('<section class="sec sec--paper"%s><div class="wrap">%s'
+    return ('<section class="sec sec--warm"%s><div class="wrap">%s'
             '<div class="tier-grid tier-n%d rv">%s</div>%s</div></section>'
             % (' id="%s"' % esc(b['id']) if b.get('id') else '', head,
                min(len(items), 4), cards, note))
 
 
 def checklist(b, D):
-    """A list of what KLIP can do, filtered to what KLIP actually offers.
-
-    An item with offered=false is left out entirely rather than greyed out:
-    a visitor reading a service list treats every line as a promise, and the
-    master brief is explicit that these appear only where KLIP offers them.
+    """Three structured modules rather than one open field of checkmarks
+    (KLIP_GLOBAL §7). An item with offered=false is left out entirely, and
+    a module whose items are all off does not render — a visitor reads a
+    service list as a list of promises.
     """
     src = (D.get('podcastPage') or {}).get(b.get('source') or '', {}) \
         if b.get('source') else b
-    items = [i for i in (src.get('items') or []) if i.get('offered')]
-    if not items:
-        return ''
-    lis = ''.join(
-        '<li class="fade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-        'stroke-width="1.8" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'
-        '<span>%s</span></li>' % esc(i.get('label', '')) for i in items)
+
+    mods = ''
+    for n, m in enumerate(src.get('modules') or [], 1):
+        on = [i for i in (m.get('items') or []) if i.get('offered')]
+        if not on:
+            continue
+        lis = ''.join(
+            '<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+            'stroke-width="2" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/>'
+            '</svg><span>%s</span></li>' % esc(i.get('label', '')) for i in on)
+        mods += ('<article class="k-card mod fade"><span class="k-num">%02d</span>'
+                 '<h3>%s</h3><p>%s</p><ul class="mod-list">%s</ul></article>'
+                 % (n, esc(m.get('title', '')), esc(m.get('text', '')), lis))
+
+    if not mods:
+        # older flat list, still supported
+        items = [i for i in (src.get('items') or []) if i.get('offered')]
+        if not items:
+            return ''
+        mods = ''.join(
+            '<li class="fade"><svg viewBox="0 0 24 24" fill="none" '
+            'stroke="currentColor" stroke-width="1.8" aria-hidden="true">'
+            '<path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>%s</span></li>'
+            % esc(i.get('label', '')) for i in items)
+        mods = '<ul class="chk">%s</ul>' % mods
+        wrap_cls = ''
+    else:
+        wrap_cls = 'mod-grid'
+
     cta = ''
     if src.get('cta'):
         cta = '<div class="chk-cta">%s</div>' % btn(src['cta'], 'btn--dark')
     head = head_block(dict(b, eyebrow=b.get('eyebrow') or src.get('eyebrow'),
                            headline=b.get('headline') or src.get('headline'),
                            body=b.get('body') or src.get('body')))
-    return ('<section class="sec sec--paper"%s><div class="wrap">%s'
-            '<ul class="chk rv">%s</ul>%s</div></section>'
-            % (' id="%s"' % esc(b['id']) if b.get('id') else '', head, lis, cta))
+    mode = b.get('mode') or 'sec--grid'
+    return ('<section class="sec %s"%s><div class="wrap">%s'
+            '<div class="%s rv">%s</div>%s</div></section>'
+            % (mode, ' id="%s"' % esc(b['id']) if b.get('id') else '',
+               head, wrap_cls, mods, cta))
 
 
 def note_panel(b, D):

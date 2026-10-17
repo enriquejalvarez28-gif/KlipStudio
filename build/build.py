@@ -685,7 +685,10 @@ def build():
             if key == 'podcasts':
                 graph += video_schema(D)
 
-        body = (header(D, here) + '\n<main>\n' + main + '\n</main>\n' + footer(D, here))
+        # the global rhythm rule is applied to the finished page, so it
+        # holds whatever order the sections end up in (KLIP_GLOBAL §2)
+        body = (header(D, here) + '\n<main>\n' + R.assign_modes(main)
+                + '\n</main>\n' + footer(D, here))
         schema = json.dumps({"@context": "https://schema.org", "@graph": graph},
                             indent=2, ensure_ascii=False)
         t2, d2, share, noindex = seo_for(D, key)

@@ -50,6 +50,20 @@
         "kind": "clip",
         "preview": "",
         "previewMp4": ""
+      },
+      {
+        "show": "Always Algo",
+        "title": "Tasas y Mercado",
+        "time": "0:58",
+        "image": "img/pod1.jpg",
+        "kind": "clip"
+      },
+      {
+        "show": "Respect Your Journey",
+        "title": "Mentalidad De Atleta",
+        "time": "1:06",
+        "image": "img/pod2.jpg",
+        "kind": "clip"
       }
     ]
   }

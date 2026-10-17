@@ -1,7 +1,7 @@
 {
   "specials": {
     "_note": "One reusable offer component. Set 'active' to true to publish it. The offer also needs a headline and must be inside its start/end dates. Prices must match the matching SimplyBook service exactly - SimplyBook is the source of truth. Do not advertise a price here that a visitor will not see at checkout.",
-    "active": false,
+    "active": true,
     "showOnHome": true,
     "showAsPopup": true,
     "name": "Kanvas 2-Hour",
