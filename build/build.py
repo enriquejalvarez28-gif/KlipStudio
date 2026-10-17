@@ -27,7 +27,7 @@ SITE = 'https://theklipstudio.com'
 
 PARTS = ['brand', 'navigation', 'hero', 'sections', 'studio', 'photography',
          'photographers', 'podcasts', 'clients', 'location', 'visibility',
-         'booking', 'consultation']
+         'booking', 'consultation', 'faq']
 
 LEGAL = [('privacy.html', 'privacy', '/privacy/'), ('terms.html', 'terms', '/terms/')]
 
@@ -128,6 +128,19 @@ def footer(D, here):
         '<div class="lb" id="lightbox" role="dialog" aria-modal="true" aria-label="Video player">'
         '<div class="lb-inner" id="lb-inner">'
         '<button class="lb-close" id="lb-close" aria-label="Close video">&times;</button></div></div>\n'
+        # Room gallery. Empty until a VIEW PHOTOS button fills it, so none of
+        # the gallery images are fetched on page load.
+        '<div class="gal" id="gallery" role="dialog" aria-modal="true" aria-label="Room photos">'
+        '<div class="gal-top"><span class="gal-name" id="gal-name"></span>'
+        '<span class="gal-count" id="gal-count"></span>'
+        '<button class="gal-close" id="gal-close" aria-label="Close photos">&times;</button></div>'
+        '<button class="gal-arrow gal-prev" id="gal-prev" aria-label="Previous photo">'
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+        'aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>'
+        '<div class="gal-track" id="gal-track"></div>'
+        '<button class="gal-arrow gal-next" id="gal-next" aria-label="Next photo">'
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+        'aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button></div>\n'
         '<footer class="site-footer" id="site-footer"><div class="wrap">'
         '<div class="foot-top"><a href="#top" aria-label="Home">'
         '<img class="logo" src="%s" alt="%s" width="150" height="56"></a>'
@@ -256,21 +269,29 @@ def home_main(D):
            mix, tiles))
 
     P = D['podcasts']
+    eps = [c for c in P['items'] if (c.get('kind') or 'episode') == 'episode']
+    clips = [c for c in P['items'] if (c.get('kind') or 'episode') == 'clip']
+    # Episodes are the rail that auto-advances on a phone; clips sit two to a
+    # row underneath and never auto-scroll. Same split as the Podcasts page.
     out.append(
         '<section class="sec sec--paper" id="podcasts"><div class="wrap">'
         '<div class="sec-head rv"><div class="titles"><p class="eyebrow fade">%s</p><h2>%s</h2></div>'
         '<div class="aside right"><div style="display:flex;align-items:center;gap:26px" class="fade">'
         '<a class="link" href="%s">%s %s</a><div class="carousel-ctl">'
-        '<button class="circ" data-dir="-1" aria-label="Previous clips"><svg width="14" height="14" '
+        '<button class="circ" data-dir="-1" aria-label="Previous episode"><svg width="14" height="14" '
         'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">'
         '<path d="M15 5l-7 7 7 7"/></svg></button>'
-        '<button class="circ" data-dir="1" aria-label="Next clips"><svg width="14" height="14" '
+        '<button class="circ" data-dir="1" aria-label="Next episode"><svg width="14" height="14" '
         'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">'
         '<path d="M9 5l7 7-7 7"/></svg></button></div></div></div></div>'
-        '<div class="pod-grid rv" id="pod-grid">%s</div></div></section>'
+        '<div class="pod-grid pod-grid--eps rv" id="pod-grid">%s</div>'
+        '%s</div></section>'
         % (esc(P['eyebrow']), headline(P['headline']), esc(P['cta']['href']),
            esc(P['cta']['label']), R.AR,
-           ''.join(pod_card(c) for c in P['items'])))
+           ''.join(pod_card(c) for c in eps),
+           ('<p class="rail-label">%s</p><div class="pod-clips rv">%s</div>'
+            % (esc(P.get('clipsLabel', 'Short Clips')),
+               ''.join(pod_card(c) for c in clips))) if clips else ''))
 
     T = D['studio']
     room_tiles = ''

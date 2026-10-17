@@ -507,6 +507,40 @@ collections:
           label: Booking key
           widget: string
           hint: Matches a key under Booking → SimplyBook, e.g. podcastRoom
+        - name: gallery
+          label: Photo gallery
+          widget: list
+          required: false
+          label_singular: Gallery photo
+          summary: '{{fields.alt}}'
+          hint: >-
+            Three or more extra views of this room. The room photo above is
+            always the first image, so adding three here gives a gallery of
+            four. The VIEW PHOTOS button appears by itself once there is at
+            least one photo in this list, and stays hidden while it is empty.
+          fields:
+          - name: image
+            label: Photo
+            widget: image
+          - name: alt
+            label: Photo description
+            widget: string
+            required: false
+            hint: What the photo shows, e.g. Guest-facing angle with microphones.
+        - name: focal
+          label: Mobile focal point
+          widget: string
+          required: false
+          default: 50% 50%
+          hint: >-
+            Where the phone crop centres, as "across down". 50% 50% is the
+            middle. Lower the second number to pull the crop up toward faces
+            and equipment, e.g. 50% 38%. Leave blank for the middle.
+        - name: anchor
+          label: Link anchor
+          widget: string
+          required: false
+          hint: Used by the homepage tiles, e.g. klip-room. Change only with care.
       - name: imageAlt
         label: Photo description
         widget: string
@@ -1323,6 +1357,40 @@ collections:
 - name: pages
   label: Other pages
   files:
+  - name: faq
+    label: FAQ (About page)
+    file: data/faq.json
+    fields:
+    - name: faq
+      label: FAQ
+      widget: object
+      fields:
+      - name: eyebrow
+        label: Eyebrow
+        widget: string
+      - name: headline
+        label: Headline
+        widget: list
+        field:
+          name: line
+          label: Line
+          widget: string
+      - name: items
+        label: Questions
+        widget: list
+        label_singular: Question
+        summary: '{{fields.q}}'
+        hint: >-
+          These show on the About page as an accordion. Keep answers factual —
+          they are read by search engines and by people deciding whether to
+          book. Do not promise a service KLIP does not currently offer.
+        fields:
+        - name: q
+          label: Question
+          widget: string
+        - name: a
+          label: Answer
+          widget: text
   - name: pages
     label: Page content
     file: data/pages.json

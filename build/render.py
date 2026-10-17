@@ -160,9 +160,41 @@ def editorial(b, D):
             % (' id="%s"' % esc(b['id']) if b.get('id') else '', head_block(b), items))
 
 
+def room_gallery_button(anchor, D, label='View Studio Photos'):
+    """A VIEW PHOTOS control for a room's gallery, usable from any page.
+
+    Returns '' while that room has no extra views, so the Photography page
+    never shows a button that opens a single picture.
+    """
+    for r in ((D.get('studio') or {}).get('rooms') or []):
+        if r.get('anchor') != anchor:
+            continue
+        gal = [g for g in (r.get('gallery') or []) if g.get('image')]
+        if not gal:
+            return ''
+        name = r.get('name') or ''
+        shots = [[r.get('image', ''), r.get('imageAlt') or name]] + \
+                [[g['image'], g.get('alt') or name] for g in gal]
+        return ('<button type="button" class="view-photos view-photos--inline" '
+                'data-gallery="%s" data-gallery-name="%s">'
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+                'stroke-width="1.5" aria-hidden="true"><rect x="3" y="5" width="18" '
+                'height="14" rx="1.5"/><circle cx="8.5" cy="10" r="1.5"/>'
+                '<path d="M21 16l-5-5-5 5-2-2-6 5"/></svg>%s '
+                '<span class="vp-n">%d</span></button>'
+                % (esc(json.dumps(shots)), esc(name), esc(label), len(shots)))
+    return ''
+
+
 def split(b, D):
-    fig = '<figure>%s</figure>' % pic(b.get('image', ''), b.get('imageAlt', ''),
-                                      'loading="lazy" decoding="async" width="1200" height="800"')
+    gal_btn = room_gallery_button(b['roomGallery'], D,
+                                  b.get('roomGalleryLabel') or 'View Studio Photos') \
+        if b.get('roomGallery') else ''
+    fig = '<figure%s>%s%s</figure>' % (
+        ' class="has-gallery"' if gal_btn else '',
+        pic(b.get('image', ''), b.get('imageAlt', ''),
+            'loading="lazy" decoding="async" width="1200" height="800"'),
+        gal_btn.replace('view-photos--inline', '') if gal_btn else '')
     copy = '<div class="studio-copy">'
     if b.get('eyebrow'):
         copy += '<p class="eyebrow fade">%s</p>' % esc(b['eyebrow'])
@@ -219,9 +251,30 @@ def rooms(b, D):
         a = act(r)
         rev = (i % 2 == 1)
         name = r.get('name') or r.get('title') or ''
-        fig = '<figure>%s</figure>' % pic(
-            r.get('image', ''), r.get('imageAlt') or name,
-            'loading="lazy" decoding="async" width="1600" height="900"')
+        # Gallery: the cover plus whatever extra views the room has. The
+        # VIEW PHOTOS control only appears once there is more than the cover,
+        # so a room awaiting its shoot never shows a button that opens one
+        # picture. Sources go in a data attribute, not <img> tags, so nothing
+        # downloads until the gallery is opened.
+        gal = [g for g in (r.get('gallery') or []) if g.get('image')]
+        shots = ([{'image': r.get('image', ''),
+                   'alt': r.get('imageAlt') or name}] + gal) if r.get('image') else gal
+        gal_attr = view = ''
+        if len(shots) > 1:
+            gal_attr = (' data-gallery="%s" data-gallery-name="%s"'
+                        % (esc(json.dumps([[g['image'], g.get('alt') or name]
+                                           for g in shots])), esc(name)))
+            view = ('<button type="button" class="view-photos"%s>'
+                    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+                    'stroke-width="1.5" aria-hidden="true"><rect x="3" y="5" width="18" '
+                    'height="14" rx="1.5"/><circle cx="8.5" cy="10" r="1.5"/>'
+                    '<path d="M21 16l-5-5-5 5-2-2-6 5"/></svg>'
+                    'View Photos <span class="vp-n">%d</span></button>'
+                    % (gal_attr, len(shots)))
+        fig = '<figure%s>%s%s</figure>' % (
+            ' class="has-gallery"' if view else '',
+            pic(r.get('image', ''), r.get('imageAlt') or name,
+                'loading="lazy" decoding="async" width="1600" height="900"'), view)
         copy = '<div class="studio-copy">'
         if r.get('role'):
             copy += '<p class="eyebrow fade">%s</p>' % esc(r['role'])
@@ -286,19 +339,66 @@ def facts(b, D):
 
 
 def clips(b, D):
-    items = ''
-    for c in (b.get('items') or []):
-        items += ('<a class="pod fade" href="%s"%s><div class="pod-thumb">%s</div>'
-                  '<div class="pod-meta"><div><span class="label">%s</span><h3>%s</h3></div>%s</div></a>'
-                  % (esc(c.get('video') or '#'),
-                     ' data-video="%s"' % esc(c['video']) if c.get('video') else '',
-                     pic(c.get('image', ''), c.get('title', ''),
-                         'loading="lazy" decoding="async" width="1000" height="700"'),
-                     esc(c.get('show', '')), esc(c.get('title', '')),
-                     '<span class="pod-time">%s</span>' % esc(c['time']) if c.get('time') else ''))
+    """FULL EPISODES and SHORT CLIPS as two labelled sections.
+
+    Episodes are 16:9 and ride the auto-advance rail; clips are 9:16, two to
+    a row on a phone, and are never auto-scrolled. A list with no `kind` on
+    its items is treated as episodes, so older data keeps working.
+    """
+    items = b.get('items') or []
+    eps = [c for c in items if (c.get('kind') or 'episode') == 'episode']
+    cl = [c for c in items if (c.get('kind') or 'episode') == 'clip']
+
+    def card(c, kind):
+        prev = ''
+        if c.get('preview') or c.get('previewMp4'):
+            prev = (' data-preview="%s" data-preview-mp4="%s"'
+                    % (esc(c.get('preview', '')), esc(c.get('previewMp4', ''))))
+        return ('<a class="pod pod--%s fade" href="%s"%s%s><div class="pod-thumb">%s</div>'
+                '<div class="pod-meta"><div><span class="label">%s</span><h3>%s</h3></div>%s</div></a>'
+                % (kind, esc(c.get('video') or '#'),
+                   ' data-video="%s"' % esc(c['video']) if c.get('video') else '', prev,
+                   pic(c.get('image', ''), c.get('title', ''),
+                       'loading="lazy" decoding="async" width="1000" height="700"'),
+                   esc(c.get('show', '')), esc(c.get('title', '')),
+                   '<span class="pod-time">%s</span>' % esc(c['time']) if c.get('time') else ''))
+
+    body = head_block(b)
+    if eps:
+        body += ('<p class="rail-label" id="full-episodes">%s</p>'
+                 '<div class="pod-grid pod-grid--eps rv" id="episode-rail">%s</div>'
+                 % (esc(b.get('episodesLabel', 'Full Episodes')),
+                    ''.join(card(c, 'episode') for c in eps)))
+    if cl:
+        body += ('<p class="rail-label" id="short-clips">%s</p>'
+                 '<div class="pod-clips rv">%s</div>'
+                 % (esc(b.get('clipsLabel', 'Short Clips')),
+                    ''.join(card(c, 'clip') for c in cl)))
+    return ('<section class="sec sec--paper"%s><div class="wrap">%s</div></section>'
+            % (' id="%s"' % esc(b['id']) if b.get('id') else '', body))
+
+
+def faq(b, D):
+    """Questions and answers as real HTML — <details> so it is keyboard
+    accessible and open-able without JavaScript, and so a crawler reads
+    every answer whether or not it is expanded. No layout jump: the
+    accordion grows in place."""
+    src = (D.get('faq') or {}) if b.get('source') == 'faq' else b
+    items = src.get('items') or b.get('items') or []
+    if not items:
+        return ''
+    b = dict(b, eyebrow=b.get('eyebrow') or src.get('eyebrow'),
+             headline=b.get('headline') or src.get('headline'))
+    rows = ''.join(
+        '<details class="faq-item fade"%s><summary><span>%s</span>'
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" '
+        'aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></summary>'
+        '<div class="faq-a"><p>%s</p></div></details>'
+        % (' open' if i == 0 else '', esc(q.get('q', '')), esc(q.get('a', '')))
+        for i, q in enumerate(items))
     return ('<section class="sec sec--paper"%s><div class="wrap">%s'
-            '<div class="pod-grid rv" id="pod-grid">%s</div></div></section>'
-            % (' id="%s"' % esc(b['id']) if b.get('id') else '', head_block(b), items))
+            '<div class="faq rv">%s</div></div></section>'
+            % (' id="%s"' % esc(b['id']) if b.get('id') else '', head_block(b), rows))
 
 
 def visibility(b, D):
@@ -333,7 +433,8 @@ def cta(b, D):
 
 BLOCKS = {'pagehero': pagehero, 'editorial': editorial, 'split': split, 'cards': cards,
           'rooms': rooms, 'portfolio': portfolio, 'steps': steps, 'facts': facts,
-          'clips': clips, 'visibility': visibility, 'cta': cta}
+          'clips': clips, 'visibility': visibility, 'cta': cta,
+          'faq': faq}
 
 
 def render_blocks(blocks, D):

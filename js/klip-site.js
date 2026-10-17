@@ -115,6 +115,157 @@
       b.addEventListener('click',function(){ var c=grid.querySelector('.pod'); if(c) grid.scrollBy({left:(c.offsetWidth+16)*Number(b.dataset.dir),behavior:'smooth'}); });
     });
 
+    /* ------------------------------------------------------------------
+       Controlled auto-advance for the room and full-episode rails.
+
+       Alive, not restless: one step every 5s, paused the moment the user
+       touches it and for 9s after they stop, off entirely under
+       prefers-reduced-motion, and off while a modal is open or the tab is
+       hidden. It drives the native scroll container, so there is no slider
+       library and the rail still swipes by hand exactly as before.
+
+       Reels are deliberately NOT in this list — they stay user-driven.
+    ------------------------------------------------------------------ */
+    function carousel(rail){
+      if(!rail) return;
+      var items=rail.children, STEP=5000, RESUME=9000, timer=null, idle=null, dead=false;
+      function many(){ return rail.scrollWidth - rail.clientWidth > 8; }
+      function go(){
+        if(dead || !many() || document.hidden || document.body.style.overflow==='hidden') return;
+        var w=items[0]?items[0].offsetWidth+parseFloat(getComputedStyle(rail).columnGap||10):0;
+        if(!w) return;
+        var last=rail.scrollWidth-rail.clientWidth-4;
+        rail.scrollTo({left: rail.scrollLeft>=last?0:rail.scrollLeft+w, behavior:'smooth'});
+        dots();
+      }
+      function start(){ stop(); timer=setInterval(go, STEP); }
+      function stop(){ if(timer){ clearInterval(timer); timer=null; } }
+      function hold(){              /* the user took over */
+        stop(); clearTimeout(idle);
+        idle=setTimeout(function(){ if(dead) return; go(); start(); }, RESUME);
+      }
+      ['pointerdown','touchstart','wheel','keydown'].forEach(function(ev){
+        rail.addEventListener(ev, hold, {passive:true});
+      });
+      rail.addEventListener('mouseenter', stop);
+      rail.addEventListener('mouseleave', function(){ if(!dead) hold(); });
+      rail.addEventListener('scroll', dots, {passive:true});
+      document.addEventListener('visibilitychange', function(){
+        if(document.hidden) stop(); else if(!dead) start();
+      });
+
+      /* position dots, so a phone knows there is more than one card */
+      var nav=null, buttons=[];
+      function dots(){
+        if(!many()){ if(nav) nav.hidden=true; return; }
+        if(!nav){
+          nav=document.createElement('div');
+          nav.className='rail-dots'; nav.setAttribute('role','tablist');
+          for(var i=0;i<items.length;i++){
+            var d=document.createElement('button');
+            d.type='button'; d.className='rail-dot';
+            d.setAttribute('aria-label','Go to item '+(i+1));
+            (function(n){ d.addEventListener('click',function(){
+              hold();
+              var w=items[0].offsetWidth+parseFloat(getComputedStyle(rail).columnGap||10);
+              rail.scrollTo({left:n*w, behavior:'smooth'});
+            }); })(i);
+            nav.appendChild(d); buttons.push(d);
+          }
+          rail.parentNode.insertBefore(nav, rail.nextSibling);
+        }
+        nav.hidden=false;
+        var w=items[0].offsetWidth+parseFloat(getComputedStyle(rail).columnGap||10);
+        var at=Math.round(rail.scrollLeft/w);
+        buttons.forEach(function(b,i){
+          b.classList.toggle('is-on', i===at);
+          b.setAttribute('aria-selected', i===at?'true':'false');
+        });
+      }
+
+      if(REDUCE){ dead=true; dots(); return; }   /* manual only, dots stay */
+      dots(); start();
+    }
+    carousel(document.querySelector('.rooms'));
+    carousel(document.getElementById('pod-grid'));
+    carousel(document.getElementById('episode-rail'));
+
+    /* ------------------------------------------------------------------
+       Room photo gallery. Opens inside KLIP — the visitor never leaves the
+       site. Swipe on a phone, arrows and keyboard on a desktop, a 1 / 4
+       counter throughout. Images are created only when the gallery opens,
+       and only the current one plus its neighbours are given a src, so a
+       room with twelve photos still costs nothing on page load.
+    ------------------------------------------------------------------ */
+    (function(){
+      var gal=document.getElementById('gallery'); if(!gal) return;
+      var track=document.getElementById('gal-track'),
+          nameEl=document.getElementById('gal-name'),
+          countEl=document.getElementById('gal-count'),
+          prev=document.getElementById('gal-prev'),
+          next=document.getElementById('gal-next'),
+          shots=[], at=0, opener=null;
+
+      function paint(){
+        countEl.textContent=(at+1)+' / '+shots.length;
+        [].forEach.call(track.children,function(fig,i){
+          var img=fig.firstChild, near=Math.abs(i-at)<=1;
+          if(near && !img.getAttribute('src')) img.src=img.dataset.src;
+          fig.classList.toggle('is-on', i===at);
+        });
+        prev.disabled = next.disabled = shots.length<2;
+      }
+      function show(n){ at=(n+shots.length)%shots.length; paint(); }
+      function open(list,name,from){
+        shots=list; at=0; opener=from||null;
+        nameEl.textContent=name||'';
+        track.innerHTML='';
+        shots.forEach(function(s){
+          var fig=document.createElement('figure'), img=document.createElement('img');
+          img.alt=s[1]||''; img.dataset.src=s[0];
+          img.decoding='async'; img.loading='lazy';
+          fig.appendChild(img); track.appendChild(fig);
+        });
+        paint();
+        gal.classList.add('is-open');
+        document.body.style.overflow='hidden';
+        document.getElementById('gal-close').focus();
+      }
+      function close(){
+        gal.classList.remove('is-open'); document.body.style.overflow='';
+        track.innerHTML=''; shots=[];
+        if(opener){ opener.focus(); opener=null; }
+      }
+      window.klipGallery=open;   /* so other sections can open a room gallery */
+
+      document.addEventListener('click',function(e){
+        var b=e.target.closest('[data-gallery]'); if(!b) return;
+        e.preventDefault();
+        var list; try{ list=JSON.parse(b.dataset.gallery); }catch(err){ return; }
+        if(list && list.length) open(list, b.dataset.galleryName||'', b);
+      });
+      prev.addEventListener('click',function(){ show(at-1); });
+      next.addEventListener('click',function(){ show(at+1); });
+      document.getElementById('gal-close').addEventListener('click',close);
+      gal.addEventListener('click',function(e){
+        if(e.target===gal||e.target===track) close();
+      });
+      document.addEventListener('keydown',function(e){
+        if(!gal.classList.contains('is-open')) return;
+        if(e.key==='Escape') close();
+        else if(e.key==='ArrowLeft') show(at-1);
+        else if(e.key==='ArrowRight') show(at+1);
+      });
+      /* swipe */
+      var x0=null;
+      track.addEventListener('touchstart',function(e){ x0=e.touches[0].clientX; },{passive:true});
+      track.addEventListener('touchend',function(e){
+        if(x0===null) return;
+        var dx=e.changedTouches[0].clientX-x0; x0=null;
+        if(Math.abs(dx)>45) show(at+(dx<0?1:-1));
+      },{passive:true});
+    })();
+
     /* lightbox — no iframe exists until a card is clicked */
     var lb=document.getElementById('lightbox'), lbInner=document.getElementById('lb-inner');
     function ytEmbed(u){ var m=String(u).match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{6,})/); return m?'https://www.youtube.com/embed/'+m[1]+'?autoplay=1&rel=0':''; }

@@ -356,7 +356,9 @@
             "label": "Rent The Photo Studio",
             "booking": "photoStudioRental"
           }
-        ]
+        ],
+        "roomGallery": "kanvas-room",
+        "roomGalleryLabel": "View Photo Studio"
       },
       {
         "type": "editorial",
@@ -438,30 +440,36 @@
             "show": "Always Algo",
             "title": "La Verdad Sobre el Crédito",
             "time": "1:24",
-            "video": ""
+            "video": "",
+            "kind": "episode"
           },
           {
             "image": "img/pod2.jpg",
             "show": "Respect Your Journey",
             "title": "Player Development",
             "time": "1:37",
-            "video": ""
+            "video": "",
+            "kind": "episode"
           },
           {
             "image": "img/pod3.jpg",
             "show": "Business Talk",
             "title": "Marketing Que Funciona",
             "time": "1:15",
-            "video": ""
+            "video": "",
+            "kind": "clip"
           },
           {
             "image": "img/pod4.jpg",
             "show": "Health & Lifestyle",
             "title": "Mindset y Bienestar",
             "time": "1:42",
-            "video": ""
+            "video": "",
+            "kind": "clip"
           }
-        ]
+        ],
+        "episodesLabel": "Full Episodes",
+        "clipsLabel": "Short Clips"
       },
       {
         "type": "split",
@@ -820,6 +828,11 @@
             "text": "English and Spanish."
           }
         ]
+      },
+      {
+        "type": "faq",
+        "id": "faq",
+        "source": "faq"
       },
       {
         "type": "cta",

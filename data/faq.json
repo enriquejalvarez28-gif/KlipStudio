@@ -1,0 +1,58 @@
+{
+  "faq": {
+    "eyebrow": "Questions",
+    "headline": [
+      "Before You Book."
+    ],
+    "items": [
+      {
+        "q": "What is KLIP?",
+        "a": "KLIP is a content, production and digital marketing company with KLIP Studio and KLIP Media under one brand. We help businesses, creators and professionals create content, build visibility and grow."
+      },
+      {
+        "q": "Can I book the studio without a technician?",
+        "a": "Yes. Selected studio sessions are available self-service. If you prefer help with setup, production or recording, technician and full-service options are also available."
+      },
+      {
+        "q": "What can I create at KLIP Studio?",
+        "a": "Podcasts, interviews, reels, UGC, personal-brand content, online courses, photography, product content, live-selling sessions and other branded content."
+      },
+      {
+        "q": "Can I record an online course at KLIP?",
+        "a": "Yes. Courses, lessons, masterclasses and training content can be recorded in different KLIP rooms depending on the look and format you want."
+      },
+      {
+        "q": "Do you provide cameras, lighting and audio?",
+        "a": "Equipment depends on the room and booking type. KLIP Studio offers professional cameras, lighting and audio setups, and the booking page shows what is included with each service."
+      },
+      {
+        "q": "Can I bring guests or my own crew?",
+        "a": "Yes, subject to the capacity and rules of the room you book. The booking client is responsible for their guests and crew while they are on the premises."
+      },
+      {
+        "q": "Can I book a photographer?",
+        "a": "Yes. You can book a photography session and choose an available photographer, or book/rent the photography space depending on the service."
+      },
+      {
+        "q": "Do you offer editing after the session?",
+        "a": "Yes. Podcast editing, reel editing and other post-production services can be added depending on the project."
+      },
+      {
+        "q": "Do you offer marketing services too?",
+        "a": "Yes. KLIP Media provides services including SEO, GEO/AI search visibility, paid advertising, social media, branding, websites, content strategy and AI solutions."
+      },
+      {
+        "q": "Can KLIP come to my business or event?",
+        "a": "Yes. On-location production is available for businesses, events, interviews, campaigns and other content needs."
+      },
+      {
+        "q": "How do I book?",
+        "a": "Studio services are booked through the embedded KLIP booking experience. Marketing and strategy consultations are scheduled through the embedded consultation calendar."
+      },
+      {
+        "q": "Where is KLIP located?",
+        "a": "KLIP Studio is at 2145 Davie Blvd, Suite 204, Fort Lauderdale, FL, serving South Florida including Broward, Miami-Dade and Palm Beach."
+      }
+    ]
+  }
+}
