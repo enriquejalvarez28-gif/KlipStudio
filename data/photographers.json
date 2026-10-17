@@ -18,7 +18,8 @@
         "providerId": "",
         "headshot": "",
         "portfolio": [],
-        "active": true
+        "active": true,
+        "temp": true
       },
       {
         "name": "Photographer B — TEMP",
@@ -28,7 +29,8 @@
         "providerId": "",
         "headshot": "",
         "portfolio": [],
-        "active": true
+        "active": true,
+        "temp": true
       },
       {
         "name": "Photographer C — TEMP",
@@ -38,7 +40,8 @@
         "providerId": "",
         "headshot": "",
         "portfolio": [],
-        "active": true
+        "active": true,
+        "temp": true
       }
     ]
   }

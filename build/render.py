@@ -234,10 +234,16 @@ def cards(b, D):
                          esc(i.get('title', '')),
                          '<span>%s</span>' % esc(i['sub']) if i.get('sub') else ''))
     style = '' if portrait else 'grid-template-columns:repeat(%s,minmax(0,1fr))' % (b.get('cols') or 4)
+    # The portrait grid is shared with Industries, which legitimately has six
+    # tiles. Four items must not be stretched across a six-column grid, so the
+    # count travels with the markup and the stylesheet picks the right shape.
+    cls = 'ind-grid' if portrait else 'rooms'
+    if portrait:
+        cls += ' ind-grid--n%d' % min(len(b.get('items') or []), 6)
     return ('<section class="sec sec--paper"%s><div class="wrap">%s'
             '<div class="%s rv" style="%s">%s</div></div></section>'
             % (' id="%s"' % esc(b['id']) if b.get('id') else '', head_block(b),
-               'ind-grid' if portrait else 'rooms', style, items))
+               cls, style, items))
 
 
 def rooms(b, D):
@@ -363,16 +369,20 @@ def clips(b, D):
                    esc(c.get('show', '')), esc(c.get('title', '')),
                    '<span class="pod-time">%s</span>' % esc(c['time']) if c.get('time') else ''))
 
+    # The column count follows the item count. Two episodes in a four-column
+    # grid leave half the row empty, which is the desktop dead space the
+    # master doc calls out; two of four columns is a gap, two of two is a
+    # layout.
     body = head_block(b)
     if eps:
         body += ('<p class="rail-label" id="full-episodes">%s</p>'
-                 '<div class="pod-grid pod-grid--eps rv" id="episode-rail">%s</div>'
-                 % (esc(b.get('episodesLabel', 'Full Episodes')),
+                 '<div class="pod-grid pod-grid--eps pod-n%d rv" id="episode-rail">%s</div>'
+                 % (esc(b.get('episodesLabel', 'Full Episodes')), min(len(eps), 4),
                     ''.join(card(c, 'episode') for c in eps)))
     if cl:
         body += ('<p class="rail-label" id="short-clips">%s</p>'
-                 '<div class="pod-clips rv">%s</div>'
-                 % (esc(b.get('clipsLabel', 'Short Clips')),
+                 '<div class="pod-clips pod-n%d rv">%s</div>'
+                 % (esc(b.get('clipsLabel', 'Short Clips')), min(len(cl), 4),
                     ''.join(card(c, 'clip') for c in cl)))
     return ('<section class="sec sec--paper"%s><div class="wrap">%s</div></section>'
             % (' id="%s"' % esc(b['id']) if b.get('id') else '', body))
@@ -399,6 +409,86 @@ def faq(b, D):
     return ('<section class="sec sec--paper"%s><div class="wrap">%s'
             '<div class="faq rv">%s</div></div></section>'
             % (' id="%s"' % esc(b['id']) if b.get('id') else '', head_block(b), rows))
+
+
+def duo(b, D):
+    """Two equal primary paths side by side — Book a Photographer and Rent
+    the Photo Studio. Both are revenue paths, so neither panel is styled as
+    secondary: same size, same weight, same button prominence. 50/50 on
+    desktop and iPad landscape, stacked full width on a phone."""
+    panels = ''
+    for p in (b.get('panels') or []):
+        a = act(p.get('cta'))
+        media = ''
+        if p.get('image'):
+            media = '<div class="duo-img">%s</div>' % pic(
+                p['image'], p.get('imageAlt') or p.get('title', ''),
+                'loading="lazy" decoding="async" width="1200" height="900"')
+        panels += ('<div class="duo-panel fade">%s<div class="duo-copy">'
+                   '<p class="eyebrow">%s</p><h3>%s</h3><p class="duo-text">%s</p>'
+                   '<a class="btn btn--dark" href="%s"%s>%s %s</a></div></div>'
+                   % (media, esc(p.get('eyebrow', '')), esc(p.get('title', '')),
+                      esc(p.get('text', '')), esc(a['href']), a['attr'],
+                      esc((p.get('cta') or {}).get('label', '')), AR))
+    return ('<section class="sec sec--paper"%s><div class="wrap">%s'
+            '<div class="duo rv">%s</div></div></section>'
+            % (' id="%s"' % esc(b['id']) if b.get('id') else '', head_block(b), panels))
+
+
+def photographers(b, D):
+    """Real photographer cards. A profile is public only when it is active,
+    not marked temp, and actually has a headshot and a provider id — the
+    three together are what "approved" means. Everything else stays private,
+    so placeholder names can live in the CMS without ever reaching a
+    visitor. First Available stays a small separate option beside them."""
+    P = (D.get('photographers') or {})
+    people = [p for p in (P.get('items') or [])
+              if p.get('active') and not p.get('temp')
+              and p.get('headshot') and p.get('providerId')]
+
+    cards = ''
+    for p in people:
+        a = act({'booking': p.get('booking'), 'provider': p.get('providerId')})
+        shots = [g for g in (p.get('portfolio') or []) if g]
+        work = ''
+        if shots:
+            work = ('<button type="button" class="pg-work" data-gallery="%s" '
+                    'data-gallery-name="%s">View Work <span class="vp-n">%d</span>'
+                    '</button>'
+                    % (esc(json.dumps([[u, '%s — work' % p.get('name', '')]
+                                       for u in shots])),
+                       esc(p.get('name', '')), len(shots)))
+        cards += ('<article class="pg-card fade"><div class="pg-shot">%s</div>'
+                  '<div class="pg-body"><h3>%s</h3><p class="pg-spec">%s</p>'
+                  '<p class="pg-bio">%s</p><div class="pg-acts">'
+                  '<a class="btn btn--dark" href="%s"%s>%s %s</a>%s</div></div></article>'
+                  % (pic(p.get('headshot', ''), p.get('name', ''),
+                         'loading="lazy" decoding="async" width="800" height="1000"'),
+                     esc(p.get('name', '')), esc(p.get('specialties', '')),
+                     esc(p.get('bio', '')), esc(a['href']), a['attr'],
+                     esc('Book With %s' % p.get('name', '').split()[0]
+                         if p.get('name') else 'Book'), AR, work))
+
+    fa = P.get('firstAvailable') or {}
+    aside = ''
+    if fa:
+        fa_act = act({'booking': fa.get('booking')})
+        aside = ('<div class="pg-first fade"><div><p class="eyebrow">%s</p>'
+                 '<p>%s</p></div><a class="btn btn--outline" href="%s"%s>%s %s</a></div>'
+                 % (esc(fa.get('title', 'First Available')), esc(fa.get('text', '')),
+                    esc(fa_act['href']), fa_act['attr'],
+                    esc(fa.get('cta', 'Find A Time')), AR))
+
+    note = ('<p class="pg-note fade">%s</p>' % esc(P['intro'])) if P.get('intro') else ''
+    body = head_block(b)
+    if cards:
+        body += '<div class="pg-grid rv">%s</div>%s%s' % (cards, note, aside)
+    else:
+        # No approved profiles yet: show the one honest path rather than an
+        # empty grid or placeholder people.
+        body += '%s%s' % (note, aside)
+    return ('<section class="sec sec--paper"%s><div class="wrap">%s</div></section>'
+            % (' id="%s"' % esc(b['id']) if b.get('id') else '', body))
 
 
 def visibility(b, D):
@@ -434,7 +524,7 @@ def cta(b, D):
 BLOCKS = {'pagehero': pagehero, 'editorial': editorial, 'split': split, 'cards': cards,
           'rooms': rooms, 'portfolio': portfolio, 'steps': steps, 'facts': facts,
           'clips': clips, 'visibility': visibility, 'cta': cta,
-          'faq': faq}
+          'faq': faq, 'duo': duo, 'photographers': photographers}
 
 
 def render_blocks(blocks, D):

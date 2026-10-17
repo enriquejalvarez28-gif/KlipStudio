@@ -27,7 +27,7 @@ SITE = 'https://theklipstudio.com'
 
 PARTS = ['brand', 'navigation', 'hero', 'sections', 'studio', 'photography',
          'photographers', 'podcasts', 'clients', 'location', 'visibility',
-         'booking', 'consultation', 'faq']
+         'booking', 'consultation', 'faq', 'specials', 'seo']
 
 LEGAL = [('privacy.html', 'privacy', '/privacy/'), ('terms.html', 'terms', '/terms/')]
 
@@ -141,6 +141,12 @@ def footer(D, here):
         '<button class="gal-arrow gal-next" id="gal-next" aria-label="Next photo">'
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
         'aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button></div>\n'
+        # Specials. The shell is empty and the script fills it only when a
+        # live offer exists, so a site with no promotion ships no promotion.
+        '<div class="sp" id="special" role="dialog" aria-modal="true" '
+        'aria-labelledby="sp-head" hidden><div class="sp-box" id="sp-box">'
+        '<button class="sp-close" id="sp-close" aria-label="Close offer">&times;</button>'
+        '</div></div>\n'
         '<footer class="site-footer" id="site-footer"><div class="wrap">'
         '<div class="foot-top"><a href="#top" aria-label="Home">'
         '<img class="logo" src="%s" alt="%s" width="150" height="56"></a>'
@@ -284,13 +290,13 @@ def home_main(D):
         '<button class="circ" data-dir="1" aria-label="Next episode"><svg width="14" height="14" '
         'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">'
         '<path d="M9 5l7 7-7 7"/></svg></button></div></div></div></div>'
-        '<div class="pod-grid pod-grid--eps rv" id="pod-grid">%s</div>'
+        '<div class="pod-grid pod-grid--eps pod-n%d rv" id="pod-grid">%s</div>'
         '%s</div></section>'
         % (esc(P['eyebrow']), headline(P['headline']), esc(P['cta']['href']),
            esc(P['cta']['label']), R.AR,
-           ''.join(pod_card(c) for c in eps),
-           ('<p class="rail-label">%s</p><div class="pod-clips rv">%s</div>'
-            % (esc(P.get('clipsLabel', 'Short Clips')),
+           min(len(eps), 4), ''.join(pod_card(c) for c in eps),
+           ('<p class="rail-label">%s</p><div class="pod-clips pod-n%d rv">%s</div>'
+            % (esc(P.get('clipsLabel', 'Short Clips')), min(len(clips), 4),
                ''.join(pod_card(c) for c in clips))) if clips else ''))
 
     T = D['studio']
@@ -400,6 +406,27 @@ def pod_card(c):
                '<span class="pod-time">%s</span>' % R.esc(c['time']) if c.get('time') else ''))
 
 
+
+def live_special(D):
+    """The offer, but only if it is genuinely live.
+
+    Active, inside its date window, and carrying at least a headline. A
+    promotional price with no SimplyBook service behind it is not published:
+    an offer a visitor cannot actually book is worse than no offer.
+    """
+    S = (D.get('specials') or {})
+    if not S.get('active') or not S.get('headline'):
+        return None
+    today = date.today().isoformat()
+    if S.get('startDate') and today < S['startDate']:
+        return None
+    if S.get('endDate') and today > S['endDate']:
+        return None
+    if S.get('promoPrice') and not (S.get('booking') or S.get('simplybookServiceId')):
+        return None
+    return S
+
+
 def runtime_config(D):
     """The settings the behaviour needs, inlined so nothing is fetched at runtime.
     Content is already in the HTML; this is booking ids, schedulers and copy for
@@ -407,16 +434,93 @@ def runtime_config(D):
     return {
         'booking': D.get('booking', {}),
         'consultation': D.get('consultation', {}),
-        'photographers': D.get('photographers', {}),
+        # Only approved profiles are inlined. A profile is approved when it is
+        # active, not marked temp, and actually has a headshot and a provider
+        # id. Filtering here and not in the browser matters: the config is
+        # shipped in the HTML, so an unapproved name left in it is published
+        # whether or not anything renders it.
+        'photographers': dict(
+            D.get('photographers', {}),
+            items=[p for p in (D.get('photographers', {}).get('items') or [])
+                   if p.get('active') and not p.get('temp')
+                   and p.get('headshot') and p.get('providerId')]),
         'visibility': D.get('visibility', {}),
         'hero': {k: D['hero'].get(k) for k in
                  ('image', 'videoPoster', 'videoPosterMobile', 'videoMp4',
                   'videoWebm', 'videoMobile', 'videoMobileWebm')},
         'webp': sorted(R.WEBP),
+        # Only a genuinely live offer is inlined, and only the fields the
+        # pop-up needs. An inactive or expired offer is simply absent, so
+        # there is nothing in the page for anyone to read or trigger.
+        'special': (lambda S: S and {
+            'name': S.get('name', ''), 'badge': S.get('badge', ''),
+            'headline': S.get('headline', ''), 'copy': S.get('copy', ''),
+            'regularPrice': S.get('regularPrice', ''),
+            'promoPrice': S.get('promoPrice', ''),
+            'ctaLabel': S.get('ctaLabel') or 'Book The Special',
+            'booking': S.get('booking', ''),
+            'image': S.get('image', ''), 'imageMobile': S.get('imageMobile', ''),
+            'imageAlt': S.get('imageAlt', ''),
+            'popup': bool(S.get('showAsPopup')),
+            'days': int(S.get('frequencyDays') or 7),
+            'delay': int(S.get('delaySeconds') or 10),
+            'scroll': int(S.get('scrollPercent') or 40),
+            'email': bool(S.get('emailCapture')),
+            'emailLabel': S.get('emailLabel', ''),
+            'emailNote': S.get('emailNote', ''),
+            'id': (S.get('name') or S.get('headline') or '')[:40],
+        })(live_special(D)) or None,
     }
 
 
-def shell(title, desc, canonical, body, schema, page_key, extra_head='', config='{}'):
+
+def seo_for(D, key):
+    """Per-page title, description, share image and index flag, as set in
+    /admin -> SEO & Integrations. Anything left blank there falls back to the
+    page's own content, so an empty field never blanks a tag."""
+    S = (D.get('seo') or {})
+    row = next((r for r in (S.get('pages') or []) if r.get('key') == key), {})
+    share = row.get('shareImage') or S.get('shareImage') or 'img/hero.jpg'
+    if not share.startswith('http'):
+        share = SITE + '/' + share.lstrip('/')
+    return (row.get('title') or '', row.get('description') or '',
+            share, bool(row.get('noindex')))
+
+
+def site_head(D):
+    """Verification tags and measurement snippets, from public IDs only.
+
+    Nothing is emitted for a blank field, so a site with no analytics ships
+    no analytics. Secrets never belong here — this file is public; API keys
+    and webhook secrets stay in the Cloudflare environment.
+    """
+    I = (D.get('integrations') or {})
+    out = []
+    if I.get('searchConsole'):
+        out.append('<meta name="google-site-verification" content="%s">'
+                   % R.esc(I['searchConsole']))
+    if I.get('bing'):
+        out.append('<meta name="msvalidate.01" content="%s">' % R.esc(I['bing']))
+    if I.get('gtm'):
+        g = R.esc(I['gtm'])
+        out.append("<script>(function(w,d,s,l,i){w[l]=w[l]||[];"
+                   "w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});"
+                   "var f=d.getElementsByTagName(s)[0],j=d.createElement(s),"
+                   "dl=l!='dataLayer'?'&l='+l:'';j.async=true;"
+                   "j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;"
+                   "f.parentNode.insertBefore(j,f);})"
+                   "(window,document,'script','dataLayer','%s');</script>" % g)
+    elif I.get('ga4'):
+        g = R.esc(I['ga4'])
+        out.append('<script async src="https://www.googletagmanager.com/gtag/js?id=%s">'
+                   '</script><script>window.dataLayer=window.dataLayer||[];'
+                   'function gtag(){dataLayer.push(arguments);}'
+                   "gtag('js',new Date());gtag('config','%s');</script>" % (g, g))
+    return ('\n' + '\n'.join(out)) if out else ''
+
+
+def shell(title, desc, canonical, body, schema, page_key, extra_head='',
+          config='{}', share='', noindex=False, site_head=''):
     return """<!doctype html>
 <html lang="en">
 <head>
@@ -424,7 +528,7 @@ def shell(title, desc, canonical, body, schema, page_key, extra_head='', config=
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>%s</title>
 <meta name="description" content="%s">
-<link rel="canonical" href="%s">
+<link rel="canonical" href="%s">%s
 <meta name="theme-color" content="#1d1d1c">
 <link rel="icon" type="image/png" href="img/favicon.png?v=2">
 <link rel="apple-touch-icon" href="img/favicon.png?v=2">
@@ -434,11 +538,12 @@ def shell(title, desc, canonical, body, schema, page_key, extra_head='', config=
 <meta property="og:title" content="%s">
 <meta property="og:description" content="%s">
 <meta property="og:url" content="%s">
-<meta property="og:image" content="%s/img/hero.jpg">
+<meta property="og:image" content="%s">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="%s">
 <meta name="twitter:description" content="%s">
-<meta name="twitter:image" content="%s/img/hero.jpg">
+<meta name="twitter:image" content="%s">
+%s
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -455,8 +560,11 @@ def shell(title, desc, canonical, body, schema, page_key, extra_head='', config=
 <script src="js/klip-site.js" defer></script>
 </body>
 </html>
-""" % (R.esc(title), R.esc(desc), canonical, R.esc(title), R.esc(desc), canonical, SITE,
-       R.esc(title), R.esc(desc), SITE, extra_head, schema, page_key, body, config)
+""" % (R.esc(title), R.esc(desc), canonical,
+       '\n<meta name="robots" content="noindex,nofollow">' if noindex else '',
+       R.esc(title), R.esc(desc), canonical, R.esc(share),
+       R.esc(title), R.esc(desc), R.esc(share), site_head,
+       extra_head, schema, page_key, body, config)
 
 
 def org_schema(D):
@@ -519,6 +627,7 @@ def video_schema(D):
 def build():
     D, pages = load()
     cfg = runtime_config(D)
+    head_tags = site_head(D)
     written = []
     for filename, key, url in PAGES:
         here = filename.lower()
@@ -555,7 +664,10 @@ def build():
         body = (header(D, here) + '\n<main>\n' + main + '\n</main>\n' + footer(D, here))
         schema = json.dumps({"@context": "https://schema.org", "@graph": graph},
                             indent=2, ensure_ascii=False)
-        html = shell(title, desc, SITE + url, body, schema, key, extra_head=head,
+        t2, d2, share, noindex = seo_for(D, key)
+        html = shell(t2 or title, d2 or desc, SITE + url, body, schema, key,
+                     extra_head=head, share=share, noindex=noindex,
+                     site_head=head_tags,
                      config=json.dumps(cfg, ensure_ascii=False, separators=(',', ':')))
         with open(os.path.join(ROOT, filename), 'w', encoding='utf-8') as fh:
             fh.write(html)
@@ -579,10 +691,12 @@ def build():
         graph = [org_schema(D), breadcrumbs(L['heading'][0], url)]
         body = (header(D, filename.lower()) + '\n<main>\n' + main + '\n</main>\n'
                 + footer(D, filename.lower()))
-        html = shell(L['title'], L['description'], SITE + url, body,
+        t2, d2, share, noindex = seo_for(D, key)
+        html = shell(t2 or L['title'], d2 or L['description'], SITE + url, body,
                      json.dumps({"@context": "https://schema.org", "@graph": graph},
                                 indent=2, ensure_ascii=False),
-                     key, config=json.dumps(cfg, ensure_ascii=False, separators=(',', ':')))
+                     key, share=share, noindex=noindex, site_head=head_tags,
+                     config=json.dumps(cfg, ensure_ascii=False, separators=(',', ':')))
         with open(os.path.join(ROOT, filename), 'w', encoding='utf-8') as fh:
             fh.write(html)
         written.append((filename, len(html)))

@@ -1111,3 +1111,184 @@ figure.has-gallery{position:relative}
   .btn{padding:17px 20px;min-height:52px;font-size:12.5px}
   [data-booking],.btn--solid,.btn--dark{min-height:54px}
 }
+
+/* ------------------------------------------------------------------
+   The two primary photography paths. Equal panels on purpose: booking a
+   photographer and renting the room are both revenue, so neither is
+   styled as the secondary option.
+------------------------------------------------------------------ */
+.duo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:20px}
+.duo-panel{display:flex;flex-direction:column;background:var(--white);
+  border:1px solid var(--line)}
+.duo-img{aspect-ratio:4/3;overflow:hidden}
+.duo-img img{width:100%;height:100%;object-fit:cover;
+  transition:transform .7s cubic-bezier(.2,.7,.2,1)}
+.duo-panel:hover .duo-img img{transform:scale(1.04)}
+.duo-copy{display:flex;flex-direction:column;gap:12px;flex:1;
+  padding:clamp(22px,2.4vw,34px)}
+.duo-copy h3{font-size:clamp(21px,1.9vw,27px);line-height:1.12}
+.duo-text{font-size:clamp(14.5px,1.05vw,16px);line-height:1.6;color:#4a4a47;flex:1}
+.duo-copy .btn{align-self:stretch;justify-content:space-between}
+
+/* ------------------------------------------------------------------
+   Photographer cards. Only approved profiles reach this markup — the
+   renderer requires active + not temp + a headshot + a provider id.
+------------------------------------------------------------------ */
+.pg-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:20px}
+.pg-card{display:flex;flex-direction:column;background:var(--white);
+  border:1px solid var(--line)}
+.pg-shot{aspect-ratio:4/5;overflow:hidden;background:#eceae7}
+.pg-shot img{width:100%;height:100%;object-fit:cover}
+.pg-body{display:flex;flex-direction:column;gap:9px;flex:1;padding:20px}
+.pg-body h3{font-size:clamp(18px,1.5vw,22px)}
+.pg-spec{font-family:'Montserrat',sans-serif;font-size:10.5px;font-weight:700;
+  letter-spacing:.17em;text-transform:uppercase;color:var(--red)}
+.pg-bio{font-size:14.5px;line-height:1.6;color:#4a4a47;flex:1}
+.pg-acts{display:flex;flex-direction:column;gap:9px;margin-top:4px}
+.pg-work{border:1px solid var(--line);background:none;cursor:pointer;
+  padding:13px 16px;display:inline-flex;align-items:center;justify-content:space-between;
+  gap:10px;font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--ink);
+  transition:background .25s ease,color .25s ease,border-color .25s ease}
+.pg-work:hover{background:var(--ink);color:#fff;border-color:var(--ink)}
+.pg-work:hover .vp-n{background:#fff;color:var(--ink)}
+.pg-note{margin-top:16px;font-size:14.5px;color:#6a6a66}
+.pg-first{display:flex;align-items:center;justify-content:space-between;gap:20px;
+  margin-top:14px;padding:18px 22px;border:1px solid var(--line);background:var(--white)}
+.pg-first p:last-of-type{font-size:14.5px;color:#4a4a47;margin-top:4px}
+
+@media (max-width:1024px){
+  .pg-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:760px){
+  .duo{grid-template-columns:minmax(0,1fr);gap:11px;margin-top:14px}
+  .duo-img{aspect-ratio:16/9}
+  .duo-copy{padding:20px 18px;gap:10px}
+  .pg-grid{grid-template-columns:minmax(0,1fr);gap:11px}
+  .pg-shot{aspect-ratio:3/2}
+  .pg-first{flex-direction:column;align-items:stretch;gap:14px;padding:18px}
+  .pg-first .btn{width:100%}
+}
+
+/* ------------------------------------------------------------------
+   The portrait tile grid is shared between Industries (six tiles) and
+   What We Shoot (four). Four items across a six-column grid leaves the
+   row stretched and thin, so the column count follows the item count.
+------------------------------------------------------------------ */
+.ind-grid--n4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.ind-grid--n3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.ind-grid--n2{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (max-width:1024px){
+  .ind-grid--n4,.ind-grid--n3{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:760px){
+  .ind-grid--n4,.ind-grid--n3,.ind-grid--n2{
+    grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+/* iPad portrait stacks the two photography paths; iPad landscape (1024
+   and up) and desktop are wide enough for two readable 50/50 panels. */
+@media (max-width:1023px){
+  .duo{grid-template-columns:minmax(0,1fr);gap:12px}
+  .duo-img{aspect-ratio:16/9}
+}
+@media (min-width:1024px){
+  .duo{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+/* ------------------------------------------------------------------
+   Podcast grids size to their contents. Two episodes across a four
+   column grid is the desktop dead space the master doc calls out, so
+   the column count comes from the item count instead.
+   Episodes 16:9 — desktop and iPad 2 across, phone one at a time.
+   Clips 9:16 — desktop 4 across, iPad 2x2, phone 2 per row, and two
+   clips become two centred columns rather than a gappy four.
+------------------------------------------------------------------ */
+@media (min-width:761px){
+  .pod-grid--eps.pod-n1{grid-template-columns:minmax(0,760px);justify-content:center}
+  .pod-grid--eps.pod-n2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pod-grid--eps.pod-n3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .pod-grid--eps.pod-n4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pod-clips.pod-n1{grid-template-columns:minmax(0,360px);justify-content:center}
+  .pod-clips.pod-n2{grid-template-columns:repeat(2,minmax(0,420px));
+    justify-content:center}
+  .pod-clips.pod-n3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .pod-clips.pod-n4{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media (min-width:761px) and (max-width:1024px){
+  /* iPad: episodes stay 2 across, clips become 2 x 2 */
+  .pod-clips.pod-n3,.pod-clips.pod-n4{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+/* ------------------------------------------------------------------
+   View Photos: revealed on hover where there is a pointer, always
+   visible as a badge where there is not. A touch device has no hover,
+   so an iPad must never have to guess that photos exist.
+------------------------------------------------------------------ */
+@media (hover:hover) and (pointer:fine){
+  figure.has-gallery .view-photos{
+    opacity:0;transform:translateY(6px);
+    transition:opacity .28s ease,transform .28s ease,background .25s ease,color .25s ease}
+  figure.has-gallery:hover .view-photos,
+  figure.has-gallery:focus-within .view-photos{opacity:1;transform:none}
+  /* keyboard users must still be able to reach it */
+  figure.has-gallery .view-photos:focus-visible{
+    opacity:1;transform:none;outline:2px solid var(--red);outline-offset:3px}
+}
+@media (hover:none),(pointer:coarse){
+  figure.has-gallery .view-photos{opacity:1;transform:none}
+}
+@media (prefers-reduced-motion:reduce){
+  figure.has-gallery .view-photos{transition:opacity .01ms}
+}
+
+/* ------------------------------------------------------------------
+   Specials. A centred card on desktop, a compact bottom sheet on a
+   phone — never a full-screen takeover, and never the first thing a
+   visitor meets.
+------------------------------------------------------------------ */
+.sp{position:fixed;inset:0;z-index:118;display:flex;align-items:center;
+  justify-content:center;padding:20px;background:rgba(10,10,10,.55);
+  opacity:0;transition:opacity .26s ease}
+.sp.is-open{opacity:1}
+.sp[hidden]{display:none}
+.sp-box{position:relative;width:min(100%,600px);max-height:86vh;overflow:auto;
+  background:var(--white);display:grid;grid-template-columns:minmax(0,1fr);
+  transform:translateY(14px);transition:transform .3s cubic-bezier(.16,1,.3,1)}
+.sp.is-open .sp-box{transform:none}
+.sp-close{position:absolute;top:10px;right:10px;z-index:2;width:42px;height:42px;
+  border:0;background:rgba(255,255,255,.9);color:var(--ink);font-size:25px;
+  line-height:1;cursor:pointer;transition:background .25s ease,color .25s ease}
+.sp-close:hover{background:var(--red);color:#fff}
+.sp-img{aspect-ratio:16/9;overflow:hidden}
+.sp-img img{width:100%;height:100%;object-fit:cover}
+.sp-copy{display:flex;flex-direction:column;gap:12px;padding:26px 26px 28px}
+.sp-badge{align-self:flex-start;font-family:'Montserrat',sans-serif;font-size:10px;
+  font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#fff;
+  background:var(--red);padding:6px 11px}
+.sp-copy h2{font-size:clamp(23px,2.4vw,31px);line-height:1.1}
+.sp-text{font-size:15.5px;line-height:1.6;color:#4a4a47}
+.sp-price{font-family:'Montserrat',sans-serif;font-size:19px}
+.sp-price s{color:#9a9a96;font-weight:500;margin-right:8px}
+.sp-price b{color:var(--red);font-size:25px;font-weight:800}
+.sp-cta{justify-content:space-between}
+.sp-mail{display:flex;flex-wrap:wrap;gap:9px;margin-top:4px}
+.sp-mail input{flex:1 1 180px;min-width:0;padding:14px 14px;border:1px solid var(--line);
+  font-family:inherit;font-size:15px;background:var(--paper)}
+.sp-mail input:focus-visible{outline:2px solid var(--red);outline-offset:1px}
+.sp-note{flex:1 1 100%;font-size:12.5px;color:#8a8a86}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+@media (max-width:760px){
+  /* a sheet from the bottom, sized to its content, not a takeover */
+  .sp{align-items:flex-end;padding:0}
+  .sp-box{width:100%;max-height:82vh;transform:translateY(100%)}
+  .sp-img{aspect-ratio:2/1}
+  .sp-copy{padding:22px 18px calc(22px + env(safe-area-inset-bottom))}
+  .sp-copy h2{font-size:24px}
+  .sp-close{width:44px;height:44px}
+}
+@media (prefers-reduced-motion:reduce){
+  .sp,.sp-box{transition:none}
+}

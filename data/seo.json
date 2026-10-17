@@ -1,0 +1,79 @@
+{
+  "seo": {
+    "shareImage": "",
+    "pages": [
+      {
+        "key": "home",
+        "title": "KLIP — Content, Marketing & Production",
+        "description": "KLIP is a content and digital marketing company in South Florida. Klip Media runs the marketing; Klip Studio runs the production — podcast, video, photography and on-location.",
+        "shareImage": "",
+        "noindex": false
+      },
+      {
+        "key": "media",
+        "title": "Klip Media — Digital Marketing in South Florida | KLIP",
+        "description": "Klip Media is KLIP's marketing division: Google Ads, Meta Ads, SEO, GEO and AI search, social media, branding, website design, AI solutions and content strategy.",
+        "shareImage": "",
+        "noindex": false
+      },
+      {
+        "key": "studio",
+        "title": "Klip Studio — Podcast, Video & Photo Studio in Fort Lauderdale | KLIP",
+        "description": "Klip Studio is KLIP's production space in Fort Lauderdale: multicam podcast room, dark interview room, green screen and a white wall for photo and product. Book by the hour.",
+        "shareImage": "",
+        "noindex": false
+      },
+      {
+        "key": "photography",
+        "title": "Photography — Headshots, Lifestyle, Branding | KLIP",
+        "description": "KLIP photography in Fort Lauderdale: headshots, lifestyle, birthday and branding sessions, plus photo studio rental with the white wall and lighting included.",
+        "shareImage": "",
+        "noindex": false
+      },
+      {
+        "key": "podcasts",
+        "title": "Podcast Production & Studio — Fort Lauderdale | KLIP",
+        "description": "Record your podcast at KLIP: multicam room, broadcast audio, a technician if you want one, and edited episodes and clips ready to publish.",
+        "shareImage": "",
+        "noindex": false
+      },
+      {
+        "key": "work",
+        "title": "Selected Work — Content & Campaigns | KLIP",
+        "description": "A look at what KLIP produces: branded podcasts, business content shoots, on-location production, short-form social, photography and brand campaigns.",
+        "shareImage": "",
+        "noindex": false
+      },
+      {
+        "key": "about",
+        "title": "About KLIP — Content & Marketing in South Florida",
+        "description": "KLIP is a content and digital marketing company in Fort Lauderdale. Klip Media runs the marketing, Klip Studio runs the production, and both sit under one roof.",
+        "shareImage": "",
+        "noindex": false
+      },
+      {
+        "key": "privacy",
+        "title": "Privacy Policy | KLIP",
+        "description": "This policy covers theklipstudio.com and explains what we collect, why, and what you can ask us to do about it. KLIP is operated by Klip Studio LLC and Kli",
+        "shareImage": "",
+        "noindex": false
+      },
+      {
+        "key": "terms",
+        "title": "Terms of Service | KLIP",
+        "description": "These terms apply to this website and to work booked through it. Services are provided by Klip Studio LLC and Klip Media LLC, 2145 Davie Blvd, Suite 204, F",
+        "shareImage": "",
+        "noindex": false
+      }
+    ]
+  },
+  "integrations": {
+    "ga4": "",
+    "gtm": "",
+    "searchConsole": "",
+    "bing": "",
+    "metaPixel": "",
+    "googleAdsId": "",
+    "businessProfile": ""
+  }
+}

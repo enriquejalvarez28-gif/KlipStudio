@@ -1,0 +1,28 @@
+{
+  "specials": {
+    "_note": "One reusable offer component. Nothing here is published until 'active' is true AND the dates include today. Prices must match the matching SimplyBook service exactly — SimplyBook is the source of truth. Do not advertise a price here that a visitor will not see at checkout.",
+    "active": false,
+    "showOnHome": false,
+    "showAsPopup": false,
+    "name": "",
+    "badge": "",
+    "headline": "",
+    "copy": "",
+    "regularPrice": "",
+    "promoPrice": "",
+    "ctaLabel": "Book The Special",
+    "booking": "",
+    "simplybookServiceId": "",
+    "image": "",
+    "imageMobile": "",
+    "imageAlt": "",
+    "startDate": "",
+    "endDate": "",
+    "frequencyDays": 7,
+    "delaySeconds": 10,
+    "scrollPercent": 40,
+    "emailCapture": false,
+    "emailLabel": "Send Me KLIP Specials",
+    "emailNote": "Occasional KLIP offers. Unsubscribe any time."
+  }
+}

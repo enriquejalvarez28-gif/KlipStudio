@@ -324,6 +324,39 @@
         ]
       },
       {
+        "type": "duo",
+        "id": "choose",
+        "eyebrow": "Two Ways In",
+        "headline": [
+          "Book A Photographer.",
+          "Or Rent The Room"
+        ],
+        "panels": [
+          {
+            "eyebrow": "With A KLIP Photographer",
+            "title": "Book A Photographer",
+            "text": "Choose a KLIP photographer or let us assign the first available. Studio, photographer and edited images in one booking.",
+            "image": "img/photo1.jpg",
+            "imageAlt": "KLIP photographer shooting a portrait session in studio",
+            "cta": {
+              "label": "Choose A Photographer",
+              "photographers": true
+            }
+          },
+          {
+            "eyebrow": "Bring Your Own",
+            "title": "Rent The Photo Studio",
+            "text": "Bring your own camera or photographer. Use the Kanvas room, white wall, backdrops and professional lighting.",
+            "image": "img/photo4.jpg",
+            "imageAlt": "Kanvas room white wall with professional lighting",
+            "cta": {
+              "label": "Rent The Room",
+              "booking": "photoStudioRental"
+            }
+          }
+        ]
+      },
+      {
         "type": "split",
         "image": "img/room4.jpg",
         "imageAlt": "White wall photography studio with lighting",
@@ -361,29 +394,12 @@
         "roomGalleryLabel": "View Photo Studio"
       },
       {
-        "type": "editorial",
-        "eyebrow": "Our Photographers",
+        "type": "photographers",
+        "id": "photographers",
+        "eyebrow": "The Team",
         "headline": [
           "Choose Your",
           "Photographer"
-        ],
-        "body": "Pick the style you want, or let us assign the first available.",
-        "items": [
-          {
-            "icon": "badge",
-            "title": "Meet The Team",
-            "text": "Browse specialties and styles, then book the person you want."
-          },
-          {
-            "icon": "calendar",
-            "title": "First Available",
-            "text": "In a hurry? We will put you with the earliest available KLIP photographer."
-          },
-          {
-            "icon": "gear",
-            "title": "One Clear Price",
-            "text": "The package price does not change based on who shoots it."
-          }
         ]
       },
       {

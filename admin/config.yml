@@ -1391,6 +1391,222 @@ collections:
         - name: a
           label: Answer
           widget: text
+  - name: specials
+    label: Pricing & Specials
+    file: data/specials.json
+    fields:
+    - name: specials
+      label: Current offer
+      widget: object
+      fields:
+      - name: _note
+        label: note
+        widget: hidden
+      - name: active
+        label: Offer is live
+        widget: boolean
+        default: false
+        hint: >-
+          Nothing is published while this is off. The offer also needs a
+          headline, and must be inside its start/end dates.
+      - name: showAsPopup
+        label: Show as pop-up
+        widget: boolean
+        default: false
+        hint: >-
+          The pop-up never appears on page load, never over a booking window,
+          never on Privacy or Terms, and at most once every few days per
+          visitor.
+      - name: showOnHome
+        label: Show on the homepage
+        widget: boolean
+        default: false
+      - name: name
+        label: Offer name (internal)
+        widget: string
+        required: false
+      - name: badge
+        label: Badge
+        widget: string
+        required: false
+        hint: Short, e.g. Best Value. Leave blank for none.
+      - name: headline
+        label: Headline
+        widget: string
+        required: false
+      - name: copy
+        label: Copy
+        widget: text
+        required: false
+      - name: regularPrice
+        label: Regular price
+        widget: string
+        required: false
+        hint: 'As a visitor reads it, e.g. $130. Shown struck through.'
+      - name: promoPrice
+        label: Promotional price
+        widget: string
+        required: false
+        hint: >-
+          Must match the SimplyBook service exactly. SimplyBook is the source
+          of truth for price. A promo price with no booking service behind it
+          is not published at all.
+      - name: ctaLabel
+        label: Button label
+        widget: string
+        default: Book The Special
+      - name: booking
+        label: Booking key
+        widget: string
+        required: false
+        hint: Matches a key under Booking -> SimplyBook, e.g. photoStudioRental
+      - name: simplybookServiceId
+        label: SimplyBook service ID
+        widget: string
+        required: false
+      - name: image
+        label: Image
+        widget: image
+        required: false
+      - name: imageMobile
+        label: Image (phone)
+        widget: image
+        required: false
+      - name: imageAlt
+        label: Image description
+        widget: string
+        required: false
+      - name: startDate
+        label: Start date
+        widget: datetime
+        required: false
+        format: YYYY-MM-DD
+        date_format: YYYY-MM-DD
+        time_format: false
+        picker_utc: true
+      - name: endDate
+        label: End date
+        widget: datetime
+        required: false
+        format: YYYY-MM-DD
+        date_format: YYYY-MM-DD
+        time_format: false
+        picker_utc: true
+      - name: frequencyDays
+        label: Show again after (days)
+        widget: number
+        default: 7
+        value_type: int
+        min: 1
+      - name: delaySeconds
+        label: Show after (seconds)
+        widget: number
+        default: 10
+        value_type: int
+        min: 4
+      - name: scrollPercent
+        label: Or after scrolling (%)
+        widget: number
+        default: 40
+        value_type: int
+        min: 10
+        max: 90
+      - name: emailCapture
+        label: Offer the email sign-up
+        widget: boolean
+        default: false
+        hint: >-
+          Optional, and never a gate — the Book button always works without
+          an email. Consent and source are recorded with each sign-up.
+      - name: emailLabel
+        label: Sign-up button label
+        widget: string
+        required: false
+      - name: emailNote
+        label: Sign-up small print
+        widget: string
+        required: false
+  - name: seo
+    label: SEO & Integrations
+    file: data/seo.json
+    fields:
+    - name: seo
+      label: SEO
+      widget: object
+      fields:
+      - name: shareImage
+        label: Default social share image
+        widget: image
+        required: false
+        hint: Used when a page has no image of its own. 1200 x 630 works best.
+      - name: pages
+        label: Per-page SEO
+        widget: list
+        label_singular: Page
+        summary: '{{fields.key}} — {{fields.title}}'
+        fields:
+        - name: key
+          label: Page
+          widget: select
+          options: [home, studio, photography, podcasts, work, media, about,
+                    privacy, terms]
+        - name: title
+          label: Browser title
+          widget: string
+          hint: Around 55-60 characters. Unique per page.
+        - name: description
+          label: Search description
+          widget: text
+          hint: Around 150-160 characters. Unique per page.
+        - name: shareImage
+          label: Social share image
+          widget: image
+          required: false
+        - name: noindex
+          label: Hide from search engines
+          widget: boolean
+          default: false
+          hint: Leave off for every public page.
+    - name: integrations
+      label: Integrations
+      widget: object
+      hint: >-
+        Public measurement IDs only. Never paste an API key, access token or
+        webhook secret here — this file is public. Those belong in the
+        Cloudflare environment variables.
+      fields:
+      - name: ga4
+        label: Google Analytics 4 measurement ID
+        widget: string
+        required: false
+        hint: Looks like G-XXXXXXXXXX. Leave blank and nothing is loaded.
+      - name: gtm
+        label: Google Tag Manager container ID
+        widget: string
+        required: false
+        hint: Looks like GTM-XXXXXXX.
+      - name: searchConsole
+        label: Search Console verification
+        widget: string
+        required: false
+        hint: The content value of the google-site-verification meta tag.
+      - name: bing
+        label: Bing Webmaster verification
+        widget: string
+        required: false
+      - name: metaPixel
+        label: Meta Pixel ID
+        widget: string
+        required: false
+        hint: Numbers only. Add this only once the Privacy Policy mentions it.
+      - name: googleAdsId
+        label: Google Ads conversion ID
+        widget: string
+        required: false
+      - name: businessProfile
+        label: Google Business Profile URL
+        widget: string
+        required: false
   - name: pages
     label: Page content
     file: data/pages.json

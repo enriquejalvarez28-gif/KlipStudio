@@ -266,6 +266,121 @@
       },{passive:true});
     })();
 
+    /* ------------------------------------------------------------------
+       Specials pop-up. One reusable component driven entirely from the
+       admin — there is no per-promotion code.
+
+       The rules it enforces, from the master doc: never on load, never
+       over a booking or consultation modal, never on Privacy or Terms,
+       once every N days per visitor, dismissal remembered, and a compact
+       sheet on mobile rather than a full-screen takeover. It appears
+       after a delay OR a scroll depth, whichever the visitor reaches
+       first, and only once per page view.
+    ------------------------------------------------------------------ */
+    (function(){
+      var S = D.special;
+      if(!S || !S.popup) return;
+      var host=document.getElementById('special'); if(!host) return;
+      if(/\/(privacy|terms)\.html$/i.test(location.pathname)) return;
+
+      var KEY='klip.sp.'+(S.id||'offer');
+      try{
+        var seen=localStorage.getItem(KEY);
+        if(seen && (Date.now()-Number(seen)) < (S.days||7)*864e5) return;
+      }catch(e){}           /* private mode: show it, do not crash */
+
+      var box=document.getElementById('sp-box'), shown=false, armed=true;
+
+      function build(){
+        var img = (window.matchMedia('(max-width:760px)').matches &&
+                   S.imageMobile) ? S.imageMobile : S.image;
+        var price='';
+        if(S.promoPrice){
+          price='<p class="sp-price">'+
+            (S.regularPrice?'<s>'+esc(S.regularPrice)+'</s> ':'')+
+            '<b>'+esc(S.promoPrice)+'</b></p>';
+        }
+        var mail='';
+        if(S.email){
+          mail='<form class="sp-mail" id="sp-mail"><label class="sr-only" '+
+               'for="sp-email">Email</label>'+
+               '<input id="sp-email" type="email" name="email" required '+
+               'autocomplete="email" placeholder="you@example.com">'+
+               '<button type="submit" class="btn btn--outline">'+
+               esc(S.emailLabel||'Send Me KLIP Specials')+'</button>'+
+               (S.emailNote?'<span class="sp-note">'+esc(S.emailNote)+'</span>':'')+
+               '</form>';
+        }
+        box.insertAdjacentHTML('beforeend',
+          (img?'<div class="sp-img"><img src="'+esc(img)+'" alt="'+
+               esc(S.imageAlt||'')+'" loading="lazy" decoding="async"></div>':'')+
+          '<div class="sp-copy">'+
+          (S.badge?'<span class="sp-badge">'+esc(S.badge)+'</span>':'')+
+          '<h2 id="sp-head">'+esc(S.headline)+'</h2>'+
+          (S.copy?'<p class="sp-text">'+esc(S.copy)+'</p>':'')+
+          price+
+          '<a class="btn btn--dark sp-cta" href="'+esc(D.booking&&D.booking.base||'#')+
+            '"'+(S.booking?' data-booking="'+esc(S.booking)+'"':'')+'>'+
+            esc(S.ctaLabel)+' <span class="ar" aria-hidden="true">&#8594;</span></a>'+
+          mail+'</div>');
+      }
+      function esc(v){ return String(v==null?'':v)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;'); }
+
+      function open(){
+        if(shown || !armed) return;
+        /* never on top of a booking, consultation or gallery modal */
+        if(document.body.style.overflow==='hidden') return;
+        shown=true; build();
+        host.hidden=false;
+        requestAnimationFrame(function(){ host.classList.add('is-open'); });
+        document.getElementById('sp-close').focus();
+      }
+      function close(){
+        host.classList.remove('is-open');
+        try{ localStorage.setItem(KEY, String(Date.now())); }catch(e){}
+        setTimeout(function(){ host.hidden=true; }, 260);
+      }
+
+      var t=setTimeout(open, Math.max(4, S.delay||10)*1000);
+      function onScroll(){
+        var h=document.documentElement.scrollHeight-window.innerHeight;
+        if(h>0 && (window.scrollY/h)*100 >= (S.scroll||40)){
+          window.removeEventListener('scroll', onScroll);
+          open();
+        }
+      }
+      window.addEventListener('scroll', onScroll, {passive:true});
+
+      document.getElementById('sp-close').addEventListener('click', close);
+      host.addEventListener('click', function(e){ if(e.target===host) close(); });
+      document.addEventListener('keydown', function(e){
+        if(e.key==='Escape' && host.classList.contains('is-open')) close();
+      });
+      /* booking from the offer counts as taken, not dismissed-and-forgotten */
+      host.addEventListener('click', function(e){
+        if(e.target.closest('.sp-cta')) close();
+      });
+      if(S.email){
+        host.addEventListener('submit', function(e){
+          var f=e.target.closest('#sp-mail'); if(!f) return;
+          e.preventDefault();
+          var v=f.querySelector('#sp-email').value;
+          fetch('/api/lead', {method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({email:v, source:'specials-popup',
+                                 offer:S.name||S.headline, consent:true,
+                                 page:location.pathname})})
+            .catch(function(){});
+          f.innerHTML='<span class="sp-note">Thanks — we\\u2019ll send the next one.</span>';
+        });
+      }
+      document.addEventListener('click', function(e){
+        if(e.target.closest('[data-booking],[data-consult]')){ armed=false; clearTimeout(t); }
+      }, true);
+    })();
+
     /* lightbox — no iframe exists until a card is clicked */
     var lb=document.getElementById('lightbox'), lbInner=document.getElementById('lb-inner');
     function ytEmbed(u){ var m=String(u).match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{6,})/); return m?'https://www.youtube.com/embed/'+m[1]+'?autoplay=1&rel=0':''; }
