@@ -1,0 +1,228 @@
+{
+  "mediaServices": {
+    "_note": "Each service becomes its own section on the Media page, anchored at #slug. The homepage and the Media card grid link straight to it. Visual mode picks one of the five approved section treatments.",
+    "eyebrow": "What We Do",
+    "headline": [
+      "Nine Services.",
+      "One Team"
+    ],
+    "body": "Every one of these is explained in full below. Pick the one you came for.",
+    "items": [
+      {
+        "slug": "google-ads",
+        "title": "Google Ads",
+        "icon": "target",
+        "mode": "sec--warm",
+        "outcome": "Capture demand from people already searching.",
+        "why": "People searching for your service are already showing intent. The goal is to turn that demand into calls, forms, bookings or purchases.",
+        "does": [
+          "Search campaign strategy",
+          "Keyword and intent research",
+          "Google Ads account/campaign setup or restructuring",
+          "Search / Performance Max / local campaign management where appropriate",
+          "Ad copy + creative coordination",
+          "Landing-page recommendations",
+          "Conversion tracking",
+          "Budget and bid management",
+          "Ongoing optimization and reporting"
+        ],
+        "ctaLabel": "Let's Talk About This",
+        "consult": "google-ads",
+        "image": "",
+        "imageAlt": "",
+        "active": true
+      },
+      {
+        "slug": "meta-ads",
+        "title": "Meta Ads",
+        "icon": "chart",
+        "mode": "sec--image",
+        "outcome": "Create and convert demand on Facebook + Instagram.",
+        "why": "Meta works differently from search: the creative has to earn attention before the visitor is actively looking for you.",
+        "does": [
+          "Campaign strategy",
+          "Audience planning",
+          "Creative concept and ad production",
+          "Reels / static / carousel creative",
+          "Lead generation or website conversion campaigns",
+          "Retargeting",
+          "Pixel / event tracking where applicable",
+          "Testing and optimization",
+          "Performance reporting"
+        ],
+        "ctaLabel": "Let's Talk About This",
+        "consult": "meta-ads",
+        "image": "img/case2.jpg",
+        "imageAlt": "Creative production for a paid social campaign",
+        "active": true
+      },
+      {
+        "slug": "seo",
+        "title": "SEO",
+        "icon": "search",
+        "mode": "sec--dark",
+        "outcome": "Build discoverability in organic search.",
+        "why": "SEO helps your business appear when people research your services without paying for every click.",
+        "does": [
+          "Technical SEO review",
+          "On-page SEO",
+          "Service-page structure",
+          "Location-page strategy",
+          "Internal linking",
+          "Google Search Console review/setup",
+          "Google Business Profile recommendations",
+          "Content opportunity mapping",
+          "Local SEO",
+          "Ongoing monitoring / optimization where included"
+        ],
+        "ctaLabel": "Let's Talk About This",
+        "consult": "seo",
+        "image": "",
+        "imageAlt": "",
+        "active": true
+      },
+      {
+        "slug": "geo-ai",
+        "title": "GEO / AI Search",
+        "icon": "globe",
+        "mode": "sec--warm",
+        "outcome": "Improve how your business is understood by AI and answer engines.",
+        "why": "GEO complements SEO. It improves the clarity and usefulness of the information AI systems can interpret; it does not guarantee citations.",
+        "does": [
+          "Entity clarity",
+          "Structured data recommendations",
+          "Crawler/indexing accessibility",
+          "Service and location clarity",
+          "Answer-ready content",
+          "Brand/entity consistency",
+          "Content gaps",
+          "AI visibility monitoring where available",
+          "SEO alignment"
+        ],
+        "ctaLabel": "Let's Talk About This",
+        "consult": "geo-ai",
+        "image": "",
+        "imageAlt": "",
+        "active": true
+      },
+      {
+        "slug": "social-media",
+        "title": "Social Media",
+        "icon": "megaphone",
+        "mode": "sec--image",
+        "outcome": "Run a consistent content system, not random posting.",
+        "why": "KLIP can connect strategy and production, so the client is not left with a calendar but no content to publish.",
+        "does": [
+          "Monthly/quarterly content planning",
+          "Content pillars",
+          "Studio or on-location production",
+          "Reels and short-form",
+          "Photography / graphics where included",
+          "Caption writing",
+          "Scheduling / publishing",
+          "Community management where included",
+          "Performance review and iteration"
+        ],
+        "ctaLabel": "Let's Talk About This",
+        "consult": "social-media",
+        "image": "img/studio-main.jpg",
+        "imageAlt": "Content production on the KLIP studio floor",
+        "active": true
+      },
+      {
+        "slug": "branding",
+        "title": "Branding",
+        "icon": "badge",
+        "mode": "sec--grid",
+        "outcome": "Make the business recognizable and consistent.",
+        "why": "Branding should make the business easier to recognize, remember and trust across every channel.",
+        "does": [
+          "Brand positioning",
+          "Messaging",
+          "Visual direction",
+          "Logo refinement or identity system where scoped",
+          "Typography and color system",
+          "Social / content look",
+          "Brand guidelines",
+          "Offer and audience clarity"
+        ],
+        "ctaLabel": "Let's Talk About This",
+        "consult": "branding",
+        "image": "",
+        "imageAlt": "",
+        "active": true
+      },
+      {
+        "slug": "website-design",
+        "title": "Website Design",
+        "icon": "window",
+        "mode": "sec--dark",
+        "outcome": "Build a site that explains, converts and can be found.",
+        "why": "A website should not just look good. It should help visitors understand the offer, trust the business and take the next step.",
+        "does": [
+          "Site strategy",
+          "Information architecture",
+          "Copy / messaging support",
+          "Responsive design",
+          "Conversion paths",
+          "SEO-ready page structure",
+          "Analytics setup",
+          "Booking / lead integrations",
+          "Performance optimization"
+        ],
+        "ctaLabel": "Let's Talk About This",
+        "consult": "website-design",
+        "image": "",
+        "imageAlt": "",
+        "active": true
+      },
+      {
+        "slug": "ai-solutions",
+        "title": "AI Solutions",
+        "icon": "chip",
+        "mode": "sec--warm",
+        "outcome": "Use automation and AI to reduce repetitive work.",
+        "why": "The value is not 'AI for AI's sake'; it is saving time, improving consistency and making useful processes easier.",
+        "does": [
+          "Workflow mapping",
+          "AI-assisted content systems",
+          "Lead-routing concepts",
+          "CRM / automation planning",
+          "Internal knowledge tools",
+          "Reporting workflows",
+          "Integration planning",
+          "Human review and safeguards"
+        ],
+        "ctaLabel": "Let's Talk About This",
+        "consult": "ai-solutions",
+        "image": "",
+        "imageAlt": "",
+        "active": true
+      },
+      {
+        "slug": "content-strategy",
+        "title": "Content Strategy",
+        "icon": "doc",
+        "mode": "sec--band",
+        "outcome": "Decide what to create, for whom and why.",
+        "why": "Content strategy connects production to business goals so the team is not posting without a reason.",
+        "does": [
+          "Audience and offer clarity",
+          "Content pillars",
+          "Campaign planning",
+          "Podcast / short-form strategy",
+          "Content batching",
+          "Platform mix",
+          "Editorial calendar",
+          "Repurposing plan",
+          "Measurement and iteration"
+        ],
+        "ctaLabel": "Let's Talk About This",
+        "consult": "content-strategy",
+        "image": "",
+        "imageAlt": "",
+        "active": true
+      }
+    ]
+  }
+}

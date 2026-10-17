@@ -1739,7 +1739,7 @@ input:focus-visible,[tabindex]:focus-visible{
 .svc-card:hover::after,.svc-card:focus-within::after{transform:scaleX(1)}
 .svc-top{display:flex;align-items:center;justify-content:space-between;gap:12px;
   margin-bottom:4px}
-.svc-top svg{width:26px;height:26px;color:var(--red);flex:0 0 auto}
+.svc-top svg{flex:0 0 auto}
 .svc-card h3{font-size:clamp(17px,1.4vw,21px);line-height:1.15}
 .svc-card .k-outcome{margin-top:-2px}
 @media (max-width:1024px){
@@ -1991,3 +1991,107 @@ input:focus-visible,[tabindex]:focus-visible{
 .work-filters button{border-color:var(--line);font-size:11px}
 .work-filters button[aria-pressed="true"]{background:var(--ink);
   border-color:var(--ink);color:#fff}
+
+/* ------------------------------------------------------------------
+   §8 One KLIP icon family. Near-black by default with exactly one red
+   accent group per icon, so icons read as a set rather than a mix of
+   libraries. Scale: 28-32px desktop, 26-28px mobile.
+------------------------------------------------------------------ */
+.ki{width:30px;height:30px;color:var(--ink);flex:0 0 auto}
+.ki .ax{stroke:var(--red)}
+.sec--dark .ki,.sec--band .ki,.sec--image .ki,.sec--ink .ki,
+.k-card--premium .ki{color:#fff}
+.k-card--premium .ki .ax,.sec--dark .ki .ax,.sec--band .ki .ax{stroke:#ff5a68}
+.svc-top .ki{width:30px;height:30px}
+.room-panel .ki,.room-panel svg{width:22px;height:22px}
+@media (max-width:760px){
+  .ki{width:27px;height:27px}
+}
+
+/* ------------------------------------------------------------------
+   §2-§4 Media service deep-dives. One component, five section modes, so
+   nine services read as a designed sequence rather than nine identical
+   white boxes. Composition alternates with the mode: the id block and
+   the two-column body stay consistent, the surface does the work.
+------------------------------------------------------------------ */
+.sv-sec{padding:clamp(52px,6vw,96px) 0;scroll-margin-top:84px}
+.sv-head{display:grid;grid-template-columns:auto minmax(0,1fr);gap:clamp(18px,2.4vw,38px);
+  align-items:start;padding-bottom:clamp(20px,2.4vw,32px);
+  border-bottom:2px solid var(--ink)}
+.sec--dark .sv-head,.sec--image .sv-head,.sec--band .sv-head{
+  border-bottom-color:rgba(255,255,255,.3)}
+.sv-id{display:flex;align-items:center;gap:14px}
+.sv-n{font-family:'Montserrat',sans-serif;font-size:clamp(28px,3.4vw,46px);
+  font-weight:800;line-height:1;color:var(--red)}
+.sv-title h2{font-size:clamp(26px,3.2vw,44px);line-height:1.05}
+.sv-outcome{margin-top:8px;font-family:'Montserrat',sans-serif;font-weight:700;
+  font-size:clamp(15px,1.3vw,19px);line-height:1.35;color:var(--ink)}
+.sec--dark .sv-outcome,.sec--image .sv-outcome,.sec--band .sv-outcome{color:#fff}
+.sv-body{display:grid;grid-template-columns:minmax(0,42fr) minmax(0,58fr);
+  gap:clamp(22px,3vw,54px);padding-top:clamp(22px,2.6vw,38px)}
+.sv-label{font-family:'Montserrat',sans-serif;font-size:10.5px;font-weight:700;
+  letter-spacing:.2em;text-transform:uppercase;color:var(--red);margin-bottom:10px}
+.sv-why p{font-size:clamp(15px,1.2vw,17.5px);line-height:1.66;color:#4a4a47;
+  max-width:52ch}
+.sec--dark .sv-why p,.sec--image .sv-why p,.sec--band .sv-why p{color:#d5d3cf}
+.sv-why .btn{margin-top:22px}
+.sv-does ul{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:0 clamp(18px,2.2vw,34px);list-style:none;padding:0;margin:0}
+.sv-does li{position:relative;padding:11px 0 11px 20px;font-size:14.5px;
+  line-height:1.45;border-bottom:1px solid var(--line)}
+.sec--dark .sv-does li,.sec--image .sv-does li,.sec--band .sv-does li{
+  border-bottom-color:rgba(255,255,255,.16)}
+.sv-does li::before{content:"";position:absolute;left:0;top:17px;width:8px;height:2px;
+  background:var(--red)}
+@media (max-width:1024px){
+  .sv-body{grid-template-columns:minmax(0,1fr);gap:26px}
+  .sv-does ul{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:760px){
+  .sv-sec{padding:clamp(40px,7vw,60px) 0;scroll-margin-top:70px}
+  .sv-head{grid-template-columns:minmax(0,1fr);gap:12px}
+  .sv-id{gap:11px}
+  .sv-n{font-size:30px}
+  .sv-title h2{font-size:clamp(25px,7.4vw,32px)}
+  .sv-does ul{grid-template-columns:minmax(0,1fr)}
+  .sv-why .btn{width:100%;margin-top:18px}
+}
+
+/* Image-led sections: the photograph is atmosphere, not competition. At
+   0.3 opacity the picture was still reading through the body copy. */
+.sec--image .sec-bg img{opacity:.2}
+.sec--image::after{background:linear-gradient(180deg,
+  rgba(16,16,15,.76),rgba(16,16,15,.9))}
+.sv-sec.sec--image .sv-why p{color:#e2e0dc}
+
+/* §7 subtle grain on dark sections — texture, not an effect. A tiny
+   inline SVG noise tile, so it costs no request and no library. */
+.sec--dark::before,.sec--band::before,.sec--image .sec-bg::after{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:1;
+  opacity:.055;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/></filter><rect width='120' height='120' filter='url(%23n)' opacity='.5'/></svg>");
+  background-size:120px 120px}
+.sec--dark,.sec--band{position:relative}
+.sec--dark>.wrap,.sec--band>.wrap{position:relative;z-index:2}
+@media (prefers-reduced-motion:reduce){
+  .sec--dark::before,.sec--band::before{opacity:.04}
+}
+
+/* §9 The mobile service row is a designed card, not a list item: number,
+   its own icon zone, an outcome label, a red rule and a real link out. */
+.svc-more{margin-top:auto;padding-top:12px;display:inline-flex;align-items:center;
+  gap:9px;font-family:'Montserrat',sans-serif;font-size:10.5px;font-weight:700;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--red)}
+.svc-card:hover .svc-more .ar{transform:translateX(5px)}
+.k-card--premium .svc-more{color:#ff5a68}
+@media (max-width:760px){
+  .svc-card{padding:18px 16px 16px;gap:7px}
+  .svc-top{margin-bottom:2px}
+  .svc-top .ki{width:28px;height:28px}
+  .svc-card h3{font-size:19px}
+  .svc-card p{font-size:14px;line-height:1.5}
+  /* a controlled alternation so a column of cards is not one flat run */
+  .svc-cards>.svc-card:nth-child(4n+2){background:var(--white)}
+  .svc-cards>.svc-card:nth-child(4n+2):not(.k-card--premium){
+    border-color:var(--ink);border-width:2px}
+}

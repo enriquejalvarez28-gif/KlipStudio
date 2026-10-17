@@ -40,66 +40,78 @@
             "title": "Google Ads",
             "text": "Capture the people already searching for what you do. Search, Performance Max and local campaigns, managed against cost per lead rather than clicks.",
             "outcome": "Capture demand",
-            "featured": false
+            "featured": false,
+            "href": "#google-ads"
           },
           {
             "icon": "chart",
             "title": "Meta Ads",
             "text": "Facebook and Instagram campaigns built around creative that actually stops the scroll — because we shoot it ourselves.",
             "outcome": "Create demand",
-            "featured": false
+            "featured": false,
+            "href": "#meta-ads"
           },
           {
             "icon": "search",
             "title": "SEO",
             "text": "Technical fixes, on-page structure, service and location pages, and the content that earns rankings over time.",
             "outcome": "Build discoverability",
-            "featured": true
+            "featured": true,
+            "href": "#seo"
           },
           {
             "icon": "globe",
             "title": "GEO / AI Search",
             "text": "Get found inside AI answers. Entity clarity, structured data, crawler access and answer-ready content. GEO complements SEO — it does not replace it.",
             "outcome": "Get found in AI answers",
-            "featured": false
+            "featured": false,
+            "href": "#geo-ai"
           },
           {
             "icon": "megaphone",
             "title": "Social Media",
             "text": "Planning, production, publishing and community management. Consistent presence without you running the account.",
             "outcome": "Stay in front of people",
-            "featured": false
+            "featured": false,
+            "href": "#social-media"
           },
           {
             "icon": "badge",
             "title": "Branding",
             "text": "Positioning, identity, messaging and the visual system that makes you recognisable across every channel.",
             "outcome": "Be recognised",
-            "featured": true
+            "featured": true,
+            "href": "#branding"
           },
           {
             "icon": "window",
             "title": "Website Design",
             "text": "Fast, modern sites built to convert and to be found, with the technical foundations search and AI both need.",
             "outcome": "Convert the visit",
-            "featured": false
+            "featured": false,
+            "href": "#website-design"
           },
           {
             "icon": "chip",
             "title": "AI Solutions",
             "text": "Automation and AI workflows for follow-up, lead routing, reporting and the busywork that eats your week.",
             "outcome": "Remove the manual work",
-            "featured": false
+            "featured": false,
+            "href": "#ai-solutions"
           },
           {
             "icon": "doc",
             "title": "Content Strategy",
             "text": "A clear plan for what to create, where to publish and why — tied to business goals, not vanity metrics.",
             "outcome": "Know what to make",
-            "featured": true
+            "featured": true,
+            "href": "#content-strategy"
           }
         ],
         "variant": "services"
+      },
+      {
+        "type": "serviceDepth"
       },
       {
         "type": "steps",

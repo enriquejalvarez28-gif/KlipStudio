@@ -71,8 +71,11 @@ def icon(name):
     paths = ICON.get(name, '')
     if not paths:
         return ''
-    return ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-            'stroke-width="1.4" aria-hidden="true">%s</svg>' % paths)
+    # One family: 24x24, 1.9px stroke, rounded joins, near-black by default
+    # with a single red accent group per icon (KLIP_CHANGE §8).
+    return ('<svg class="ki" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+            'stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" '
+            'aria-hidden="true">%s</svg>' % paths)
 
 
 def headline(lines_, punct=None):
@@ -164,14 +167,18 @@ def editorial(b, D):
             tag = 'a' if i.get('href') else 'div'
             href = ' href="%s"' % esc(i['href']) if i.get('href') else ''
             cls = 'k-card svc-card fade' + (' k-card--premium' if i.get('featured') else '')
+            # LEARN MORE appears only when the card really deep-links to a
+            # service section, so it never promises depth that is not there.
+            more = ('<span class="svc-more">Learn More %s</span>' % AR) \
+                if i.get('href') else ''
             items += ('<%s class="%s"%s><div class="svc-top">'
                       '<span class="k-num">%02d</span>%s</div>'
-                      '<h3>%s</h3>%s<p>%s</p></%s>'
+                      '<h3>%s</h3>%s<p>%s</p>%s</%s>'
                       % (tag, cls, href, n, icon(i.get('icon', '')),
                          esc(i.get('title', '')),
                          '<p class="k-outcome">%s</p>' % esc(i['outcome'])
                          if i.get('outcome') else '',
-                         esc(i.get('text', '')), tag))
+                         esc(i.get('text', '')), more, tag))
         return ('<section class="sec sec--grid"%s><div class="wrap">%s'
                 '<div class="svc-cards rv">%s</div></div></section>'
                 % (' id="%s"' % esc(b['id']) if b.get('id') else '',
@@ -341,10 +348,14 @@ def room_shots(r):
     page call this same function, so a gallery edited in /admin changes both
     and the two can never drift apart.
     """
-    gal = [g for g in (r.get('gallery') or []) if g.get('image')]
-    if not gal:
-        return []
     name = r.get('name') or ''
+    if not r.get('image'):
+        return []
+    gal = [g for g in (r.get('gallery') or []) if g.get('image')]
+    # The cover counts as the first photo, so every room with a picture has
+    # a gallery and the control is never missing (KLIP_CHANGE §5: required
+    # on Home and Studio, no exceptions). The count on the button is the
+    # real number, so a room still waiting on its shoot says so honestly.
     return ([[r.get('image', ''), r.get('imageAlt') or name]]
             + [[g['image'], g.get('alt') or name] for g in gal])
 
@@ -765,6 +776,52 @@ def note_panel(b, D):
                btn(src.get('cta'), 'btn--outline') if src.get('cta') else ''))
 
 
+def service_depth(b, D):
+    """One real section per service (KLIP_CHANGE §2-§4).
+
+    Each answers the five questions the brief lists: what it is, what KLIP
+    does, why it helps, what it can include, and the next step. The visual
+    mode rotates through the approved treatments so nine sections do not
+    become nine identical white boxes — the mode travels with the service
+    in the CMS rather than being hard-coded here.
+    """
+    MS = D.get('mediaServices') or {}
+    items = [x for x in (MS.get('items') or []) if x.get('active', True)]
+    if not items:
+        return ''
+    out = ''
+    for n, sv in enumerate(items, 1):
+        mode = sv.get('mode') or 'sec--warm'
+        dark = mode in ('sec--dark', 'sec--image', 'sec--band', 'sec--ink')
+        a = act({'consult': sv.get('consult') or '1'})
+        does = ''.join('<li>%s</li>' % esc(x) for x in (sv.get('does') or []))
+        bg = ''
+        if mode == 'sec--image' and sv.get('image'):
+            bg = '<div class="sec-bg">%s</div>' % pic(
+                sv['image'], sv.get('imageAlt', ''),
+                'loading="lazy" decoding="async" width="1600" height="900"')
+        out += (
+            # sec--keep: the mode is the owner's choice in the CMS, so the
+            # global rhythm rule must not reassign it.
+            '<section class="sec sv-sec sec--keep %s" id="%s"><div class="wrap">%s'
+            '<div class="sv-head rv">'
+            '<div class="sv-id"><span class="sv-n">%02d</span>%s</div>'
+            '<div class="sv-title"><h2>%s</h2>'
+            '<p class="sv-outcome">%s</p></div></div>'
+            '<div class="sv-body rv">'
+            '<div class="sv-why"><p class="sv-label">Why it helps</p><p>%s</p>'
+            '<a class="btn %s" href="%s"%s>%s %s</a></div>'
+            '<div class="sv-does"><p class="sv-label">What it can include</p>'
+            '<ul>%s</ul></div></div></div></section>'
+            % (mode, esc(sv['slug']), bg, n, icon(sv.get('icon', '')),
+               esc(sv['title']), esc(sv.get('outcome', '')),
+               esc(sv.get('why', '')),
+               'btn--solid' if dark else 'btn--dark',
+               esc(a['href']), a['attr'],
+               esc(sv.get('ctaLabel') or "Let's Talk About This"), AR, does))
+    return out
+
+
 def visibility(b, D):
     V = D['visibility']
     return ('<section class="sec sec--paper" id="visibility"><div class="wrap"><div class="vis-panel rv">'
@@ -799,7 +856,8 @@ BLOCKS = {'pagehero': pagehero, 'editorial': editorial, 'split': split, 'cards':
           'rooms': rooms, 'portfolio': portfolio, 'steps': steps, 'facts': facts,
           'clips': clips, 'visibility': visibility, 'cta': cta,
           'faq': faq, 'duo': duo, 'photographers': photographers,
-          'tiers': tiers, 'checklist': checklist, 'notePanel': note_panel}
+          'tiers': tiers, 'checklist': checklist, 'notePanel': note_panel,
+          'serviceDepth': service_depth}
 
 
 def render_blocks(blocks, D):

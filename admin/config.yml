@@ -1941,6 +1941,115 @@ collections:
       - name: blocks
         label: blocks
         widget: hidden
+  - name: mediaServices
+    label: Media services
+    file: data/media-services.json
+    fields:
+    - name: mediaServices
+      label: Media services
+      widget: object
+      fields:
+      - name: _note
+        label: note
+        widget: hidden
+      - name: eyebrow
+        label: Eyebrow
+        widget: string
+      - name: headline
+        label: Headline
+        widget: list
+        field:
+          name: line
+          label: Line
+          widget: string
+      - name: body
+        label: Intro
+        widget: text
+      - name: items
+        label: Services
+        widget: list
+        label_singular: Service
+        summary: '{{fields.title}}'
+        hint: Drag to reorder. The order here is the order on the Media page and the numbering follows it.
+        fields:
+        - name: title
+          label: Service name
+          widget: string
+        - name: slug
+          label: Anchor
+          widget: string
+          hint: The link target, e.g. google-ads. Changing it breaks any existing link to this service.
+        - name: icon
+          label: Icon
+          widget: select
+          options:
+          - target
+          - chart
+          - search
+          - globe
+          - megaphone
+          - badge
+          - window
+          - chip
+          - doc
+          - gear
+          - growth
+          - sets
+          - mic
+          - camera
+          - light
+          - screen
+          hint: From the KLIP icon family. One style across the site.
+        - name: mode
+          label: Section style
+          widget: select
+          options:
+          - label: Warm paper
+            value: sec--warm
+          - label: Dark cinematic
+            value: sec--dark
+          - label: Image-led
+            value: sec--image
+          - label: Structured grid
+            value: sec--grid
+          - label: Feature band
+            value: sec--band
+          hint: Approved treatments only. Vary it between neighbouring services so the page does not read as one long template.
+        - name: outcome
+          label: Outcome line
+          widget: string
+          hint: 'One short sentence: what the client gets.'
+        - name: why
+          label: Why it helps
+          widget: text
+        - name: does
+          label: What it can include
+          widget: list
+          field:
+            name: item
+            label: Item
+            widget: string
+          hint: Only list what KLIP actually delivers for this service.
+        - name: ctaLabel
+          label: Button label
+          widget: string
+        - name: consult
+          label: Consultation topic
+          widget: string
+          required: false
+        - name: image
+          label: Section image
+          widget: image
+          required: false
+          hint: Used by the Image-led style. Ignored by the others.
+        - name: imageAlt
+          label: Image description
+          widget: string
+          required: false
+        - name: active
+          label: Show this service
+          widget: boolean
+          default: true
   - name: insights
     label: Insights (Blog)
     label_singular: Article

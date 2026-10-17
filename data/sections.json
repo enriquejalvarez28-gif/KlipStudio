@@ -15,55 +15,55 @@
         "icon": "target",
         "title": "Google Ads",
         "text": "Capture the people already searching for what you do.",
-        "href": "media.html"
+        "href": "media.html#google-ads"
       },
       {
         "icon": "chart",
         "title": "Meta Ads",
         "text": "Reach the right audience on Facebook and Instagram.",
-        "href": "media.html"
+        "href": "media.html#meta-ads"
       },
       {
         "icon": "search",
         "title": "SEO",
         "text": "Rank for the searches that bring real customers.",
-        "href": "media.html"
+        "href": "media.html#seo"
       },
       {
         "icon": "globe",
         "title": "GEO / AI Search",
         "text": "Get found inside AI answers, not just search results.",
-        "href": "media.html"
+        "href": "media.html#geo-ai"
       },
       {
         "icon": "megaphone",
         "title": "Social Media",
         "text": "Build visibility. Engage your audience. Stay consistent.",
-        "href": "media.html"
+        "href": "media.html#social-media"
       },
       {
         "icon": "badge",
         "title": "Branding",
         "text": "Positioning, identity and a look people remember.",
-        "href": "media.html"
+        "href": "media.html#branding"
       },
       {
         "icon": "window",
         "title": "Website Design",
         "text": "Fast, modern sites built to convert and to be found.",
-        "href": "media.html"
+        "href": "media.html#website-design"
       },
       {
         "icon": "chip",
         "title": "AI Solutions",
         "text": "Automation and AI workflows that cut the busywork.",
-        "href": "media.html"
+        "href": "media.html#ai-solutions"
       },
       {
         "icon": "doc",
         "title": "Content Strategy",
         "text": "A clear plan for what to create, where to publish and why.",
-        "href": "media.html"
+        "href": "media.html#content-strategy"
       }
     ]
   },

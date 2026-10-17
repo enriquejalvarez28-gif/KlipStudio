@@ -29,7 +29,7 @@ SITE = 'https://theklipstudio.com'
 PARTS = ['brand', 'navigation', 'hero', 'sections', 'studio', 'photography',
          'photographers', 'podcasts', 'clients', 'location', 'visibility',
          'booking', 'consultation', 'faq', 'specials', 'seo', 'podcast-page',
-         'insights']
+         'insights', 'media-services']
 
 LEGAL = [('privacy.html', 'privacy', '/privacy/'), ('terms.html', 'terms', '/terms/')]
 
