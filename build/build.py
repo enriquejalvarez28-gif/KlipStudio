@@ -310,52 +310,32 @@ def home_main(D):
     T = D['studio']
     room_tiles = ''
     for r in [x for x in T['rooms'] if x.get('active', True)]:
-        # PHOTO = PHOTOS. ROOM = DETAILS. BOOK = BOOKING. Three separate
-        # controls, because one link wrapping the whole card can only do one
-        # of the three and the visitor cannot tell which.
+        # Three visible actions under every room, identical on both pages:
+        # VIEW PHOTOS | EXPLORE ROOM ........ BOOK ROOM.
+        # The photo itself opens the gallery, never booking.
         href = 'studio.html#%s' % r.get('anchor', 'rooms')
         caps = (r.get('capabilities') or [])[:3]
         focal = (' style="object-position:%s"' % esc(r['focal'])) if r.get('focal') else ''
         name = r['name']
-
-        gal = [g for g in (r.get('gallery') or []) if g.get('image')]
-        shots = ([[r.get('image', ''), r.get('imageAlt') or name]]
-                 + [[g['image'], g.get('alt') or name] for g in gal]) if gal else []
-        if shots:
-            media = ('<button type="button" class="room-img room-img--gal" '
-                     'data-gallery="%s" data-gallery-name="%s" data-track="view_photos" '
-                     'data-track-room="%s" aria-label="View photos of %s">%s'
-                     '<span class="view-photos"><svg viewBox="0 0 24 24" fill="none" '
-                     'stroke="currentColor" stroke-width="1.5" aria-hidden="true">'
-                     '<rect x="3" y="5" width="18" height="14" rx="1.5"/>'
-                     '<circle cx="8.5" cy="10" r="1.5"/>'
-                     '<path d="M21 16l-5-5-5 5-2-2-6 5"/></svg>View Photos '
-                     '<span class="vp-n">%d</span></span></button>'
-                     % (esc(json.dumps(shots)), esc(name), esc(name), esc(name),
-                        pic(r['image'], name,
-                            'loading="lazy" decoding="async" width="820" height="640"'
-                            + focal), len(shots)))
-        else:
-            # No gallery yet: the image goes to the room detail rather than
-            # offering photos that do not exist.
-            media = ('<a class="room-img" href="%s" tabindex="-1" aria-hidden="true">%s</a>'
-                     % (esc(href), pic(r['image'], name,
-                        'loading="lazy" decoding="async" width="820" height="640"' + focal)))
-
+        media = R.room_media(
+            r, href, 'loading="lazy" decoding="async" width="820" height="640"' + focal)
+        vp = R.view_photos_btn(r)
         book = act({'booking': r.get('booking')}) if r.get('booking') else None
         room_tiles += ('<article class="room fade">%s<div class="room-text">'
                        '<a class="room-name" href="%s" data-track="explore_room" '
                        'data-track-room="%s"><h3>%s</h3></a>'
-                       '<span>%s%s</span>%s<div class="room-acts">'
-                       '<a class="room-link" href="%s" data-track="explore_room" '
-                       'data-track-room="%s">Explore Room %s</a>%s</div>'
+                       '<span>%s%s</span>%s'
+                       '<div class="room-actions">%s'
+                       '<a class="vp-btn vp-btn--ghost" href="%s" '
+                       'data-track="explore_room" data-track-room="%s">'
+                       '<span>Explore Room</span></a>%s</div>'
                        '</div></article>'
                        % (media, esc(href), esc(name), esc(name),
                           esc(r.get('role') or r.get('card') or ''),
                           '<br>' + esc(r['price']) if r.get('price') else '',
                           ('<ul class="room-caps room-caps--mini">%s</ul>'
                            % ''.join('<li>%s</li>' % esc(c) for c in caps)) if caps else '',
-                          esc(href), esc(name), R.AR,
+                          vp, esc(href), esc(name),
                           ('<a class="btn btn--dark room-book" href="%s"%s '
                            'data-track="book_room" data-track-room="%s">Book Room %s</a>'
                            % (esc(book['href']), book['attr'], esc(name), R.AR))

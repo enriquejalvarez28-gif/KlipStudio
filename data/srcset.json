@@ -95,6 +95,20 @@
 "img/cta.webp"
 ]
 ],
+"img/hero-poster-m.jpg": [
+[
+480,
+"img/r/hero-poster-m-480.webp"
+],
+[
+768,
+"img/r/hero-poster-m-768.webp"
+],
+[
+960,
+"img/hero-poster-m.webp"
+]
+],
 "img/hero-poster.jpg": [
 [
 480,

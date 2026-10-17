@@ -253,6 +253,55 @@ def cards(b, D):
                cls, style, items))
 
 
+def room_shots(r):
+    """The gallery for a room: its cover first, then the extra views.
+
+    One source for both pages (KLIP_FIX §3) — the homepage and the Studio
+    page call this same function, so a gallery edited in /admin changes both
+    and the two can never drift apart.
+    """
+    gal = [g for g in (r.get('gallery') or []) if g.get('image')]
+    if not gal:
+        return []
+    name = r.get('name') or ''
+    return ([[r.get('image', ''), r.get('imageAlt') or name]]
+            + [[g['image'], g.get('alt') or name] for g in gal])
+
+
+def view_photos_btn(r, cls='vp-btn'):
+    """VIEW PHOTOS as a real button, sized to be noticed, with the photo
+    count on it. Returns '' when the room has no extra views, so no page
+    ever shows a control that opens a single picture."""
+    shots = room_shots(r)
+    if not shots:
+        return ''
+    name = r.get('name') or ''
+    return ('<button type="button" class="%s" data-gallery="%s" '
+            'data-gallery-name="%s" data-track="view_photos" data-track-room="%s">'
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+            'stroke-width="1.6" aria-hidden="true"><rect x="3" y="5" width="18" '
+            'height="14" rx="1.5"/><circle cx="8.5" cy="10" r="1.5"/>'
+            '<path d="M21 16l-5-5-5 5-2-2-6 5"/></svg>'
+            '<span>View Photos</span><span class="vp-n">%d</span></button>'
+            % (cls, esc(json.dumps(shots)), esc(name), esc(name), len(shots)))
+
+
+def room_media(r, href, extra_attrs=''):
+    """The room photo. It opens the gallery when there is one to open, and
+    otherwise goes to the room detail — the photo is never a dead end and
+    never sends someone to booking before they have seen the space."""
+    name = r.get('name') or ''
+    img = pic(r.get('image', ''), r.get('imageAlt') or name, extra_attrs)
+    shots = room_shots(r)
+    if shots:
+        return ('<button type="button" class="room-img room-img--gal" '
+                'data-gallery="%s" data-gallery-name="%s" data-track="view_photos" '
+                'data-track-room="%s" aria-label="View photos of %s">%s</button>'
+                % (esc(json.dumps(shots)), esc(name), esc(name), esc(name), img))
+    return ('<a class="room-img" href="%s" aria-label="%s">%s</a>'
+            % (esc(href), esc(name), img))
+
+
 def rooms(b, D):
     """Image-led room blocks, photo dominant, sides alternating."""
     lst = b.get('items')
@@ -277,28 +326,14 @@ def rooms(b, D):
         # so a room awaiting its shoot never shows a button that opens one
         # picture. Sources go in a data attribute, not <img> tags, so nothing
         # downloads until the gallery is opened.
-        gal = [g for g in (r.get('gallery') or []) if g.get('image')]
-        shots = ([{'image': r.get('image', ''),
-                   'alt': r.get('imageAlt') or name}] + gal) if r.get('image') else gal
-        gal_attr = view = ''
-        if len(shots) > 1:
-            gal_attr = (' data-gallery="%s" data-gallery-name="%s"'
-                        % (esc(json.dumps([[g['image'], g.get('alt') or name]
-                                           for g in shots])), esc(name)))
-            view = ('<button type="button" class="view-photos"%s>'
-                    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-                    'stroke-width="1.5" aria-hidden="true"><rect x="3" y="5" width="18" '
-                    'height="14" rx="1.5"/><circle cx="8.5" cy="10" r="1.5"/>'
-                    '<path d="M21 16l-5-5-5 5-2-2-6 5"/></svg>'
-                    'View Photos <span class="vp-n">%d</span></button>'
-                    % (gal_attr, len(shots)))
+        # The big image opens the gallery; it never jumps to booking before
+        # the visitor has seen the space (KLIP_FIX §2).
         dfoc = (' style="object-position:%s"' % esc(r['focalDesktop'])) \
             if r.get('focalDesktop') else ''
-        fig = '<figure%s>%s%s</figure>' % (
-            ' class="has-gallery"' if view else '',
-            pic(r.get('image', ''), r.get('imageAlt') or name,
-                'loading="lazy" decoding="async" width="1600" height="900"' + dfoc),
-            view)
+        href_detail = '#%s' % esc(r['anchor']) if r.get('anchor') else '#rooms'
+        fig = '<figure class="room-fig">%s</figure>' % room_media(
+            r, href_detail,
+            'loading="lazy" decoding="async" width="1600" height="900"' + dfoc)
         copy = '<div class="studio-copy">'
         if r.get('role'):
             copy += '<p class="eyebrow fade">%s</p>' % esc(r['role'])
@@ -320,8 +355,13 @@ def rooms(b, D):
         if r.get('capabilities'):
             copy += '<ul class="room-caps fade">%s</ul>' % ''.join(
                 '<li>%s</li>' % esc(c) for c in r['capabilities'])
-        copy += ('<div class="photo-actions"><a class="btn btn--dark" href="%s"%s>%s %s</a></div></div>'
-                 % (esc(a['href']), a['attr'], esc(r.get('cta') or 'Book This Room'), AR))
+        # VIEW PHOTOS sits beside the booking action as a real button, not
+        # as small text and not hidden inside the image (KLIP_FIX §2/§5).
+        vp = view_photos_btn(r, 'vp-btn vp-btn--lg')
+        copy += ('<div class="room-actions">%s<a class="btn btn--dark" href="%s"%s '
+                 'data-track="book_room" data-track-room="%s">%s %s</a></div></div>'
+                 % (vp, esc(a['href']), a['attr'], esc(name),
+                    esc(r.get('cta') or 'Book Room'), AR))
         anchor = r.get('anchor')
         out += ('<div class="studio-split studio-split--room%s rv"%s>%s</div>'
                 % (' is-rev' if rev else '',
