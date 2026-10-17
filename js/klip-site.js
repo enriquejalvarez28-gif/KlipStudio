@@ -336,10 +336,14 @@
         host.hidden=false;
         requestAnimationFrame(function(){ host.classList.add('is-open'); });
         document.getElementById('sp-close').focus();
+        if(window.klipTrack) window.klipTrack('special_impression',
+          {offer:S.name||S.headline});
       }
-      function close(){
+      function close(taken){
         host.classList.remove('is-open');
         try{ localStorage.setItem(KEY, String(Date.now())); }catch(e){}
+        if(!taken && window.klipTrack) window.klipTrack('special_close',
+          {offer:S.name||S.headline});
         setTimeout(function(){ host.hidden=true; }, 260);
       }
 
@@ -353,14 +357,19 @@
       }
       window.addEventListener('scroll', onScroll, {passive:true});
 
-      document.getElementById('sp-close').addEventListener('click', close);
-      host.addEventListener('click', function(e){ if(e.target===host) close(); });
+      document.getElementById('sp-close').addEventListener('click',
+        function(){ close(false); });
+      host.addEventListener('click', function(e){ if(e.target===host) close(false); });
       document.addEventListener('keydown', function(e){
-        if(e.key==='Escape' && host.classList.contains('is-open')) close();
+        if(e.key==='Escape' && host.classList.contains('is-open')) close(false);
       });
       /* booking from the offer counts as taken, not dismissed-and-forgotten */
       host.addEventListener('click', function(e){
-        if(e.target.closest('.sp-cta')) close();
+        if(e.target.closest('.sp-cta')){
+          if(window.klipTrack) window.klipTrack('special_cta',
+            {offer:S.name||S.headline, service:S.booking||''});
+          close(true);
+        }
       });
       if(S.email){
         host.addEventListener('submit', function(e){
@@ -380,6 +389,81 @@
         if(e.target.closest('[data-booking],[data-consult]')){ armed=false; clearTimeout(t); }
       }, true);
     })();
+
+    /* ------------------------------------------------------------------
+       Conversion tracking (KLIP_FINAL §23).
+
+       Everything is pushed to window.dataLayer, so GTM can route it to
+       GA4 and to ad platforms without this file knowing about either.
+       If no container is installed the pushes land in an array nobody
+       reads — harmless, and nothing is sent anywhere.
+
+       Events are named for the action, not the element, and carry the
+       room or photographer so KLIP can see which room earns bookings:
+         book_studio · book_room · book_photographer · rent_studio
+         consultation · view_photos · explore_room · view_work · watch
+         special_impression · special_close · special_cta · special_signup
+
+       These fire when the control is clicked. A click is interest, not a
+       completed booking — booking completion has to come from SimplyBook
+       itself, and is not claimed here.
+    ------------------------------------------------------------------ */
+    window.dataLayer = window.dataLayer || [];
+    /* A CTA carries both the desktop and the phone label, so textContent
+       would report "Book The StudioBook Studio". Read the full label when
+       the pair is present. */
+    function labelOf(el){
+      var f = el.querySelector && el.querySelector('.lbl-full');
+      var t = (f ? f.textContent : (el.textContent || ''));
+      return t.replace(/\s+/g, ' ').replace(/\s*\u2192\s*$/, '').trim().slice(0, 40);
+    }
+    function track(event, extra){
+      try{
+        var o = {event: 'klip_' + event, page: location.pathname};
+        if(extra) for(var k in extra){ if(extra[k]) o[k] = extra[k]; }
+        window.dataLayer.push(o);
+      }catch(e){}
+    }
+    window.klipTrack = track;
+
+    document.addEventListener('click', function(e){
+      var el = e.target.closest('[data-track],[data-booking],[data-consult],'
+                              + '[data-photographers],[data-video]');
+      if(!el) return;
+
+      var named = el.getAttribute('data-track');
+      if(named){
+        track(named, {room: el.getAttribute('data-track-room') || '',
+                      label: labelOf(el)});
+        return;
+      }
+      if(el.hasAttribute('data-consult')){
+        track('consultation', {topic: el.getAttribute('data-consult')});
+        return;
+      }
+      if(el.hasAttribute('data-photographers')){
+        track('book_photographer', {source: 'list'});
+        return;
+      }
+      if(el.hasAttribute('data-video')){
+        track('watch', {title: ((el.querySelector('h3') || {}).textContent || '').trim()});
+        return;
+      }
+      if(el.hasAttribute('data-booking')){
+        var key = el.getAttribute('data-booking');
+        var map = {photoStudioRental: 'rent_studio',
+                   photographySessions: 'book_photographer'};
+        track(map[key] || 'book_studio',
+              {service: key, provider: el.getAttribute('data-provider') || '',
+               label: labelOf(el)});
+      }
+    }, true);
+
+    /* View Work links, which are ordinary anchors */
+    document.addEventListener('click', function(e){
+      var a = e.target.closest('a[href$="work.html"],a[href*="work.html#"]');
+      if(a && !a.hasAttribute('data-track')) track('view_work', {});
+    }, true);
 
     /* lightbox — no iframe exists until a card is clicked */
     var lb=document.getElementById('lightbox'), lbInner=document.getElementById('lb-inner');

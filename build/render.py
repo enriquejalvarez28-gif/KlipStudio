@@ -53,11 +53,18 @@ BOOKING_BASE = ''
 
 
 def btn(o, cls='btn--solid'):
+    """A CTA. Where a mobileLabel exists the phone gets the short form and
+    the desktop keeps the fuller supporting label — both are in the HTML and
+    CSS swaps them, so no layout shift and both are crawlable."""
     if not o:
         return ''
     a = act(o)
+    label = esc(o.get('label', ''))
+    short = o.get('mobileLabel')
+    text = ('<span class="lbl-full">%s</span><span class="lbl-short">%s</span>'
+            % (label, esc(short))) if short else label
     return ('<a class="btn %s" href="%s"%s>%s %s</a>'
-            % (cls, esc(a['href']), a['attr'], esc(o.get('label', '')), AR))
+            % (cls, esc(a['href']), a['attr'], text, AR))
 
 
 def icon(name):

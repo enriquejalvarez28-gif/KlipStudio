@@ -95,7 +95,8 @@
     ],
     "cta": {
       "label": "View All Work",
-      "href": "work.html"
+      "href": "work.html",
+      "mobileLabel": "View Work"
     },
     "items": [
       {

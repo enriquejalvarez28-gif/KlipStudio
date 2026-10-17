@@ -7,11 +7,12 @@
     ],
     "body": "Headshots. Lifestyle. Branding. Events.",
     "primaryCta": {
-      "label": "Book A Photo Session",
-      "booking": "photographySessions"
+      "label": "Book A Photographer",
+      "booking": "photographySessions",
+      "mobileLabel": "Book Photographer"
     },
     "secondaryCta": {
-      "label": "Rent The Photo Studio",
+      "label": "Rent The Studio",
       "booking": "photoStudioRental"
     },
     "smallLink": {

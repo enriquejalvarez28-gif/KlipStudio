@@ -1292,3 +1292,135 @@ figure.has-gallery{position:relative}
 @media (prefers-reduced-motion:reduce){
   .sp,.sp-box{transition:none}
 }
+
+/* ==================================================================
+   KLIP_FINAL §22/§26 — Studio is the strongest proof block on the
+   lower homepage, and a room card carries three distinct actions:
+   PHOTO = PHOTOS, ROOM = DETAILS, BOOK = BOOKING.
+================================================================== */
+.room{display:flex;flex-direction:column;background:var(--white);
+  border:1px solid var(--line)}
+.room-img--gal{position:relative;display:block;width:100%;padding:0;border:0;
+  background:#ddd;cursor:pointer;overflow:hidden;aspect-ratio:4/3.1}
+.rooms .room-img--gal{aspect-ratio:16/10}
+.room-img--gal img{transition:transform .7s cubic-bezier(.2,.7,.2,1)}
+.room-img--gal:hover img{transform:scale(1.04)}
+.room-img--gal:focus-visible{outline:2px solid var(--red);outline-offset:-2px}
+.room-text{display:flex;flex-direction:column;gap:7px;flex:1;padding:16px 16px 18px}
+.room-name{display:block;color:inherit}
+.room-name h3{margin-top:0;font-size:clamp(16px,1.3vw,19px);transition:color .2s ease}
+.room-name:hover h3{color:var(--red)}
+.room-acts{display:flex;align-items:center;gap:12px;margin-top:auto;padding-top:14px;
+  flex-wrap:wrap}
+.room-link{font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--ink);
+  display:inline-flex;align-items:center;gap:8px;transition:color .2s ease}
+.room-link:hover{color:var(--red)}
+.room-book{flex:0 0 auto;margin-left:auto;padding:13px 17px;font-size:11px;gap:12px}
+
+/* The gallery control sits on the photo, which is the thing it opens. */
+.room-img--gal .view-photos{right:12px;bottom:12px}
+@media (hover:hover) and (pointer:fine){
+  .room-img--gal .view-photos{opacity:0;transform:translateY(6px);
+    transition:opacity .28s ease,transform .28s ease,background .25s ease,color .25s ease}
+  .room-img--gal:hover .view-photos,
+  .room-img--gal:focus-visible .view-photos{opacity:1;transform:none}
+}
+@media (hover:none),(pointer:coarse){
+  .room-img--gal .view-photos{opacity:1;transform:none}
+}
+
+@media (max-width:760px){
+  /* 94-96% of usable width, 4-6% next-card peek. The rail is full-bleed,
+     so the card is measured against the viewport, not the gutter. */
+  .rooms{grid-auto-columns:95vw;gap:9px}
+  .rooms .room-img--gal,.rooms .room-img{aspect-ratio:3/2}
+  .room-text{padding:15px 15px 17px;gap:6px}
+  .room-acts{padding-top:12px;gap:10px}
+  .room-book{margin-left:auto;min-height:56px;padding:16px 17px}
+  .room-link{font-size:11px}
+}
+
+/* ==================================================================
+   KLIP_FINAL §22 — homepage Work and Podcast get physically smaller so
+   Studio reads as the proof section. The Work PAGE is untouched: it
+   keeps true 9:16, because that is where the real portfolio lives.
+================================================================== */
+@media (min-width:1025px){
+  /* A compact centred row rather than a full-bleed grid. Vertical
+     previews crop to 4:5 here so they stay thumbnails instead of
+     becoming giant 9:16 tiles. */
+  .work-grid--home{
+    display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-start;
+    gap:12px;grid-template-columns:none;grid-auto-rows:auto;
+    --row:clamp(172px,13.2vw,195px);
+  }
+  .work-grid--home .w{grid-column:auto;grid-row:auto;height:var(--row);flex:0 0 auto}
+  .work-grid--home .w--reel{aspect-ratio:4/5;width:calc(var(--row)*0.8)}
+  .work-grid--home .w--landscape{aspect-ratio:16/9;width:calc(var(--row)*1.7778)}
+  /* the interleave ordering is only meaningful in the two-column grid */
+  .work-grid--home.work-grid--mix22 .w:nth-child(n){order:0}
+  .work-grid--home .w-cap{padding:30px 14px 12px}
+  .work-grid--home .w-cap h3{font-size:14px}
+  .work-grid--home .w-cap em{font-size:9px;margin-bottom:4px}
+  .work-grid--home .w-cap .go{display:none}
+}
+@media (min-width:761px) and (max-width:1024px){
+  .work-grid--home{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;
+    --row:clamp(160px,19vw,185px)}
+  .work-grid--home .w{grid-column:auto;grid-row:auto;height:var(--row);flex:0 0 auto}
+  .work-grid--home .w--reel{aspect-ratio:4/5;width:calc(var(--row)*0.8)}
+  .work-grid--home .w--landscape{aspect-ratio:16/9;width:calc(var(--row)*1.7778)}
+  .work-grid--home .w-cap .go{display:none}
+}
+@media (max-width:760px){
+  /* phone: two 4:5 thumbnails across, then the horizontal projects */
+  .work-grid--home .w--reel{aspect-ratio:4/5}
+  .work-grid--home .w-cap{padding:28px 12px 11px}
+  .work-grid--home .w-cap h3{font-size:13px}
+  .work-grid--home .w-cap .go{display:none}
+  /* full-episode rail 82-86% of the viewport, not 91% */
+  .pod-grid--eps{grid-auto-columns:84vw}
+}
+
+/* Homepage podcast preview: compact and centred. The Podcasts page keeps
+   the full-width presentation — that is where the content lives. */
+@media (min-width:761px){
+  .pod-grid--home.pod-n2{grid-template-columns:repeat(2,minmax(0,430px));
+    justify-content:center}
+  .pod-clips--home.pod-n2{grid-template-columns:repeat(2,minmax(0,210px));
+    justify-content:center}
+  .pod-grid--home .pod-meta h3{font-size:15px}
+  .pod-clips--home .pod-meta h3{font-size:14px}
+}
+
+/* ------------------------------------------------------------------
+   Work page, desktop and tablet: true aspect ratios. The uniform row
+   band was squashing 9:16 reels to 0.83 and stretching 16:9 projects
+   to 3.47 — the portfolio is the one place the real shape matters
+   (KLIP_FINAL §4: "Full Work page keeps true 9:16").
+   align-items:start keeps each card its own height instead of letting
+   the grid stretch a short card to match a tall neighbour.
+------------------------------------------------------------------ */
+@media (min-width:761px){
+  .work-grid--all{
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    grid-auto-rows:auto;align-items:start;grid-auto-flow:row dense;
+  }
+  .work-grid.work-grid--all .w{grid-row:auto}
+  .work-grid.work-grid--all .w--reel{grid-column:span 1;aspect-ratio:9/16}
+  .work-grid.work-grid--all .w--landscape{grid-column:span 2;aspect-ratio:16/9}
+}
+@media (min-width:761px) and (max-width:1024px){
+  .work-grid--all{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .work-grid.work-grid--all .w--landscape{grid-column:1/-1}
+}
+
+/* Short CTA labels on phones, fuller supporting labels on desktop
+   (KLIP_FINAL §24). Both strings ship, so neither is hidden from a
+   crawler and swapping them causes no layout shift. */
+.lbl-short{display:none}
+@media (max-width:760px){
+  .lbl-full{display:none}
+  .lbl-short{display:inline}
+}

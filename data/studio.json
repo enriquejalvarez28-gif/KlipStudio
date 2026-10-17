@@ -9,7 +9,8 @@
     "body": "Podcasts. Video. Photography. Creator content. Courses. Live selling.",
     "cta": {
       "label": "Explore The Studio",
-      "href": "studio.html"
+      "href": "studio.html",
+      "mobileLabel": "Explore Studio"
     },
     "tourCta": {
       "label": "Tour The Studio",

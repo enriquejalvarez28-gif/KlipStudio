@@ -270,7 +270,7 @@ def home_main(D):
     out.append(
         '<section class="sec sec--dark" id="work"><div class="wrap">'
         '<div class="sec-head rv"><div class="titles"><p class="eyebrow on-dark fade">%s</p><h2>%s</h2></div>'
-        '<div class="aside right">%s</div></div><div class="work-grid%s rv">%s</div></div></section>'
+        '<div class="aside right">%s</div></div><div class="work-grid work-grid--home%s rv">%s</div></div></section>'
         % (esc(K['eyebrow']), headline(K['headline']), btn(K.get('cta'), 'btn--ghost'),
            mix, tiles))
 
@@ -290,32 +290,68 @@ def home_main(D):
         '<button class="circ" data-dir="1" aria-label="Next episode"><svg width="14" height="14" '
         'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">'
         '<path d="M9 5l7 7-7 7"/></svg></button></div></div></div></div>'
-        '<div class="pod-grid pod-grid--eps pod-n%d rv" id="pod-grid">%s</div>'
+        '<div class="pod-grid pod-grid--eps pod-grid--home pod-n%d rv" id="pod-grid">%s</div>'
         '%s</div></section>'
         % (esc(P['eyebrow']), headline(P['headline']), esc(P['cta']['href']),
            esc(P['cta']['label']), R.AR,
            min(len(eps), 4), ''.join(pod_card(c) for c in eps),
-           ('<p class="rail-label">%s</p><div class="pod-clips pod-n%d rv">%s</div>'
+           ('<p class="rail-label">%s</p><div class="pod-clips pod-clips--home pod-n%d rv">%s</div>'
             % (esc(P.get('clipsLabel', 'Short Clips')), min(len(clips), 4),
                ''.join(pod_card(c) for c in clips))) if clips else ''))
 
     T = D['studio']
     room_tiles = ''
     for r in T['rooms']:
-        # The card teaches; only BOOK THIS ROOM on the Studio page books.
+        # PHOTO = PHOTOS. ROOM = DETAILS. BOOK = BOOKING. Three separate
+        # controls, because one link wrapping the whole card can only do one
+        # of the three and the visitor cannot tell which.
         href = 'studio.html#%s' % r.get('anchor', 'rooms')
-        # name, one short line, at most three capabilities — no equipment paragraph
         caps = (r.get('capabilities') or [])[:3]
         focal = (' style="object-position:%s"' % esc(r['focal'])) if r.get('focal') else ''
-        room_tiles += ('<a class="room fade" href="%s"><div class="room-img">%s</div>'
-                       '<h3>%s</h3><span>%s%s</span>%s</a>'
-                       % (esc(href),
-                          pic(r['image'], r['name'],
-                              'loading="lazy" decoding="async" width="820" height="640"' + focal),
-                          esc(r['name']), esc(r.get('role') or r.get('card') or ''),
+        name = r['name']
+
+        gal = [g for g in (r.get('gallery') or []) if g.get('image')]
+        shots = ([[r.get('image', ''), r.get('imageAlt') or name]]
+                 + [[g['image'], g.get('alt') or name] for g in gal]) if gal else []
+        if shots:
+            media = ('<button type="button" class="room-img room-img--gal" '
+                     'data-gallery="%s" data-gallery-name="%s" data-track="view_photos" '
+                     'data-track-room="%s" aria-label="View photos of %s">%s'
+                     '<span class="view-photos"><svg viewBox="0 0 24 24" fill="none" '
+                     'stroke="currentColor" stroke-width="1.5" aria-hidden="true">'
+                     '<rect x="3" y="5" width="18" height="14" rx="1.5"/>'
+                     '<circle cx="8.5" cy="10" r="1.5"/>'
+                     '<path d="M21 16l-5-5-5 5-2-2-6 5"/></svg>View Photos '
+                     '<span class="vp-n">%d</span></span></button>'
+                     % (esc(json.dumps(shots)), esc(name), esc(name), esc(name),
+                        pic(r['image'], name,
+                            'loading="lazy" decoding="async" width="820" height="640"'
+                            + focal), len(shots)))
+        else:
+            # No gallery yet: the image goes to the room detail rather than
+            # offering photos that do not exist.
+            media = ('<a class="room-img" href="%s" tabindex="-1" aria-hidden="true">%s</a>'
+                     % (esc(href), pic(r['image'], name,
+                        'loading="lazy" decoding="async" width="820" height="640"' + focal)))
+
+        book = act({'booking': r.get('booking')}) if r.get('booking') else None
+        room_tiles += ('<article class="room fade">%s<div class="room-text">'
+                       '<a class="room-name" href="%s" data-track="explore_room" '
+                       'data-track-room="%s"><h3>%s</h3></a>'
+                       '<span>%s%s</span>%s<div class="room-acts">'
+                       '<a class="room-link" href="%s" data-track="explore_room" '
+                       'data-track-room="%s">Explore Room %s</a>%s</div>'
+                       '</div></article>'
+                       % (media, esc(href), esc(name), esc(name),
+                          esc(r.get('role') or r.get('card') or ''),
                           '<br>' + esc(r['price']) if r.get('price') else '',
                           ('<ul class="room-caps room-caps--mini">%s</ul>'
-                           % ''.join('<li>%s</li>' % esc(c) for c in caps)) if caps else ''))
+                           % ''.join('<li>%s</li>' % esc(c) for c in caps)) if caps else '',
+                          esc(href), esc(name), R.AR,
+                          ('<a class="btn btn--dark room-book" href="%s"%s '
+                           'data-track="book_room" data-track-room="%s">Book Room %s</a>'
+                           % (esc(book['href']), book['attr'], esc(name), R.AR))
+                          if book else ''))
     out.append(
         '<section id="studio" style="background:var(--paper);padding-bottom:clamp(44px,5vw,78px)">'
         '<div class="studio-split rv"><figure>%s</figure>'
