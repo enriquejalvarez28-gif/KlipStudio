@@ -341,12 +341,39 @@ def assign_modes(html):
     return ''.join(parts)
 
 
+def shot_urls(src):
+    """(full, phone, thumb) for one gallery photo.
+
+    The gallery used to hand the browser the 2000px original for the big
+    view and again for the thumbnail strip, which on a phone meant several
+    megabytes to look at four pictures. The resized WebP set already exists
+    (tools/make-sizes.py), so point each job at the right width: 1600 for a
+    desktop lightbox, 768 for a phone, 480 for a 64px thumbnail. Anything
+    without a resized set falls back to the original, so a photo added in
+    /admin before the sizes are generated still works.
+    """
+    entries = SRCSET.get(src) or []
+    by_w = {w: u for w, u in entries}
+
+    def pick(*widths):
+        for w in widths:
+            if w in by_w:
+                return by_w[w]
+        return src
+
+    return pick(1600, 1200), pick(768, 480, 1200), pick(480, 768)
+
+
 def room_shots(r):
     """The gallery for a room: its cover first, then the extra views.
 
     One source for both pages (KLIP_FIX §3) — the homepage and the Studio
     page call this same function, so a gallery edited in /admin changes both
     and the two can never drift apart.
+
+    Each shot is [full, alt, thumb, phone]: the alt stays in slot 1 because
+    the gallery script already reads it there, and the two extra widths are
+    appended so older behaviour is unchanged when they are absent.
     """
     name = r.get('name') or ''
     if not r.get('image'):
@@ -356,14 +383,19 @@ def room_shots(r):
     # a gallery and the control is never missing (KLIP_CHANGE §5: required
     # on Home and Studio, no exceptions). The count on the button is the
     # real number, so a room still waiting on its shoot says so honestly.
-    return ([[r.get('image', ''), r.get('imageAlt') or name]]
-            + [[g['image'], g.get('alt') or name] for g in gal])
+    raw = ([[r.get('image', ''), r.get('imageAlt') or name]]
+           + [[g['image'], g.get('alt') or name] for g in gal])
+    out = []
+    for src, alt in raw:
+        full, phone, thumb = shot_urls(src)
+        out.append([full, alt, thumb, phone])
+    return out
 
 
 def view_photos_btn(r, cls='vp-btn'):
     """VIEW PHOTOS as a real button, sized to be noticed, with the photo
-    count on it. Returns '' when the room has no extra views, so no page
-    ever shows a control that opens a single picture."""
+    count on it. Returns '' only when the room has no photograph at all,
+    so a room that has been shot always offers its gallery."""
     shots = room_shots(r)
     if not shots:
         return ''

@@ -387,6 +387,11 @@ section{position:relative}
 ::selection{background:var(--red);color:#fff}
 html{scroll-behavior:smooth}
 section[id],footer[id]{scroll-margin-top:110px}
+/* The room blocks are divs, not sections, so they were missed by the rule
+   above and landed flush with the viewport top — straight under the fixed
+   header, which ate their first 77px: the top of the photo, and the room
+   number and name right after it. */
+.studio-split[id],.photo-split[id]{scroll-margin-top:110px}
 h1,h2{text-wrap:balance}
 body{font-feature-settings:"kern" 1,"liga" 1}
 
@@ -1039,7 +1044,7 @@ figure.has-gallery{position:relative}
 
 .gal{position:fixed;inset:0;z-index:120;display:none;background:rgba(10,10,10,.96);
   align-items:center;justify-content:center}
-.gal.is-open{display:flex}
+.gal.is-open{display:flex;flex-direction:column;gap:14px}
 .gal-top{position:absolute;top:0;left:0;right:0;z-index:2;display:flex;align-items:center;
   gap:16px;padding:18px 20px;color:#fff}
 .gal-name{font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;
@@ -1062,10 +1067,34 @@ figure.has-gallery{position:relative}
 .gal-arrow svg{width:20px;height:20px}
 .gal-prev{left:16px}
 .gal-next{right:16px}
+
+/* Thumbnail strip. Every photo in the room, visible at once and one tap
+   away. Before this, a phone had the arrows hidden and swipe as the only
+   way through, so the second, third and fourth photos were unreachable
+   unless you guessed the gesture. */
+.gal-thumbs{display:flex;gap:8px;max-width:min(92vw,1180px);padding:2px;
+  overflow-x:auto;overflow-y:hidden;scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
+.gal-thumbs::-webkit-scrollbar{display:none}
+.gal-thumbs[hidden]{display:none}
+.gal-thumb{flex:0 0 auto;width:94px;height:62px;padding:0;cursor:pointer;
+  border:2px solid transparent;background:none;opacity:.45;scroll-snap-align:center;
+  transition:opacity .2s ease,border-color .2s ease}
+.gal-thumb img{display:block;width:100%;height:100%;object-fit:cover}
+.gal-thumb:hover,.gal-thumb:focus-visible{opacity:.85}
+.gal-thumb.is-on{opacity:1;border-color:var(--red)}
 @media (max-width:760px){
   .view-photos{right:10px;bottom:10px;padding:13px 15px;font-size:11px}
-  .gal-track{width:100vw;height:72vh}
-  .gal-arrow{display:none}          /* swipe instead */
+  .gal-track{width:100vw;height:62vh}
+  /* The arrows used to be hidden here on the assumption that swipe was
+     enough. It is not: nothing on screen said more photos existed. They
+     stay, sized for a thumb and dark enough to read over any photo. */
+  .gal-arrow{display:flex;align-items:center;justify-content:center;
+    width:44px;height:44px;background:rgba(0,0,0,.55)}
+  .gal-prev{left:8px}
+  .gal-next{right:8px}
+  .gal-thumbs{max-width:100vw;gap:6px;padding:2px 12px}
+  .gal-thumb{width:68px;height:48px}
   .gal-top{padding:14px 15px;gap:12px}
   .gal-close{width:46px;height:46px}
 }

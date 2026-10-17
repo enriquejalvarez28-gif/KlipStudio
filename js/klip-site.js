@@ -193,18 +193,30 @@
     /* ------------------------------------------------------------------
        Room photo gallery. Opens inside KLIP — the visitor never leaves the
        site. Swipe on a phone, arrows and keyboard on a desktop, a 1 / 4
-       counter throughout. Images are created only when the gallery opens,
-       and only the current one plus its neighbours are given a src, so a
-       room with twelve photos still costs nothing on page load.
+       counter throughout, arrows, swipe, the keyboard, and a thumbnail
+       strip so every photo in the room is visible and one tap away rather
+       than hidden behind a gesture.
+
+       The big images are created only when the gallery opens, and only the
+       current one plus its neighbours are given a src, so a room with
+       twelve photos still costs nothing on page load. Thumbnails load at
+       480px, not full size.
     ------------------------------------------------------------------ */
     (function(){
       var gal=document.getElementById('gallery'); if(!gal) return;
       var track=document.getElementById('gal-track'),
           nameEl=document.getElementById('gal-name'),
           countEl=document.getElementById('gal-count'),
+          thumbs=document.getElementById('gal-thumbs'),
           prev=document.getElementById('gal-prev'),
           next=document.getElementById('gal-next'),
           shots=[], at=0, opener=null;
+
+      /* Each shot is [full, alt, thumb, phone]. The last two are optional,
+         so a gallery written before the resized sets existed still works. */
+      function bigOf(s){
+        return (window.innerWidth<=760 && s[3]) ? s[3] : s[0];
+      }
 
       function paint(){
         countEl.textContent=(at+1)+' / '+shots.length;
@@ -213,19 +225,36 @@
           if(near && !img.getAttribute('src')) img.src=img.dataset.src;
           fig.classList.toggle('is-on', i===at);
         });
+        [].forEach.call(thumbs.children,function(b,i){
+          var on=i===at;
+          b.classList.toggle('is-on', on);
+          b.setAttribute('aria-current', on?'true':'false');
+          if(on) b.scrollIntoView({block:'nearest', inline:'nearest'});
+        });
         prev.disabled = next.disabled = shots.length<2;
       }
       function show(n){ at=(n+shots.length)%shots.length; paint(); }
       function open(list,name,from){
         shots=list; at=0; opener=from||null;
         nameEl.textContent=name||'';
-        track.innerHTML='';
-        shots.forEach(function(s){
+        track.innerHTML=''; thumbs.innerHTML='';
+        shots.forEach(function(s,i){
           var fig=document.createElement('figure'), img=document.createElement('img');
-          img.alt=s[1]||''; img.dataset.src=s[0];
+          img.alt=s[1]||''; img.dataset.src=bigOf(s);
           img.decoding='async'; img.loading='lazy';
           fig.appendChild(img); track.appendChild(fig);
+
+          /* One thumbnail per photo, so every photo in the room is visible
+             and reachable in one tap. 480px wide, not the original. */
+          var t=document.createElement('button'), ti=document.createElement('img');
+          t.type='button'; t.className='gal-thumb';
+          t.setAttribute('aria-label','Photo '+(i+1)+' of '+shots.length);
+          ti.src=s[2]||s[0]; ti.alt=''; ti.decoding='async'; ti.loading='lazy';
+          t.appendChild(ti); thumbs.appendChild(t);
+          t.addEventListener('click',function(){ show(i); });
         });
+        /* A single photo needs no strip and no arrows. */
+        thumbs.hidden = shots.length<2;
         paint();
         gal.classList.add('is-open');
         document.body.style.overflow='hidden';
@@ -233,7 +262,7 @@
       }
       function close(){
         gal.classList.remove('is-open'); document.body.style.overflow='';
-        track.innerHTML=''; shots=[];
+        track.innerHTML=''; thumbs.innerHTML=''; shots=[];
         if(opener){ opener.focus(); opener=null; }
       }
       window.klipGallery=open;   /* so other sections can open a room gallery */

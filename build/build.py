@@ -148,7 +148,14 @@ def footer(D, here):
         '<div class="gal-track" id="gal-track"></div>'
         '<button class="gal-arrow gal-next" id="gal-next" aria-label="Next photo">'
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
-        'aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button></div>\n'
+        'aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>'
+        # Thumbnail strip. On a phone the arrows used to be hidden and swipe
+        # was the only way through, with nothing on screen to say so, so the
+        # other photos were invisible. The strip shows every photo in the
+        # room at once and is tappable, which is what "view all of them"
+        # means. Filled by the gallery script; empty on page load.
+        '<div class="gal-thumbs" id="gal-thumbs" aria-label="All photos in '
+        'this room"></div></div>\n'
         # Specials. The shell is empty and the script fills it only when a
         # live offer exists, so a site with no promotion ships no promotion.
         '<div class="sp" id="special" role="dialog" aria-modal="true" '
