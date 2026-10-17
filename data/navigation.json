@@ -24,6 +24,11 @@
       {
         "label": "About",
         "href": "about.html"
+      },
+      {
+        "label": "Insights",
+        "href": "insights.html",
+        "mobileOnly": true
       }
     ],
     "cta": {
@@ -56,6 +61,10 @@
       {
         "label": "About",
         "href": "about.html"
+      },
+      {
+        "label": "Insights",
+        "href": "insights.html"
       }
     ],
     "socials": [

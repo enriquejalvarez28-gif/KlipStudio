@@ -507,6 +507,44 @@ collections:
           label: Booking key
           widget: string
           hint: Matches a key under Booking → SimplyBook, e.g. podcastRoom
+        - name: detail
+          label: Detailed room copy
+          widget: text
+          required: false
+          hint: >-
+            The longer description shown on the Studio page under the room.
+            Leave blank to use the positioning sentence alone.
+        - name: focalDesktop
+          label: Desktop focal point
+          widget: string
+          required: false
+          hint: >-
+            Where the desktop crop centres, as "across down". Blank is the
+            middle. The mobile focal point below is separate.
+        - name: startingPrice
+          label: Starting price
+          widget: string
+          required: false
+          hint: >-
+            Shown as a From price. Must match SimplyBook. Blank shows nothing.
+        - name: promoPrice
+          label: Promotional price
+          widget: string
+          required: false
+        - name: showPrice
+          label: Show the price on the site
+          widget: boolean
+          default: false
+          hint: Off keeps the price internal even when it is filled in.
+        - name: categoryId
+          label: SimplyBook category ID
+          widget: string
+          required: false
+        - name: active
+          label: Show this room
+          widget: boolean
+          default: true
+          hint: Off hides the room from the homepage and the Studio page.
         - name: gallery
           label: Photo gallery
           widget: list
@@ -1607,6 +1645,144 @@ collections:
         label: Google Business Profile URL
         widget: string
         required: false
+  - name: insightsHub
+    label: Insights settings
+    file: data/insights.json
+    fields:
+    - name: insights
+      label: Insights hub
+      widget: object
+      fields:
+      - {name: title, label: Browser title, widget: string}
+      - {name: description, label: Search description, widget: text}
+      - {name: eyebrow, label: Eyebrow, widget: string}
+      - name: headline
+        label: Headline
+        widget: list
+        field: {name: line, label: Line, widget: string}
+      - {name: body, label: Intro, widget: text}
+      - name: categories
+        label: Categories
+        widget: list
+        field: {name: name, label: Category, widget: string}
+      - {name: emptyNote, label: Shown when there are no articles yet, widget: string}
+      - name: cta
+        label: Closing CTA
+        widget: object
+        collapsed: true
+        fields:
+        - {name: label, label: Label, widget: string}
+        - {name: consult, label: Consultation topic, widget: string, required: false}
+  - name: podcastPackages
+    label: Podcast packages
+    file: data/podcast-page.json
+    fields:
+    - name: podcastPage
+      label: Podcast page
+      widget: object
+      fields:
+      - {name: _note, label: note, widget: hidden}
+      - name: levels
+        label: Levels of support
+        widget: object
+        fields:
+        - {name: eyebrow, label: Eyebrow, widget: string}
+        - name: headline
+          label: Headline
+          widget: list
+          field: {name: line, label: Line, widget: string}
+        - {name: body, label: Intro, widget: text}
+        - {name: note, label: Small print under the cards, widget: string, required: false}
+        - name: items
+          label: Packages
+          widget: list
+          label_singular: Package
+          summary: '{{fields.name}}'
+          hint: >-
+            Names, prices and inclusions must match the SimplyBook service
+            exactly. An inclusion line is a promise to the customer.
+          fields:
+          - {name: name, label: Package name, widget: string}
+          - {name: positioning, label: Who it is for, widget: text}
+          - name: includes
+            label: What is included
+            widget: list
+            field: {name: item, label: Inclusion, widget: string}
+          - name: price
+            label: Starting price
+            widget: string
+            required: false
+            hint: >-
+              Blank shows no price. Only fill this in once it is confirmed in
+              SimplyBook.
+          - {name: booking, label: Booking key, widget: string, required: false}
+          - {name: cta, label: Button label, widget: string}
+          - {name: bestValue, label: Mark as Best Value, widget: boolean, default: false}
+          - {name: active, label: Show this package, widget: boolean, default: true}
+      - name: handle
+        label: What we can handle for you
+        widget: object
+        fields:
+        - {name: eyebrow, label: Eyebrow, widget: string}
+        - name: headline
+          label: Headline
+          widget: list
+          field: {name: line, label: Line, widget: string}
+        - {name: body, label: Intro, widget: text}
+        - name: items
+          label: Services
+          widget: list
+          summary: '{{fields.label}}'
+          fields:
+          - {name: label, label: Service, widget: string}
+          - name: offered
+            label: KLIP offers this
+            widget: boolean
+            default: false
+            hint: >-
+              Off means it is not shown at all. Only switch on what KLIP
+              actually delivers today.
+      - name: guidance
+        label: Need help with the show?
+        widget: object
+        fields:
+        - {name: eyebrow, label: Eyebrow, widget: string}
+        - name: headline
+          label: Headline
+          widget: list
+          field: {name: line, label: Line, widget: string}
+        - {name: body, label: Intro, widget: text}
+        - name: items
+          label: Guidance services
+          widget: list
+          summary: '{{fields.label}}'
+          fields:
+          - {name: label, label: Service, widget: string}
+          - {name: offered, label: KLIP offers this, widget: boolean, default: false}
+        - name: cta
+          label: CTA
+          widget: object
+          collapsed: true
+          fields:
+          - {name: label, label: Label, widget: string}
+          - {name: consult, label: Consultation topic, widget: string, required: false}
+      - name: hostSupport
+        label: Host / co-host add-on
+        widget: object
+        hint: >-
+          Only switch this on if KLIP has approved talent and really sells it.
+          While it is off the section does not appear.
+        fields:
+        - {name: offered, label: KLIP offers host support, widget: boolean, default: false}
+        - {name: title, label: Title, widget: string}
+        - {name: text, label: Copy, widget: text}
+        - name: cta
+          label: CTA
+          widget: object
+          collapsed: true
+          fields:
+          - {name: label, label: Label, widget: string}
+          - {name: consult, label: Consultation topic, widget: string, required: false}
   - name: pages
     label: Page content
     file: data/pages.json
@@ -1690,3 +1866,93 @@ collections:
       - name: blocks
         label: blocks
         widget: hidden
+  - name: insights
+    label: Insights (Blog)
+    label_singular: Article
+    folder: data/insights
+    create: true
+    slug: '{{fields.article.slug}}'
+    extension: json
+    format: json
+    summary: '{{fields.article.title}}'
+    fields:
+    - name: article
+      label: Article
+      widget: object
+      fields:
+      - name: published
+        label: Published
+        widget: boolean
+        default: false
+        hint: >-
+          While this is off the article has no page at all - it is not built,
+          not linked and not in the sitemap. Turn it on to publish.
+      - {name: featured, label: Feature at the top of Insights, widget: boolean, default: false}
+      - {name: title, label: Title, widget: string}
+      - name: slug
+        label: URL slug
+        widget: string
+        hint: 'Lowercase words with hyphens, e.g. how-to-prepare-for-a-headshot'
+      - name: category
+        label: Category
+        widget: select
+        options: ['Podcasting', 'Studio + Content Creation', 'Photography',
+                  'Video + Reels', 'SEO + GEO / AI Search', 'Paid Media',
+                  'Social Media', 'Branding + Websites', 'Creator / Live Commerce']
+      - name: author
+        label: Author
+        widget: string
+        hint: A real person. Every article gets a named author.
+      - name: reviewer
+        label: Reviewer
+        widget: string
+        required: false
+        hint: Optional. Left blank it is omitted from the page and the schema.
+      - name: datePublished
+        label: Published date
+        widget: datetime
+        format: YYYY-MM-DD
+        date_format: YYYY-MM-DD
+        time_format: false
+        picker_utc: true
+      - name: dateModified
+        label: Last updated
+        widget: datetime
+        required: false
+        format: YYYY-MM-DD
+        date_format: YYYY-MM-DD
+        time_format: false
+        picker_utc: true
+      - {name: image, label: Featured image, widget: image, required: false}
+      - {name: imageAlt, label: Image description, widget: string, required: false}
+      - name: excerpt
+        label: Excerpt
+        widget: text
+        hint: >-
+          One or two sentences. Shown on the Insights hub and used as the
+          search description when no meta description is set.
+      - name: body
+        label: Article
+        widget: markdown
+        hint: >-
+          Write from KLIP's own experience. Use ## for section headings and
+          link to the service pages where it genuinely helps the reader.
+      - {name: relatedService, label: Related service page, widget: string, required: false}
+      - name: cta
+        label: Call to action
+        widget: object
+        collapsed: true
+        required: false
+        hint: One CTA per article, not five.
+        fields:
+        - {name: label, label: Button label, widget: string, required: false}
+        - {name: href, label: Link, widget: string, required: false}
+        - {name: booking, label: Booking key, widget: string, required: false}
+      - {name: seoTitle, label: Browser title, widget: string, required: false}
+      - {name: metaDescription, label: Search description, widget: text, required: false}
+      - name: canonical
+        label: Canonical URL
+        widget: string
+        required: false
+        hint: Leave blank unless this article was published elsewhere first.
+      - {name: socialImage, label: Social share image, widget: image, required: false}

@@ -1,0 +1,111 @@
+{
+  "podcastPage": {
+    "_note": "Package names, prices and inclusions must come from the matching SimplyBook service. A tier with active=false is not published. An inclusion line is a promise — only list what that exact SimplyBook package includes. Guidance and add-on items only appear when offered=true.",
+    "levels": {
+      "eyebrow": "Choose Your Level Of Support",
+      "headline": ["Record Your Podcast", "Your Way"],
+      "body": "From the room on its own to a finished episode with clips. Pick the level of help you want and book it.",
+      "note": "Live prices, availability and add-ons are confirmed at checkout.",
+      "items": [
+        {
+          "name": "Self-Service",
+          "positioning": "For experienced creators who want the room and equipment.",
+          "includes": [
+            "The room for your booked time",
+            "Cameras, audio and lighting configured before you arrive",
+            "Teleprompter where the service includes it",
+            "Your raw files delivered after the session"
+          ],
+          "price": "",
+          "booking": "podcastRoom",
+          "cta": "Book Room",
+          "active": true,
+          "bestValue": false
+        },
+        {
+          "name": "With Technician",
+          "positioning": "For clients who want someone operating the session.",
+          "includes": [
+            "Everything in Self-Service",
+            "A KLIP technician running the session",
+            "Camera switching and audio monitored live"
+          ],
+          "price": "",
+          "booking": "",
+          "cta": "Book Room",
+          "active": true,
+          "bestValue": false
+        },
+        {
+          "name": "Full-Service Podcast",
+          "positioning": "For clients who want to record and receive a finished episode.",
+          "includes": [
+            "Recording with a technician",
+            "Multicam episode edit",
+            "Mastered audio",
+            "Branding elements where the package includes them"
+          ],
+          "price": "",
+          "booking": "",
+          "cta": "Book Room",
+          "active": true,
+          "bestValue": true
+        },
+        {
+          "name": "Premium Content Package",
+          "positioning": "For clients who want the episode plus social assets.",
+          "includes": [
+            "4K or premium recording where applicable",
+            "Episode edit",
+            "Short clips, captions and thumbnails where the package includes them"
+          ],
+          "price": "",
+          "booking": "",
+          "cta": "Let's Talk",
+          "active": true,
+          "bestValue": false
+        }
+      ]
+    },
+    "handle": {
+      "eyebrow": "After The Session",
+      "headline": ["What We Can", "Handle For You"],
+      "body": "Everything below is available through KLIP. What lands in your booking depends on the package you choose.",
+      "items": [
+        { "label": "Multicam episode edit", "offered": true },
+        { "label": "Mastered audio", "offered": true },
+        { "label": "Short-form clips", "offered": true },
+        { "label": "Captions", "offered": true },
+        { "label": "Thumbnails", "offered": true },
+        { "label": "Intro and outro branding", "offered": true },
+        { "label": "Repurposing for social", "offered": true },
+        { "label": "Publishing and distribution", "offered": false }
+      ]
+    },
+    "guidance": {
+      "eyebrow": "Launch Support",
+      "headline": ["Need Help", "With The Show?"],
+      "body": "First episode or hundredth, the parts around the recording are usually what decide whether a show keeps going.",
+      "items": [
+        { "label": "Podcast concept and format", "offered": true },
+        { "label": "Episode structure and run-of-show", "offered": true },
+        { "label": "Topic planning", "offered": true },
+        { "label": "Guest preparation", "offered": true },
+        { "label": "Host and on-camera coaching", "offered": true },
+        { "label": "Scripts and talking points", "offered": true },
+        { "label": "Intro, outro and branding guidance", "offered": true },
+        { "label": "Editing strategy", "offered": true },
+        { "label": "Short-form clip strategy", "offered": true },
+        { "label": "Publishing and distribution support", "offered": false },
+        { "label": "Ongoing podcast management", "offered": false }
+      ],
+      "cta": { "label": "Let's Talk", "consult": "podcast" }
+    },
+    "hostSupport": {
+      "offered": false,
+      "title": "Host Or Co-Host Support",
+      "text": "A KLIP host or co-host can run the conversation with you. Available as an add-on.",
+      "cta": { "label": "Let's Talk", "consult": "podcast" }
+    }
+  }
+}

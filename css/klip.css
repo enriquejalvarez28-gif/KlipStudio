@@ -1424,3 +1424,141 @@ figure.has-gallery{position:relative}
   .lbl-full{display:none}
   .lbl-short{display:inline}
 }
+
+/* ==================================================================
+   KLIPV2 §28 — the podcast service ladder. The page sells an outcome,
+   so the levels come before the room and the proof.
+================================================================== */
+.tier-grid{display:grid;gap:14px;margin-top:22px}
+.tier-n4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.tier-n3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.tier-n2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.tier-n1{grid-template-columns:minmax(0,420px);justify-content:center}
+.tier{position:relative;display:flex;flex-direction:column;gap:11px;
+  padding:24px 22px 26px;background:var(--white);border:1px solid var(--line)}
+.tier.is-best{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.tier-flag{position:absolute;top:-1px;right:-1px;background:var(--red);color:#fff;
+  font-family:'Montserrat',sans-serif;font-size:9.5px;font-weight:700;
+  letter-spacing:.18em;text-transform:uppercase;padding:6px 11px}
+.tier h3{font-size:clamp(17px,1.4vw,21px);line-height:1.15;padding-right:70px}
+.tier-pos{font-size:14px;line-height:1.55;color:#6a6a66}
+.tier-price{font-family:'Montserrat',sans-serif;font-size:21px;font-weight:800;
+  color:var(--ink)}
+.tier-inc{display:flex;flex-direction:column;gap:8px;flex:1;margin-top:2px}
+.tier-inc li{position:relative;padding-left:19px;font-size:14px;line-height:1.5;
+  color:#4a4a47}
+.tier-inc li::before{content:"";position:absolute;left:0;top:8px;width:7px;height:7px;
+  border-left:1.5px solid var(--red);border-bottom:1.5px solid var(--red);
+  transform:rotate(-45deg)}
+.tier .btn{margin-top:6px;justify-content:space-between}
+.tier-note{margin-top:16px;font-size:13.5px;color:#8a8a86}
+
+/* What we can handle / Need help with the show */
+.chk{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 26px;
+  margin-top:20px}
+.chk li{display:flex;align-items:flex-start;gap:11px;font-size:15px;line-height:1.5;
+  color:var(--ink)}
+.chk svg{flex:0 0 auto;width:17px;height:17px;margin-top:2px;color:var(--red)}
+.chk-cta{margin-top:26px}
+.chk-cta .btn{display:inline-flex}
+.note-panel{display:flex;align-items:center;justify-content:space-between;gap:24px;
+  padding:24px 26px;background:var(--white);border:1px solid var(--line)}
+.note-panel h3{font-size:clamp(17px,1.4vw,21px)}
+.note-panel p{margin-top:6px;font-size:14.5px;color:#4a4a47;max-width:62ch}
+
+@media (max-width:1024px){
+  .tier-n4,.tier-n3{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .chk{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:760px){
+  .tier-grid{grid-template-columns:minmax(0,1fr);gap:11px;margin-top:16px}
+  .tier{padding:20px 18px 22px}
+  .tier h3{padding-right:0}
+  .tier-flag{position:static;align-self:flex-start;margin-bottom:2px}
+  .tier .btn{width:100%}
+  .chk{grid-template-columns:minmax(0,1fr);gap:11px;margin-top:14px}
+  .chk-cta .btn{width:100%}
+  .note-panel{flex-direction:column;align-items:stretch;gap:16px;padding:20px 18px}
+  .note-panel .btn{width:100%}
+}
+
+/* Verified inclusions inside a path panel (KLIPV2 §29). Unverified
+   amenities are filtered out by the renderer, not styled differently —
+   a bullet on a booking page reads as a promise. */
+.duo-pts{display:flex;flex-direction:column;gap:8px;margin:2px 0 4px}
+.duo-pts li{position:relative;padding-left:19px;font-size:14.5px;line-height:1.5;
+  color:#4a4a47}
+.duo-pts li::before{content:"";position:absolute;left:0;top:8px;width:7px;height:7px;
+  border-left:1.5px solid var(--red);border-bottom:1.5px solid var(--red);
+  transform:rotate(-45deg)}
+@media (max-width:760px){
+  .duo-pts li{font-size:14px}
+}
+
+/* ==================================================================
+   KLIPV2 §31 — Insights. Built for authority: readable measure, real
+   dates and bylines, one CTA per article.
+================================================================== */
+.page-hero--text{padding:clamp(80px,9vw,140px) 0 clamp(26px,3vw,44px);
+  background:var(--paper)}
+.ins-filters{margin-bottom:22px}
+.ins-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.ins-grid--lead{grid-template-columns:minmax(0,1fr);margin-bottom:16px}
+.ins-card{display:flex;flex-direction:column;background:var(--white);
+  border:1px solid var(--line);transition:border-color .25s ease}
+.ins-card:hover{border-color:var(--ink)}
+.ins-img{aspect-ratio:3/2;overflow:hidden;background:#eceae7}
+.ins-grid--lead .ins-img{aspect-ratio:21/9}
+.ins-img img{width:100%;height:100%;object-fit:cover;
+  transition:transform .7s cubic-bezier(.2,.7,.2,1)}
+.ins-card:hover .ins-img img{transform:scale(1.04)}
+.ins-body{display:flex;flex-direction:column;gap:9px;flex:1;padding:20px}
+.ins-meta,.art-meta{display:flex;flex-wrap:wrap;align-items:center;gap:12px;
+  font-family:'Montserrat',sans-serif;font-size:10.5px;font-weight:600;
+  letter-spacing:.16em;text-transform:uppercase;color:#8a8a86}
+.ins-cat{color:var(--red);font-weight:700}
+.ins-body h3{font-size:clamp(17px,1.4vw,21px);line-height:1.22}
+.ins-grid--lead .ins-body h3{font-size:clamp(21px,2.2vw,30px)}
+.ins-body p{font-size:14.5px;line-height:1.6;color:#4a4a47}
+.ins-card[hidden]{display:none}
+
+.art{background:var(--paper);padding-bottom:clamp(40px,5vw,80px)}
+.art-head{padding-top:clamp(80px,9vw,140px);max-width:78ch}
+.art-head h1{margin-top:14px;font-size:clamp(31px,4.4vw,56px);line-height:1.05}
+.art-head .lede{margin-top:16px}
+.art-hero{margin:clamp(26px,3vw,44px) 0 0;aspect-ratio:16/9;overflow:hidden}
+.art-hero img{width:100%;height:100%;object-fit:cover}
+.art-body{max-width:72ch;padding-top:clamp(26px,3vw,42px)}
+.art-body h2{font-size:clamp(22px,2.3vw,30px);line-height:1.15;margin:34px 0 12px}
+.art-body h3{font-size:clamp(18px,1.7vw,22px);margin:26px 0 10px}
+.art-body p{font-size:clamp(16px,1.15vw,17.5px);line-height:1.72;color:#333331;
+  margin-bottom:17px}
+.art-body ul,.art-body ol{margin:0 0 18px 20px;display:flex;flex-direction:column;
+  gap:8px}
+.art-body li{font-size:clamp(16px,1.15vw,17.5px);line-height:1.65;color:#333331;
+  list-style:disc}
+.art-body ol li{list-style:decimal}
+.art-body a{color:var(--red);text-decoration:underline;text-underline-offset:3px}
+.art-body blockquote{margin:22px 0;padding-left:20px;border-left:2px solid var(--red);
+  font-size:clamp(17px,1.4vw,20px);line-height:1.55}
+.art-review{margin-top:22px;font-size:13px;color:#8a8a86}
+.art-cta{margin-top:30px;padding-top:26px;border-top:1px solid var(--line)}
+.ta-c{text-align:center}
+
+@media (max-width:1024px){
+  .ins-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:760px){
+  .ins-grid{grid-template-columns:minmax(0,1fr);gap:11px}
+  .ins-grid--lead .ins-img{aspect-ratio:3/2}
+  .art-head h1{font-size:clamp(28px,8.4vw,38px)}
+  .art-body{padding-top:22px}
+  .art-cta .btn{width:100%}
+}
+
+/* Room detail copy and price, both optional and both CMS-controlled. */
+.room-detail{font-size:clamp(14.5px,1.05vw,16px);line-height:1.65;color:#4a4a47;
+  max-width:62ch}
+.room-price{font-family:'Montserrat',sans-serif;font-size:16px;color:#6a6a66}
+.room-price b{font-size:22px;font-weight:800;color:var(--ink)}
+.room-price s{color:#9a9a96;margin-right:6px}

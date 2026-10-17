@@ -1,0 +1,28 @@
+{
+  "insights": {
+    "title": "Insights — Podcasting, Studio & Content | KLIP",
+    "description": "Practical answers from the KLIP studio floor: podcasting, photography, video, SEO and GEO, and the content systems South Florida businesses actually run.",
+    "eyebrow": "Insights",
+    "headline": [
+      "What We Learn",
+      "Making It"
+    ],
+    "body": "Answers to the questions clients actually ask us, written from what happens in the rooms rather than from a keyword list.",
+    "categories": [
+      "Podcasting",
+      "Studio + Content Creation",
+      "Photography",
+      "Video + Reels",
+      "SEO + GEO / AI Search",
+      "Paid Media",
+      "Social Media",
+      "Branding + Websites",
+      "Creator / Live Commerce"
+    ],
+    "emptyNote": "The first articles are being written. Check back shortly.",
+    "cta": {
+      "label": "Let's Talk",
+      "consult": "1"
+    }
+  }
+}

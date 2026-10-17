@@ -1,0 +1,23 @@
+{
+  "article": {
+    "published": true,
+    "featured": true,
+    "title": "Self-service or full-service podcast production: which should you book?",
+    "slug": "self-service-vs-full-service-podcast",
+    "category": "Podcasting",
+    "author": "Enrique Alvarez",
+    "reviewer": "",
+    "datePublished": "2026-10-17",
+    "dateModified": "2026-10-17",
+    "image": "img/room1.jpg",
+    "imageAlt": "Podcast set with table, microphones and multicam cameras",
+    "excerpt": "The honest answer is that it depends on what you are short of — time or experience. Here is how to tell which one you are, before you spend money on the wrong booking.",
+    "body": "Most people booking a studio for the first time ask what the difference is between the cheap option and the expensive one. The real question is narrower than that: what are you short of, time or experience?\n\n## Book self-service when you already know what you are doing\n\nSelf-service means the room and the equipment, set up before you walk in. You run the session. You leave with your raw files.\n\nThis works when you have recorded before, you know roughly how you want it to sound, and you already have someone editing — or you edit yourself. It is the cheapest way to record because you are only paying for the room and the gear.\n\nIt does not work well as a first episode. The first time anyone records, something goes sideways: a guest who leans out of frame, an audio level nobody was watching, a run-of-show that falls apart twenty minutes in. None of that is a disaster with a technician in the room. It is an hour of wasted booking without one.\n\n## Book a technician when the recording matters more than the budget\n\nA technician runs the session while you concentrate on the conversation. Cameras get switched live, audio gets monitored rather than discovered afterwards, and someone who is not also hosting is watching the clock.\n\nThis is the level most business podcasts should start at. You still get raw files, but you get files that are actually usable.\n\n## Book full-service when you want an episode, not footage\n\nFull-service means you record and we hand back a finished episode: multicam edit, mastered audio, your branding on the front and back.\n\nThe people who need this are usually not short of experience. They are short of time. If editing is the step where your show quietly dies — and for most shows it is — paying for the edit is the thing that keeps it alive.\n\n## Where the clips fit\n\nOne recorded hour is rarely one piece of content. It is an episode plus, realistically, somewhere between five and fifteen short vertical cuts, depending on how much of the conversation actually lands.\n\nIf short-form is how people will find the show, the clips are not an add-on. They are the point, and the episode is the raw material. That is what the premium package is for.\n\n## A simple way to choose\n\n- Recorded before, have an editor → **self-service**\n- First few episodes, or guests you cannot afford to waste → **technician**\n- No time to edit → **full-service**\n- Growing through social → **premium with clips**\n\nIf you are not sure, book the technician level once. It is the cheapest way to find out what you actually need, and nothing about that session is wasted.\n\n## Before you book\n\nCome with more topics than you think you need, decide who opens and who closes, and send your guest the questions beforehand. The studio is the easy part.",
+    "relatedService": "podcasts.html",
+    "cta": { "label": "Book The Studio", "booking": "podcastRoom" },
+    "seoTitle": "Self-Service vs Full-Service Podcast Production | KLIP Studio",
+    "metaDescription": "Deciding between a self-service podcast booking, a technician, or a full-service edit? Here is how to tell which one fits, from a Fort Lauderdale studio.",
+    "canonical": "",
+    "socialImage": ""
+  }
+}

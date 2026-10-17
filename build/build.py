@@ -19,6 +19,7 @@ import sys
 from datetime import date
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import insights as INS  # noqa: E402
 import render as R  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -27,7 +28,8 @@ SITE = 'https://theklipstudio.com'
 
 PARTS = ['brand', 'navigation', 'hero', 'sections', 'studio', 'photography',
          'photographers', 'podcasts', 'clients', 'location', 'visibility',
-         'booking', 'consultation', 'faq', 'specials', 'seo']
+         'booking', 'consultation', 'faq', 'specials', 'seo', 'podcast-page',
+         'insights']
 
 LEGAL = [('privacy.html', 'privacy', '/privacy/'), ('terms.html', 'terms', '/terms/')]
 
@@ -70,8 +72,14 @@ def header(D, here):
     def cur(h):
         return ' aria-current="page"' if str(h).split('/')[-1].lower() == here else ''
 
+    # KLIPV2 §31: do not crowd the desktop nav. A link marked mobileOnly is
+    # in the drawer and the footer but not the desktop bar, which is where
+    # Insights lives until the top-level row has room for a seventh item.
     nav = ''.join('<a href="%s"%s>%s</a>' % (R.esc(l['href']), cur(l['href']), R.esc(l['label']))
-                  for l in D['nav']['links'])
+                  for l in D['nav']['links'] if not l.get('mobileOnly'))
+    drawer_nav = ''.join('<a href="%s"%s>%s</a>'
+                         % (R.esc(l['href']), cur(l['href']), R.esc(l['label']))
+                         for l in D['nav']['links'])
     a = R.act(D['nav']['cta'])
     cta_attr = ' data-consult="1"' if D['nav']['cta'].get('consult') else ''
     logo = D['logo'].get('mark') or D['logo'].get('light')
@@ -96,7 +104,7 @@ def header(D, here):
         '<a class="btn btn--solid" id="drawer-cta" href="%s"%s>%s %s</a></div>'
         % (R.esc(logo), R.esc(D['logo'].get('alt', '')), nav,
            R.esc(a['href']), cta_attr, R.esc(D['nav']['cta']['label']), R.AR,
-           R.esc(logo), R.esc(D['logo'].get('alt', '')), nav,
+           R.esc(logo), R.esc(D['logo'].get('alt', '')), drawer_nav,
            R.esc(a['href']), cta_attr, R.esc(D['nav']['cta']['label']), R.AR))
 
 
@@ -301,7 +309,7 @@ def home_main(D):
 
     T = D['studio']
     room_tiles = ''
-    for r in T['rooms']:
+    for r in [x for x in T['rooms'] if x.get('active', True)]:
         # PHOTO = PHOTOS. ROOM = DETAILS. BOOK = BOOKING. Three separate
         # controls, because one link wrapping the whole card can only do one
         # of the three and the visitor cannot tell which.
@@ -737,13 +745,59 @@ def build():
             fh.write(html)
         written.append((filename, len(html)))
 
-    # sitemap from the same list, so it can never drift from the pages
+    # ---------------------------------------------------------- Insights
+    # Drafts are not built at all, so an unpublished article has no page and
+    # no sitemap entry — there is nothing to find and nothing to leak.
+    arts = INS.load_articles()
+    ins_urls = []
+
+    hub_schema = [org_schema(D), breadcrumbs('Insights', '/insights/')]
+    t2, d2, share, noindex = seo_for(D, 'insights')
+    I = D.get('insights') or {}
+    html = shell(t2 or I.get('title', 'Insights | KLIP'),
+                 d2 or I.get('description', ''), SITE + '/insights/',
+                 header(D, 'insights.html') + '\n<main>\n'
+                 + INS.hub_main(D, arts) + '\n</main>\n' + footer(D, 'insights.html'),
+                 json.dumps({"@context": "https://schema.org", "@graph": hub_schema},
+                            indent=2, ensure_ascii=False),
+                 'insights', share=share, noindex=noindex, site_head=head_tags,
+                 config=json.dumps(cfg, ensure_ascii=False, separators=(',', ':')))
+    with open(os.path.join(ROOT, 'insights.html'), 'w', encoding='utf-8') as fh:
+        fh.write(html)
+    written.append(('insights.html', len(html)))
+    ins_urls.append('/insights/')
+
+    for a in arts:
+        graph = [org_schema(D), INS.article_schema(a, SITE),
+                 breadcrumbs(a['title'][:60], a['_url'])]
+        body = (header(D, 'insights.html') + '\n<main>\n'
+                + INS.article_main(D, a, arts) + '\n</main>\n'
+                + footer(D, 'insights.html'))
+        share_a = a.get('socialImage') or a.get('image') or ''
+        if share_a and not share_a.startswith('http'):
+            share_a = SITE + '/' + share_a.lstrip('/')
+        html = shell(a.get('seoTitle') or (a['title'] + ' | KLIP'),
+                     a.get('metaDescription') or a.get('excerpt', ''),
+                     a.get('canonical') or (SITE + a['_url']), body,
+                     json.dumps({"@context": "https://schema.org", "@graph": graph},
+                                indent=2, ensure_ascii=False),
+                     'insights', share=share_a or share, site_head=head_tags,
+                     config=json.dumps(cfg, ensure_ascii=False, separators=(',', ':')))
+        with open(os.path.join(ROOT, a['_file']), 'w', encoding='utf-8') as fh:
+            fh.write(html)
+        written.append((a['_file'], len(html)))
+        ins_urls.append(a['_url'])
+
+    # sitemap from the same lists, so it can never drift from the pages
     today = date.today().isoformat()
     urls = ''.join(
         '  <url><loc>%s%s</loc><lastmod>%s</lastmod><changefreq>%s</changefreq>'
         '<priority>%s</priority></url>\n'
         % (SITE, u, today, 'weekly' if u == '/' else 'monthly', '1.0' if u == '/' else '0.8')
         for _, _, u in PAGES + LEGAL)
+    urls += ''.join(
+        '  <url><loc>%s%s</loc><lastmod>%s</lastmod><changefreq>monthly</changefreq>'
+        '<priority>0.7</priority></url>\n' % (SITE, u, today) for u in ins_urls)
     with open(os.path.join(ROOT, 'sitemap.xml'), 'w', encoding='utf-8') as fh:
         fh.write('<?xml version="1.0" encoding="UTF-8"?>\n'
                  '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n%s</urlset>\n' % urls)
@@ -751,7 +805,7 @@ def build():
     print('Built %d pages:' % len(written))
     for f, n in written:
         print('  %-20s %6d bytes' % (f, n))
-    print('  sitemap.xml          %d urls' % (len(PAGES) + len(LEGAL)))
+    print('  sitemap.xml          %d urls' % (len(PAGES) + len(LEGAL) + len(ins_urls)))
     return written
 
 

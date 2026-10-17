@@ -276,10 +276,10 @@
         "imageAlt": "Professional headshot session at Klip Studio",
         "eyebrow": "Klip Photography",
         "headline": [
-          "Your Story.",
-          "In Focus"
+          "Book A KLIP Photographer.",
+          "Or Rent The Studio"
         ],
-        "body": "Headshots, lifestyle, celebrations and branding — shot in our studio or at your location.",
+        "body": "Headshots, branding, product, lifestyle and content shoots in a production-ready photo space. Hire our photographer, or bring your own.",
         "ctas": [
           {
             "label": "Book A Photographer",
@@ -332,8 +332,8 @@
         "id": "choose",
         "eyebrow": "Two Ways In",
         "headline": [
-          "Book A Photographer.",
-          "Or Rent The Room"
+          "Two Ways In.",
+          "Both Primary"
         ],
         "panels": [
           {
@@ -345,7 +345,37 @@
             "cta": {
               "label": "Choose A Photographer",
               "photographers": true
-            }
+            },
+            "points": [
+              {
+                "label": "A KLIP photographer with you for the session",
+                "verified": true
+              },
+              {
+                "label": "The Kanvas room included",
+                "verified": true
+              },
+              {
+                "label": "Direction during the session",
+                "verified": true
+              },
+              {
+                "label": "Edited images per the package you choose",
+                "verified": true
+              },
+              {
+                "label": "Choose your photographer, or First Available",
+                "verified": true
+              },
+              {
+                "label": "Lighting included",
+                "verified": false
+              },
+              {
+                "label": "Private prep and changing area",
+                "verified": false
+              }
+            ]
           },
           {
             "eyebrow": "Bring Your Own",
@@ -356,7 +386,33 @@
             "cta": {
               "label": "Rent The Room",
               "booking": "photoStudioRental"
-            }
+            },
+            "points": [
+              {
+                "label": "Kanvas room, white wall and backdrops",
+                "verified": true
+              },
+              {
+                "label": "Professional lighting kit",
+                "verified": true
+              },
+              {
+                "label": "Book by the hour",
+                "verified": true
+              },
+              {
+                "label": "For photographers, creators, agencies and brands",
+                "verified": true
+              },
+              {
+                "label": "Parking",
+                "verified": false
+              },
+              {
+                "label": "Prep and changing area",
+                "verified": false
+              }
+            ]
           }
         ]
       },
@@ -399,6 +455,43 @@
         "roomGalleryLabel": "View Photo Studio"
       },
       {
+        "type": "split",
+        "id": "for-photographers",
+        "reverse": true,
+        "image": "img/photo4.jpg",
+        "imageAlt": "Kanvas room white wall with professional lighting",
+        "roomGallery": "kanvas-room",
+        "roomGalleryLabel": "View The Photo Studio",
+        "eyebrow": "For Photographers",
+        "headline": [
+          "Your Clients.",
+          "Your Camera.",
+          "Our Studio"
+        ],
+        "body": "You do not have to hire a KLIP photographer to shoot here. Independent photographers, creators, agencies and brands can book the Kanvas room on its own and run the session their own way.",
+        "points": [
+          {
+            "title": "The room",
+            "text": "White wall, interchangeable backdrops and a professional lighting kit."
+          },
+          {
+            "title": "Your setup",
+            "text": "Bring your own camera, lenses and crew. Shoot the way you normally work."
+          },
+          {
+            "title": "By the hour",
+            "text": "Book the hours you need. Live availability and rates are confirmed at checkout."
+          }
+        ],
+        "ctas": [
+          {
+            "label": "Check Studio Availability",
+            "mobileLabel": "Rent The Studio",
+            "booking": "photoStudioRental"
+          }
+        ]
+      },
+      {
         "type": "photographers",
         "id": "photographers",
         "eyebrow": "The Team",
@@ -435,10 +528,10 @@
         "imageAlt": "Podcast recording at Klip Studio",
         "eyebrow": "Podcasts",
         "headline": [
-          "Real Conversations.",
-          "Created Here"
+          "Record Your Podcast",
+          "Your Way"
         ],
-        "body": "Shows recorded in our multicam room and cut into episodes and clips that keep working after the session ends.",
+        "body": "The room on its own, a technician running the session, or a finished episode with clips. Pick the level of help you want.",
         "ctas": [
           {
             "label": "Book Room",
@@ -448,6 +541,24 @@
             "label": "Tour The Studio",
             "booking": "studioTour"
           }
+        ]
+      },
+      {
+        "type": "tiers",
+        "id": "levels",
+        "source": "levels"
+      },
+      {
+        "type": "rooms",
+        "id": "podcast-room",
+        "eyebrow": "The Room",
+        "headline": [
+          "Where It",
+          "Gets Recorded"
+        ],
+        "source": "studio.rooms",
+        "only": [
+          "klip-room"
         ]
       },
       {
@@ -494,39 +605,19 @@
         "clipsLabel": "Short Clips"
       },
       {
-        "type": "split",
-        "image": "img/studio-main.jpg",
-        "imageAlt": "Multicam podcast set at Klip Studio",
-        "eyebrow": "The Setup",
-        "headline": [
-          "Built For",
-          "Multicam"
-        ],
-        "body": "A room designed around the show, not a conference table with a microphone on it.",
-        "points": [
-          {
-            "title": "Multiple Cameras",
-            "text": "Switched angles so an episode cuts like a show, not a webcam call."
-          },
-          {
-            "title": "Broadcast Audio",
-            "text": "Studio microphones and a proper mixer, set up before you arrive."
-          },
-          {
-            "title": "Teleprompter",
-            "text": "Included in every room at no extra cost."
-          },
-          {
-            "title": "Technician",
-            "text": "Run it yourself, or add an operator switching live in the room."
-          }
-        ],
-        "ctas": [
-          {
-            "label": "Book Room",
-            "booking": "podcastRoom"
-          }
-        ]
+        "type": "checklist",
+        "id": "handled",
+        "source": "handle"
+      },
+      {
+        "type": "checklist",
+        "id": "guidance",
+        "source": "guidance"
+      },
+      {
+        "type": "notePanel",
+        "id": "host",
+        "source": "hostSupport"
       },
       {
         "type": "steps",
@@ -553,6 +644,11 @@
             "text": "Add editing and clips and we hand back episodes ready to post."
           }
         ]
+      },
+      {
+        "type": "faq",
+        "id": "podcast-faq",
+        "source": "faq"
       },
       {
         "type": "cta",

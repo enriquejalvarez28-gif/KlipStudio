@@ -888,6 +888,29 @@
       });
     })();
 
+    /* Insights category filter — same approach: every article is in the
+       HTML and this only hides the ones that do not match, so the hub
+       still works with JavaScript off. */
+    (function(){
+      var bar=document.querySelector('.ins-filters'),
+          grid=document.getElementById('ins-grid');
+      if(!bar||!grid) return;
+      var cards=[].slice.call(grid.querySelectorAll('.ins-card'));
+      bar.addEventListener('click', function(e){
+        var btn=e.target.closest('button[data-cat]'); if(!btn) return;
+        var key=btn.getAttribute('data-cat');
+        [].forEach.call(bar.querySelectorAll('button'), function(b){
+          b.setAttribute('aria-pressed', String(b===btn));
+        });
+        var shown=0;
+        cards.forEach(function(c){
+          var on=(key==='all')||(c.getAttribute('data-cat')===key);
+          c.hidden=!on; if(on) shown++;
+        });
+        track('insights_filter',{filter:key,results:shown});
+      });
+    })();
+
     /* ---------- reveal motion (CSS + IntersectionObserver) ---------- */
     function revealNow(sec){
       var els=sec.querySelectorAll('.ln>span, .fade');

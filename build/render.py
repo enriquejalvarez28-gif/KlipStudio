@@ -258,6 +258,14 @@ def rooms(b, D):
     lst = b.get('items')
     if lst is None and b.get('source') == 'studio.rooms':
         lst = (D.get('studio') or {}).get('rooms')
+    # `only` narrows a shared room list to the rooms a page is about, so the
+    # Podcast page can show the podcast room from the same single source
+    # rather than a second copy of the data that can drift out of step.
+    if b.get('only'):
+        keep = set(b['only'])
+        lst = [r for r in (lst or []) if r.get('anchor') in keep]
+    # A room switched off in /admin disappears everywhere it is drawn.
+    lst = [r for r in (lst or []) if r.get('active', True)]
     out = ('<section class="sec sec--paper"%s><div class="wrap">%s</div>'
            % (' id="%s"' % esc(b['id']) if b.get('id') else '', head_block(b)))
     for i, r in enumerate(lst or []):
@@ -284,10 +292,13 @@ def rooms(b, D):
                     '<path d="M21 16l-5-5-5 5-2-2-6 5"/></svg>'
                     'View Photos <span class="vp-n">%d</span></button>'
                     % (gal_attr, len(shots)))
+        dfoc = (' style="object-position:%s"' % esc(r['focalDesktop'])) \
+            if r.get('focalDesktop') else ''
         fig = '<figure%s>%s%s</figure>' % (
             ' class="has-gallery"' if view else '',
             pic(r.get('image', ''), r.get('imageAlt') or name,
-                'loading="lazy" decoding="async" width="1600" height="900"'), view)
+                'loading="lazy" decoding="async" width="1600" height="900"' + dfoc),
+            view)
         copy = '<div class="studio-copy">'
         if r.get('role'):
             copy += '<p class="eyebrow fade">%s</p>' % esc(r['role'])
@@ -295,6 +306,17 @@ def rooms(b, D):
         summary = r.get('summary') or r.get('sub')
         if summary:
             copy += '<p class="lede fade">%s</p>' % esc(summary)
+        if r.get('detail'):
+            copy += '<p class="room-detail fade">%s</p>' % esc(r['detail'])
+        # A price is shown only when it is filled in AND switched on, so a
+        # rate can be recorded in the CMS before it is public.
+        if r.get('showPrice') and (r.get('promoPrice') or r.get('startingPrice')):
+            if r.get('promoPrice') and r.get('startingPrice'):
+                copy += ('<p class="room-price fade"><s>%s</s> <b>%s</b></p>'
+                         % (esc(r['startingPrice']), esc(r['promoPrice'])))
+            else:
+                copy += ('<p class="room-price fade">From <b>%s</b></p>'
+                         % esc(r.get('promoPrice') or r['startingPrice']))
         if r.get('capabilities'):
             copy += '<ul class="room-caps fade">%s</ul>' % ''.join(
                 '<li>%s</li>' % esc(c) for c in r['capabilities'])
@@ -431,11 +453,21 @@ def duo(b, D):
             media = '<div class="duo-img">%s</div>' % pic(
                 p['image'], p.get('imageAlt') or p.get('title', ''),
                 'loading="lazy" decoding="async" width="1200" height="900"')
+        # Only verified inclusions are listed. An unverified amenity is left
+        # out rather than hedged — a bullet on a booking page reads as a
+        # promise, not a maybe.
+        pts = [x for x in (p.get('points') or [])
+               if (x.get('verified') if isinstance(x, dict) else True)]
+        lis = ''.join('<li>%s</li>'
+                      % esc(x.get('label') if isinstance(x, dict) else x)
+                      for x in pts)
         panels += ('<div class="duo-panel fade">%s<div class="duo-copy">'
                    '<p class="eyebrow">%s</p><h3>%s</h3><p class="duo-text">%s</p>'
-                   '<a class="btn btn--dark" href="%s"%s>%s %s</a></div></div>'
+                   '%s<a class="btn btn--dark" href="%s"%s>%s %s</a></div></div>'
                    % (media, esc(p.get('eyebrow', '')), esc(p.get('title', '')),
-                      esc(p.get('text', '')), esc(a['href']), a['attr'],
+                      esc(p.get('text', '')),
+                      '<ul class="duo-pts">%s</ul>' % lis if lis else '',
+                      esc(a['href']), a['attr'],
                       esc((p.get('cta') or {}).get('label', '')), AR))
     return ('<section class="sec sec--paper"%s><div class="wrap">%s'
             '<div class="duo rv">%s</div></div></section>'
@@ -498,6 +530,80 @@ def photographers(b, D):
             % (' id="%s"' % esc(b['id']) if b.get('id') else '', body))
 
 
+def tiers(b, D):
+    """The service ladder. A tier is published only when it is active, and a
+    price only when it has actually been filled in — an empty price shows
+    nothing rather than a placeholder, because SimplyBook is the source of
+    truth for price and a guess would be published to real customers."""
+    src = (D.get('podcastPage') or {}).get(b.get('source') or '', {}) \
+        if b.get('source') else b
+    items = [t for t in (src.get('items') or []) if t.get('active')]
+    if not items:
+        return ''
+    cards = ''
+    for t in items:
+        a = act({'booking': t['booking']}) if t.get('booking') else \
+            act({'consult': 'podcast'})
+        price = ('<p class="tier-price">%s</p>' % esc(t['price'])) if t.get('price') else ''
+        inc = ''.join('<li>%s</li>' % esc(i) for i in (t.get('includes') or []))
+        cards += ('<article class="tier fade%s">%s<h3>%s</h3>'
+                  '<p class="tier-pos">%s</p>%s<ul class="tier-inc">%s</ul>'
+                  '<a class="btn btn--dark" href="%s"%s>%s %s</a></article>'
+                  % (' is-best' if t.get('bestValue') else '',
+                     '<span class="tier-flag">Best Value</span>' if t.get('bestValue') else '',
+                     esc(t.get('name', '')), esc(t.get('positioning', '')), price, inc,
+                     esc(a['href']), a['attr'], esc(t.get('cta') or 'Book Room'), AR))
+    note = ('<p class="tier-note fade">%s</p>' % esc(src['note'])) if src.get('note') else ''
+    head = head_block(dict(b, eyebrow=b.get('eyebrow') or src.get('eyebrow'),
+                           headline=b.get('headline') or src.get('headline'),
+                           body=b.get('body') or src.get('body')))
+    return ('<section class="sec sec--paper"%s><div class="wrap">%s'
+            '<div class="tier-grid tier-n%d rv">%s</div>%s</div></section>'
+            % (' id="%s"' % esc(b['id']) if b.get('id') else '', head,
+               min(len(items), 4), cards, note))
+
+
+def checklist(b, D):
+    """A list of what KLIP can do, filtered to what KLIP actually offers.
+
+    An item with offered=false is left out entirely rather than greyed out:
+    a visitor reading a service list treats every line as a promise, and the
+    master brief is explicit that these appear only where KLIP offers them.
+    """
+    src = (D.get('podcastPage') or {}).get(b.get('source') or '', {}) \
+        if b.get('source') else b
+    items = [i for i in (src.get('items') or []) if i.get('offered')]
+    if not items:
+        return ''
+    lis = ''.join(
+        '<li class="fade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+        'stroke-width="1.8" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'
+        '<span>%s</span></li>' % esc(i.get('label', '')) for i in items)
+    cta = ''
+    if src.get('cta'):
+        cta = '<div class="chk-cta">%s</div>' % btn(src['cta'], 'btn--dark')
+    head = head_block(dict(b, eyebrow=b.get('eyebrow') or src.get('eyebrow'),
+                           headline=b.get('headline') or src.get('headline'),
+                           body=b.get('body') or src.get('body')))
+    return ('<section class="sec sec--paper"%s><div class="wrap">%s'
+            '<ul class="chk rv">%s</ul>%s</div></section>'
+            % (' id="%s"' % esc(b['id']) if b.get('id') else '', head, lis, cta))
+
+
+def note_panel(b, D):
+    """A single optional offer, such as host support. Hidden until offered."""
+    src = (D.get('podcastPage') or {}).get(b.get('source') or '', {}) \
+        if b.get('source') else b
+    if not src.get('offered'):
+        return ''
+    return ('<section class="sec sec--paper"%s><div class="wrap">'
+            '<div class="note-panel rv"><div><h3>%s</h3><p>%s</p></div>%s</div>'
+            '</div></section>'
+            % (' id="%s"' % esc(b['id']) if b.get('id') else '',
+               esc(src.get('title', '')), esc(src.get('text', '')),
+               btn(src.get('cta'), 'btn--outline') if src.get('cta') else ''))
+
+
 def visibility(b, D):
     V = D['visibility']
     return ('<section class="sec sec--paper" id="visibility"><div class="wrap"><div class="vis-panel rv">'
@@ -531,7 +637,8 @@ def cta(b, D):
 BLOCKS = {'pagehero': pagehero, 'editorial': editorial, 'split': split, 'cards': cards,
           'rooms': rooms, 'portfolio': portfolio, 'steps': steps, 'facts': facts,
           'clips': clips, 'visibility': visibility, 'cta': cta,
-          'faq': faq, 'duo': duo, 'photographers': photographers}
+          'faq': faq, 'duo': duo, 'photographers': photographers,
+          'tiers': tiers, 'checklist': checklist, 'notePanel': note_panel}
 
 
 def render_blocks(blocks, D):
