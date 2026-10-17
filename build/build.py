@@ -309,7 +309,7 @@ def home_main(D):
 
     T = D['studio']
     room_tiles = ''
-    for r in [x for x in T['rooms'] if x.get('active', True)]:
+    for _n, r in enumerate([x for x in T['rooms'] if x.get('active', True)], 1):
         # Three visible actions under every room, identical on both pages:
         # VIEW PHOTOS | EXPLORE ROOM ........ BOOK ROOM.
         # The photo itself opens the gallery, never booking.
@@ -323,14 +323,15 @@ def home_main(D):
         book = act({'booking': r.get('booking')}) if r.get('booking') else None
         room_tiles += ('<article class="room fade">%s<div class="room-text">'
                        '<a class="room-name" href="%s" data-track="explore_room" '
-                       'data-track-room="%s"><h3>%s</h3></a>'
+                       'data-track-room="%s"><span class="k-num">%02d</span>'
+                       '<h3>%s</h3></a>'
                        '<span>%s%s</span>%s'
                        '<div class="room-actions">%s'
                        '<a class="vp-btn vp-btn--ghost" href="%s" '
                        'data-track="explore_room" data-track-room="%s">'
                        '<span>Explore Room</span></a>%s</div>'
                        '</div></article>'
-                       % (media, esc(href), esc(name), esc(name),
+                       % (media, esc(href), esc(name), _n, esc(name),
                           esc(r.get('role') or r.get('card') or ''),
                           '<br>' + esc(r['price']) if r.get('price') else '',
                           ('<ul class="room-caps room-caps--mini">%s</ul>'

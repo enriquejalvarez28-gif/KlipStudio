@@ -1949,3 +1949,45 @@ input:focus-visible,[tabindex]:focus-visible{
   border-left:0;border-bottom:1.6px solid var(--red);
   border-right:1.6px solid var(--red);
   transform:rotate(45deg)}
+
+/* Room numbers (§6). 01 KLIP ROOM / 02 KAPTURE / 03 KREATOR / 04 KANVAS */
+.room-no{display:flex;align-items:center;gap:12px;font-family:'Montserrat',sans-serif;
+  font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--red)}
+.room-no span{display:inline-flex;align-items:center;justify-content:center;
+  min-width:30px;height:24px;border:1.5px solid var(--red);font-size:11px;
+  letter-spacing:.06em}
+.room-name .k-num{display:block;margin-bottom:5px;color:var(--red)}
+
+/* ------------------------------------------------------------------
+   §11 Insights — editorial, not another service grid. A featured
+   article is a large dark image-led card; the rest sit on warm paper.
+------------------------------------------------------------------ */
+.ins-card{background:var(--warm-2);border:var(--rule) solid #cfcbc3}
+.ins-grid--lead .ins-card{position:relative;background:var(--char);border:0}
+.ins-grid--lead .ins-img{aspect-ratio:21/9}
+.ins-grid--lead .ins-img::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(35,35,34,.15) 30%,rgba(35,35,34,.9))}
+.ins-grid--lead .ins-body{position:absolute;left:0;right:0;bottom:0;z-index:2;
+  padding:clamp(22px,2.4vw,36px);max-width:70ch}
+.ins-grid--lead .ins-body h3{color:#fff}
+.ins-grid--lead .ins-body p{color:#d5d3cf}
+.ins-grid--lead .ins-meta{color:#b9b7b3}
+.ins-grid--lead .ins-cat{color:#ff5a68}
+.ins-filters{border-bottom:var(--rule) solid var(--line);padding-bottom:16px}
+
+/* §12 About / FAQ — strong accordion rows on warm paper, not thin white
+   lines, plus a dark trust band for the differentiators. */
+.faq{border-top:2px solid var(--ink)}
+.faq-item{border-bottom:var(--rule) solid #cfcbc3;background:var(--warm);
+  padding:0 clamp(14px,1.6vw,22px);transition:background .25s ease}
+.faq-item:hover{background:var(--warm-2)}
+.faq-item[open]{background:var(--warm-2)}
+.faq-item summary{padding:clamp(19px,2vw,25px) 0}
+.faq-a{padding:0 0 clamp(18px,2vw,24px)}
+
+/* §10 Work — let the imagery carry it; the filter row stays light. */
+.work-filters{border-bottom:var(--rule) solid var(--line);padding-bottom:14px}
+.work-filters button{border-color:var(--line);font-size:11px}
+.work-filters button[aria-pressed="true"]{background:var(--ink);
+  border-color:var(--ink);color:#fff}

@@ -89,12 +89,16 @@ collections:
       - name: image
         label: Still image
         widget: image
-        hint: Shown instead of the video for visitors who have asked their device to reduce motion. Also
-          the social-sharing image.
+        hint: Shown instead of the video for visitors who have asked their device to reduce motion. Also the social-sharing image.
       - name: videoPoster
         label: Video poster frame
         widget: image
         hint: Shown for the split second before the loop starts. Use the loop's first frame.
+      - name: videoPosterMobile
+        label: Video poster frame (phone)
+        widget: image
+        required: false
+        hint: A smaller crop for phones. Blank uses the poster above.
       - name: videoMp4
         label: Hero loop — desktop (MP4)
         widget: file
@@ -261,6 +265,24 @@ collections:
           - tall
           - span2
           required: false
+        - name: format
+          label: Shape
+          widget: select
+          options:
+          - reel
+          - landscape
+          default: landscape
+          hint: reel is 9:16 vertical, landscape is 16:9. The homepage shows two of each.
+        - name: preview
+          label: Silent preview (WebM)
+          widget: string
+          required: false
+          hint: 3-5s, muted, under 350 KB.
+        - name: previewMp4
+          label: Silent preview (MP4)
+          widget: string
+          required: false
+          hint: The same clip as MP4, for Safari.
       - name: cta
         label: Section button
         widget: object
@@ -672,8 +694,7 @@ collections:
         - name: label
           label: Text
           widget: string
-      hint: Edited once here and used twice — the four tiles on the homepage and the large blocks on the
-        Studio page.
+      hint: Edited once here and used twice — the four tiles on the homepage and the large blocks on the Studio page.
 - name: photography
   label: Photographers
   files:
@@ -709,6 +730,11 @@ collections:
           widget: boolean
           default: false
           hint: Leave off until the profile is approved.
+        - name: temp
+          label: Placeholder profile
+          widget: boolean
+          default: false
+          hint: On keeps the profile private whatever else is set. A profile goes public only when it is active, not a placeholder, and has both a headshot and a provider ID.
         - name: specialties
           label: Specialties
           widget: string
@@ -753,8 +779,7 @@ collections:
         - name: booking
           label: Booking key
           widget: string
-      hint: Never publish a photographer’s personal phone, personal email, Instagram, personal website
-        or their own pricing.
+      hint: Never publish a photographer’s personal phone, personal email, Instagram, personal website or their own pricing.
 - name: podcasts
   label: Podcast clips
   files:
@@ -800,6 +825,24 @@ collections:
           widget: string
           required: false
           hint: A YouTube link makes the card open a player. Blank links it to the podcast page.
+        - name: kind
+          label: Type
+          widget: select
+          options:
+          - episode
+          - clip
+          default: episode
+          hint: Full episodes are 16:9 and ride the rail. Short clips are 9:16 and sit two to a row on a phone.
+        - name: preview
+          label: Silent preview (WebM)
+          widget: string
+          required: false
+          hint: 3-5s, muted, under 350 KB. Plays on hover or when the card is centred on a phone. One plays at a time.
+        - name: previewMp4
+          label: Silent preview (MP4)
+          widget: string
+          required: false
+          hint: The same clip as MP4, for Safari.
       - name: cta
         label: Section link
         widget: object
@@ -859,8 +902,7 @@ collections:
           label: Link
           widget: string
           required: false
-      hint: The strip stays hidden until “Show the logo strip” is switched on. Do not switch it on until
-        the logos are approved and KLIP has confirmed where the strip sits.
+      hint: The strip stays hidden until “Show the logo strip” is switched on. Do not switch it on until the logos are approved and KLIP has confirmed where the strip sits.
 - name: booking
   label: Booking & scheduling
   files:
@@ -1013,8 +1055,7 @@ collections:
       - name: aliases
         label: aliases
         widget: hidden
-      hint: 'Service and category IDs: SimplyBook admin → Manage → Services. Widget values: Custom Features
-        → Website widget.'
+      hint: 'Service and category IDs: SimplyBook admin → Manage → Services. Widget values: Custom Features → Website widget.'
   - name: calendly
     label: Calendly
     file: data/consultation.json
@@ -1158,6 +1199,12 @@ collections:
         - name: href
           label: Link
           widget: string
+        - name: mobileOnly
+          label: Hide from the desktop menu
+          widget: boolean
+          default: false
+          required: false
+          hint: On shows the link in the phone menu and the footer but not the top desktop bar, so the desktop row does not crowd.
       - name: cta
         label: Button
         widget: object
@@ -1390,8 +1437,7 @@ collections:
       - name: leadCta
         label: Lead form button
         widget: string
-      hint: Wording only. Scores come from a real scan of the address the visitor enters; nothing here
-        invents a number.
+      hint: Wording only. Scores come from a real scan of the address the visitor enters; nothing here invents a number.
 - name: pages
   label: Other pages
   files:
@@ -1586,8 +1632,7 @@ collections:
         - name: key
           label: Page
           widget: select
-          options: [home, studio, photography, podcasts, work, media, about,
-                    privacy, terms]
+          options: [home, studio, photography, podcasts, work, media, about, privacy, terms]
         - name: title
           label: Browser title
           widget: string
@@ -1729,19 +1774,31 @@ collections:
           widget: list
           field: {name: line, label: Line, widget: string}
         - {name: body, label: Intro, widget: text}
-        - name: items
-          label: Services
+        - name: modules
+          label: Modules
           widget: list
-          summary: '{{fields.label}}'
+          label_singular: Module
+          summary: '{{fields.title}}'
+          hint: Three cards. A service appears only when its own switch is on, and a module with nothing switched on is not shown at all.
           fields:
-          - {name: label, label: Service, widget: string}
-          - name: offered
-            label: KLIP offers this
-            widget: boolean
-            default: false
-            hint: >-
-              Off means it is not shown at all. Only switch on what KLIP
-              actually delivers today.
+          - name: title
+            label: Module title
+            widget: string
+          - name: text
+            label: One line under the title
+            widget: text
+          - name: items
+            label: Services
+            widget: list
+            summary: '{{fields.label}}'
+            fields:
+            - name: label
+              label: Service
+              widget: string
+            - name: offered
+              label: KLIP offers this
+              widget: boolean
+              default: false
       - name: guidance
         label: Need help with the show?
         widget: object
@@ -1752,13 +1809,31 @@ collections:
           widget: list
           field: {name: line, label: Line, widget: string}
         - {name: body, label: Intro, widget: text}
-        - name: items
-          label: Guidance services
+        - name: modules
+          label: Modules
           widget: list
-          summary: '{{fields.label}}'
+          label_singular: Module
+          summary: '{{fields.title}}'
+          hint: Three cards. A service appears only when its own switch is on, and a module with nothing switched on is not shown at all.
           fields:
-          - {name: label, label: Service, widget: string}
-          - {name: offered, label: KLIP offers this, widget: boolean, default: false}
+          - name: title
+            label: Module title
+            widget: string
+          - name: text
+            label: One line under the title
+            widget: text
+          - name: items
+            label: Services
+            widget: list
+            summary: '{{fields.label}}'
+            fields:
+            - name: label
+              label: Service
+              widget: string
+            - name: offered
+              label: KLIP offers this
+              widget: boolean
+              default: false
         - name: cta
           label: CTA
           widget: object
@@ -1896,9 +1971,7 @@ collections:
       - name: category
         label: Category
         widget: select
-        options: ['Podcasting', 'Studio + Content Creation', 'Photography',
-                  'Video + Reels', 'SEO + GEO / AI Search', 'Paid Media',
-                  'Social Media', 'Branding + Websites', 'Creator / Live Commerce']
+        options: ['Podcasting', 'Studio + Content Creation', 'Photography', 'Video + Reels', 'SEO + GEO / AI Search', 'Paid Media', 'Social Media', 'Branding + Websites', 'Creator / Live Commerce']
       - name: author
         label: Author
         widget: string

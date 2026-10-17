@@ -416,8 +416,8 @@ def rooms(b, D):
             r, href_detail,
             'loading="lazy" decoding="async" width="1600" height="900"' + dfoc)
         copy = '<div class="studio-copy">'
-        if r.get('role'):
-            copy += '<p class="eyebrow fade">%s</p>' % esc(r['role'])
+        copy += ('<p class="room-no fade"><span>%02d</span>%s</p>'
+                 % (i + 1, esc(r.get('role') or '')))
         copy += '<h2>%s</h2>' % headline([name])
         summary = r.get('summary') or r.get('sub')
         if summary:
