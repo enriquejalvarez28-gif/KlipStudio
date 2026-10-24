@@ -786,9 +786,20 @@
       /* ---- photographers ---- */
       function openPhotographers(){
         document.getElementById('pg-title').textContent=PG.title||'Photographers';
-        var fa=PG.firstAvailable||{};
-        document.getElementById('pg-body').innerHTML=
-          '<div class="pg-list">'+(PG.items||[]).map(function(x){
+        var fa=PG.firstAvailable||{}, items=PG.items||[];
+
+        /* Only approved profiles reach the config — the build filters out
+           anything still marked temp or missing a headshot or provider id.
+           So an empty list means none are approved yet, and the panel says
+           that instead of opening with nothing in it. */
+        var listHtml;
+        if(!items.length){
+          listHtml='<div class="pg-pending"><p>'+esc(PG.pendingNote||
+            'Individual photographer profiles are being finalised. Book First '+
+            'Available and KLIP will confirm your photographer before the session.')+
+            '</p></div>';
+        } else {
+          listHtml='<div class="pg-list">'+items.map(function(x){
             /* a face first: the headshot when there is one, the
                photographer's initials in the KLIP palette until then */
             var initials=String(x.name||'').replace(/—.*$/,'').trim().split(/\s+/)
@@ -796,12 +807,27 @@
             var face = x.headshot
               ? '<div class="pg-face">'+pic(x.headshot, x.name, 'loading="lazy" decoding="async"')+'</div>'
               : '<div class="pg-face pg-face--empty" aria-hidden="true"><span>'+esc(initials)+'</span></div>';
-            return '<div class="pg">'+face+'<b>'+esc(x.name)+'</b><span class="sp">'+esc(x.specialties)+'</span>'+
-              '<p>'+esc(x.bio)+'</p>'+
+
+            /* Their work, through the same gallery the rest of the site
+               uses, so the booking panel shows a whole profile and not
+               just a name and two lines. */
+            var shots=(x.portfolio||[]).filter(function(u){ return u; });
+            var work = shots.length
+              ? '<button type="button" class="pg-work" data-gallery="'+
+                esc(JSON.stringify(shots.map(function(u){ return [u,(x.name||'')+' — work']; })))+
+                '" data-gallery-name="'+esc(x.name||'')+'">View Work '+
+                '<span class="vp-n">'+shots.length+'</span></button>'
+              : '';
+
+            return '<div class="pg">'+face+'<b>'+esc(x.name)+'</b><span class="pg-sp">'+esc(x.specialties)+'</span>'+
+              '<p>'+esc(x.bio)+'</p><div class="pg-acts">'+
               '<a class="btn btn--dark" href="'+esc(B.base||'#')+'" data-booking="'+esc(x.booking||'photographySessions')+'"'+
             (x.providerId?' data-provider="'+esc(x.providerId)+'"':'')+'>'+
-              esc(PG.cta||'Book')+' <span class="ar" aria-hidden="true">&#8594;</span></a></div>';
-          }).join('')+'</div>'+
+              esc(PG.cta||'Book')+' <span class="ar" aria-hidden="true">&#8594;</span></a>'+work+'</div></div>';
+          }).join('')+'</div>';
+        }
+
+        document.getElementById('pg-body').innerHTML= listHtml +
           (fa.title?'<div class="pg-first"><div><b>'+esc(fa.title)+'</b><span>'+esc(fa.text||'')+'</span></div>'+
             '<a class="btn btn--ghost" href="'+esc(B.base||'#')+'" data-booking="'+esc(fa.booking||'photographySessions')+'">'+
             esc(fa.cta||'Find a time')+' <span class="ar" aria-hidden="true">&#8594;</span></a></div>':'')+

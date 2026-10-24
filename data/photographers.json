@@ -2,6 +2,7 @@
   "photographers": {
     "title": "KLIP Photographers",
     "intro": "Same KLIP package price whatever photographer you choose.",
+    "pendingNote": "Individual photographer profiles are being finalised. Book First Available and KLIP will confirm your photographer before the session.",
     "firstAvailable": {
       "title": "First Available",
       "text": "Show me the earliest available KLIP photographer.",

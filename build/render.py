@@ -638,12 +638,35 @@ def duo(b, D):
             % (' id="%s"' % esc(b['id']) if b.get('id') else '', head_block(b), panels))
 
 
+def portfolio_urls(p):
+    """A photographer's portfolio as a plain list of image paths.
+
+    /admin writes this list as objects — [{"image": "img/x.jpg"}] — because
+    the field has a named sub-field, but the gallery takes [url, alt] pairs.
+    Both shapes are accepted so a portfolio typed by hand as bare strings
+    works too, and anything empty or malformed is dropped rather than
+    reaching the page as "[object Object]".
+    """
+    out = []
+    for g in (p.get('portfolio') or []):
+        u = g.get('image') if isinstance(g, dict) else g
+        if u and isinstance(u, str):
+            out.append(u)
+    return out
+
+
 def photographers(b, D):
     """Real photographer cards. A profile is public only when it is active,
     not marked temp, and actually has a headshot and a provider id — the
     three together are what "approved" means. Everything else stays private,
     so placeholder names can live in the CMS without ever reaching a
-    visitor. First Available stays a small separate option beside them."""
+    visitor. First Available stays a small separate option beside them.
+
+    When nothing is approved yet the section does not simply collapse to a
+    stray sentence: it says plainly that profiles are on the way and keeps
+    First Available as the working path, because a visitor who came to pick
+    a photographer needs to know what happened and still be able to book.
+    """
     P = (D.get('photographers') or {})
     people = [p for p in (P.get('items') or [])
               if p.get('active') and not p.get('temp')
@@ -652,7 +675,7 @@ def photographers(b, D):
     cards = ''
     for p in people:
         a = act({'booking': p.get('booking'), 'provider': p.get('providerId')})
-        shots = [g for g in (p.get('portfolio') or []) if g]
+        shots = portfolio_urls(p)
         work = ''
         if shots:
             work = ('<button type="button" class="pg-work" data-gallery="%s" '
@@ -687,9 +710,15 @@ def photographers(b, D):
     if cards:
         body += '<div class="pg-grid rv">%s</div>%s%s' % (cards, note, aside)
     else:
-        # No approved profiles yet: show the one honest path rather than an
-        # empty grid or placeholder people.
-        body += '%s%s' % (note, aside)
+        # No approved profiles yet. Say so, rather than leaving a heading
+        # above nothing — which reads as a broken page, not a pending one.
+        # The wording lives in /admin so it can be changed without a build.
+        pending = P.get('pendingNote') or (
+            'Individual photographer profiles are being finalised. '
+            'Book First Available and KLIP will confirm your photographer '
+            'before the session.')
+        body += ('<div class="pg-pending fade"><p>%s</p></div>%s%s'
+                 % (esc(pending), note, aside))
     return ('<section class="sec sec--paper"%s><div class="wrap">%s</div></section>'
             % (' id="%s"' % esc(b['id']) if b.get('id') else '', body))
 

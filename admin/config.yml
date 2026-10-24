@@ -713,6 +713,11 @@ collections:
         label: Note under the list
         widget: text
         required: false
+      - name: pendingNote
+        label: Note shown while no profile is approved
+        widget: text
+        required: false
+        hint: Shown on the photography page and in the booking panel until at least one photographer has a headshot and a SimplyBook provider ID.
       - name: cta
         label: Button text
         widget: string

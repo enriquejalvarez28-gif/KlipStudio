@@ -473,7 +473,12 @@ def runtime_config(D):
         # whether or not anything renders it.
         'photographers': dict(
             D.get('photographers', {}),
-            items=[p for p in (D.get('photographers', {}).get('items') or [])
+            # Portfolios are normalised to plain paths here, the same way the
+            # page renderer does it, so the booking panel and the page card
+            # open the identical gallery instead of one of them shipping the
+            # raw {"image": ...} objects /admin writes.
+            items=[dict(p, portfolio=R.portfolio_urls(p))
+                   for p in (D.get('photographers', {}).get('items') or [])
                    if p.get('active') and not p.get('temp')
                    and p.get('headshot') and p.get('providerId')]),
         'visibility': D.get('visibility', {}),

@@ -680,7 +680,11 @@ body.cursor-link .cursor-ring{width:58px;height:58px;margin:-29px 0 0 -29px}
   letter-spacing:-.02em;color:#fff;opacity:.9;
 }
 .pg b{display:block;font-family:'Montserrat',sans-serif;font-size:15px;letter-spacing:-.01em}
-.pg .sp{display:block;margin:7px 0 10px;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;
+/* Was .pg .sp, which collided with .sp — the specials pop-up, a
+   position:fixed inset:0 overlay at z-index 118. The specialties span
+   inherited that and became a full-screen shield over the booking modal
+   (z-index 110), so nothing inside the panel could be clicked. */
+.pg .pg-sp{display:block;margin:7px 0 10px;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;
   letter-spacing:.16em;text-transform:uppercase;color:var(--gray)}
 .pg p{margin:0 0 18px;font-size:13.5px;line-height:1.55;color:var(--gray)}
 .pg .btn{width:100%;justify-content:space-between;padding:12px 14px;font-size:10px}
@@ -1182,9 +1186,29 @@ figure.has-gallery{position:relative}
 .pg-work:hover{background:var(--ink);color:#fff;border-color:var(--ink)}
 .pg-work:hover .vp-n{background:#fff;color:var(--ink)}
 .pg-note{margin-top:16px;font-size:14.5px;color:#6a6a66}
+
+/* Shown where the photographer cards would be, while no profile has been
+   approved. A heading over an empty space reads as a broken page; this
+   says what is happening and leaves First Available as the working path. */
+.pg-pending{border:1px solid var(--line);border-left:3px solid var(--red);
+  background:var(--white);padding:clamp(16px,2vw,22px) clamp(16px,2.2vw,24px);
+  margin-top:20px}
+.pg-pending p{margin:0;font-size:14.5px;line-height:1.6;color:#4a4a47}
+.mdl .pg-pending{margin-top:0}
+/* The modal's profile cards get the same action row as the page cards,
+   so a booking panel shows the headshot, the bio and the work. */
+.mdl .pg .pg-acts{margin-top:2px}
+.mdl .pg .pg-work{width:100%;justify-content:center}
 .pg-first{display:flex;align-items:center;justify-content:space-between;gap:20px;
   margin-top:14px;padding:18px 22px;border:1px solid var(--line);background:var(--white)}
 .pg-first p:last-of-type{font-size:14.5px;color:#4a4a47;margin-top:4px}
+/* The page's First Available panel is light; the one inside the booking
+   modal is the dark version. The light rule above sets a white background
+   but not a colour, so the modal's white type was landing on white —
+   1.0:1, the title invisible. State the dark panel explicitly. */
+.mdl .pg-first{background:var(--ink);border-color:var(--ink);color:#fff}
+.mdl .pg-first b{color:#fff}
+.mdl .pg-first span{color:#c6c6c6}
 
 @media (max-width:1024px){
   .pg-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
