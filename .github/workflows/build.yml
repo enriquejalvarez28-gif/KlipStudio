@@ -30,6 +30,12 @@ jobs:
         with:
           python-version: '3.12'
 
+      # The build imports these. Without them it does not fail, it quietly
+      # produces worse pages — Markdown article bodies came out with their
+      # "##" and "- " markers showing. Install them explicitly.
+      - name: Install build dependencies
+        run: python3 -m pip install --disable-pip-version-check -r requirements.txt
+
       - name: Build pages from CMS content
         run: python3 build/build.py
 

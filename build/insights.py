@@ -34,16 +34,73 @@ def slugify(v):
     return v or 'article'
 
 
+def _inline(t):
+    """Bold, italic, links and inline code, on text that is already escaped."""
+    t = re.sub(r'\[([^\]]+)\]\(([^)\s]+)\)', r'<a href="\2">\1</a>', t)
+    t = re.sub(r'\*\*([^*]+)\*\*', r'<strong>\1</strong>', t)
+    t = re.sub(r'(?<!\*)\*([^*\n]+)\*(?!\*)', r'<em>\1</em>', t)
+    t = re.sub(r'`([^`]+)`', r'<code>\1</code>', t)
+    return t
+
+
+def _fallback_markdown(raw):
+    """A small Markdown renderer for the subset the articles actually use:
+    headings, bullet and numbered lists, and paragraphs.
+
+    This is the path taken when the markdown library is absent. It used to
+    wrap every block in <p> regardless, so a published article showed its
+    own "##" and "- " markers — which is exactly what happened in CI, where
+    the library was never installed. Requirements and the workflow now
+    install it, and this keeps the failure mode readable rather than broken
+    if that ever stops being true.
+    """
+    out, lst, kind = [], [], None
+
+    def flush():
+        if lst:
+            out.append('<%s>%s</%s>'
+                       % (kind, ''.join('<li>%s</li>' % i for i in lst), kind))
+            lst.clear()
+
+    for line in raw.split('\n'):
+        ln = line.strip()
+        if not ln:
+            flush()
+            continue
+        h = re.match(r'(#{1,6})\s+(.*)', ln)
+        if h:
+            flush()
+            # Match the library: "##" is an h2. Clamped to h2 at the top so
+            # a stray "#" cannot add a second h1 beside the article title.
+            lvl = max(2, min(len(h.group(1)), 6))
+            out.append('<h%d>%s</h%d>'
+                       % (lvl, _inline(R.esc(h.group(2))), lvl))
+            continue
+        b = re.match(r'[-*+]\s+(.*)', ln)
+        n = re.match(r'\d+[.)]\s+(.*)', ln)
+        if b or n:
+            want = 'ul' if b else 'ol'
+            if kind != want:
+                flush()
+            kind = want
+            lst.append(_inline(R.esc((b or n).group(1))))
+            continue
+        flush()
+        out.append('<p>%s</p>' % _inline(R.esc(ln)))
+    flush()
+    return ''.join(out)
+
+
 def body_html(a):
-    """Article body. Markdown when the library is present, otherwise
-    paragraphs — never raw, unescaped HTML from the CMS."""
+    """Article body. Markdown when the library is present, otherwise the
+    small renderer above — never raw, unescaped HTML from the CMS, and
+    never visible Markdown markers either."""
     raw = a.get('body') or ''
     if not raw.strip():
         return ''
     if _md:
         return _md.markdown(raw, extensions=['extra', 'sane_lists'])
-    return ''.join('<p>%s</p>' % R.esc(p.strip())
-                   for p in re.split(r'\n\s*\n', raw) if p.strip())
+    return _fallback_markdown(raw)
 
 
 def load_articles():

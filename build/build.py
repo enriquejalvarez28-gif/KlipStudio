@@ -779,6 +779,19 @@ def build():
                                 indent=2, ensure_ascii=False),
                      'insights', share=share_a or share, site_head=head_tags,
                      config=json.dumps(cfg, ensure_ascii=False, separators=(',', ':')))
+        # Guard: an article must never ship with its Markdown showing. This
+        # happened in CI, where the markdown library was not installed and
+        # the body renderer wrapped "##" and "- " in <p> tags, so the live
+        # article displayed its own source. Requirements and the workflow
+        # now install it and the fallback renders properly, but a build that
+        # produces a visibly broken page should stop rather than publish it.
+        leaked = re.findall(r'<p>\s*(?:#{1,6}\s|[-*+]\s|\d+[.)]\s)', html)
+        if leaked:
+            raise SystemExit(
+                'Build stopped: %s has unrendered Markdown in its body (%d '
+                'instance(s), e.g. %r). Install the build dependencies with '
+                '"pip install -r requirements.txt" and build again.'
+                % (a['_file'], len(leaked), leaked[0]))
         with open(os.path.join(ROOT, a['_file']), 'w', encoding='utf-8') as fh:
             fh.write(html)
         written.append((a['_file'], len(html)))

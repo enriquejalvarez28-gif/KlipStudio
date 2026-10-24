@@ -1,0 +1,7 @@
+# Build-time dependencies for build/build.py.
+# Keep this in step with .github/workflows/build.yml — CI installs exactly
+# this file, so anything imported by the build belongs here. Without it the
+# build silently degrades: Markdown article bodies shipped with raw "##"
+# and "- " markers visible on the published page.
+markdown>=3.5,<4
+PyYAML>=6.0,<7
