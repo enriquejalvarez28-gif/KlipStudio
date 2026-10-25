@@ -1088,6 +1088,7 @@ function acctBlock(a) {
     } }, "Verify identity"));
     acts.push(el("button", { class: "btn sm danger", onclick: () => act("reject") }, "Not this account"));
   }
+  if (st === "NEEDS_REAUTH" && a.platform === "youtube") acts.unshift(el("button", { class: "btn gold sm", onclick: () => connect({ platform: "youtube" }) }, "Reconnect YouTube"));
   if (st === "OWNER_VERIFIED") acts.push(el("button", { class: "btn gold sm", onclick: () => act("assign") }, "Assign to brand"));
   if (["ASSIGNED", "ACTIVE", "SYNC_FAILED", "PERMISSION_LIMITED"].includes(st) && a.platform === "youtube") acts.push(el("button", { class: "btn sm", onclick: () => act("test") }, "Test connection"));
   if (st === "ASSIGNED" && ["spotify", "apple_podcasts"].includes(a.platform)) acts.push(el("button", { class: "btn gold sm", onclick: () => act("enable_import") }, "Enable import"));
@@ -1102,6 +1103,8 @@ function acctBlock(a) {
       el("dt", {}, "ID"), el("dd", {}, el("code", {}, a.platform_account_id)), el("dt", {}, "Verified"), el("dd", {}, a.verified_by ? `${a.verified_by} · ${ago(a.verified_at)}` : "not yet"),
       el("dt", {}, "Access"), el("dd", {}, a.access_level), el("dt", {}, "Last sync"), el("dd", {}, ago(a.last_successful_sync)), el("dt", {}, "Data as of"), el("dd", {}, a.data_as_of || "—")),
     a.last_error ? el("div", { class: "err" }, a.last_error) : null,
+    st === "NEEDS_REAUTH" && a.platform === "youtube" ? el("div", { class: "note", style: "font-size:12.5px;margin-top:8px" },
+      `Google signed this app out. Click “Reconnect YouTube”, sign in as ${a.connected_identity || "the Google account that owns the channel"} and click Continue. Back here, click “Verify identity” (type the ID above), then “Assign to brand”. History is kept.`) : null,
     el("div", { class: "row", style: "margin-top:10px" }, acts));
 }
 async function connect(t) {
