@@ -65,7 +65,7 @@ def retention_pattern(conn, tenant_id, vids):
         if len(ids) < 3:
             continue
         marks = {}
-        for x in (0.1, 0.25, 0.5, 0.9):
+        for x in (0.02, 0.1, 0.25, 0.5, 0.9):
             vals = [v for v in (_at(curves[a], x) for a in ids) if v is not None]
             marks[f"{int(x * 100)}%"] = round(100 * statistics.median(vals), 1) if vals else None
         zones, replays = Counter(), []
@@ -78,7 +78,8 @@ def retention_pattern(conn, tenant_id, vids):
                     zones[zone] += 1
                 elif e["kind"] == "replay" and e.get("t") is not None:
                     replays.append({"title": v["title"], "asset_id": a, "t": e["t"], "label": e["label"]})
-        out[fmt] = {"videos": len(ids), "still_watching_median_pct": marks, "drop_zones": dict(zones),
+        out[fmt] = {"videos": len(ids), "still_watching_median_pct": marks,
+                    "over_100_means": "viewers rewatching/looping (common on Shorts)", "drop_zones": dict(zones),
                     "replay_moments": replays[:5]}
     return out
 
@@ -135,7 +136,9 @@ BRIEF_INSTRUCTIONS = (
     "predict virality, never invent search volume, never invent guest quotes. 'title_words' are words more common in "
     "the best performers: present them as 'words that show up in what works', not guarantees. If data is thin, say so. "
     "Retention: 'still_watching_median_pct' is the median share still watching at that point of the video; "
-    "'drop_zones' counts sharp drops by part of the video. Use them for opening/ending advice. "
+    "Values above 100% mean viewers rewatch or loop (common on Shorts), not more viewers. "
+    "'drop_zones' counts sharp drops by part of the video; compare '2%' with '10%' to see how many leave in the opening. "
+    "Use them for opening/ending advice. "
     'Shape: {"headline":"one sentence","whats_happening":["3-5 bullets with numbers"],"whats_working":["2-4"],'
     '"where_viewers_leave":["2-3"],"next_episode":{"angle":"","why":"","opening":"how to open, first 30 s",'
     '"ending":"how to end/CTA","title_words":["4-6 words from INPUT.title_words or search_terms"],'
@@ -166,16 +169,21 @@ def rule_brief(f):
         name = "Shorts" if fmt == "short_heuristic" else "Long-form"
         m = r["still_watching_median_pct"]
         z = max(r["drop_zones"], key=r["drop_zones"].get) if r["drop_zones"] else None
-        leave.append(f"{name}: about {_pct(m.get('25%'))} still watching a quarter in, {_pct(m.get('50%'))} at the halfway point"
+        loop = " (over 100% = rewatching/looping)" if (m.get("10%") or 0) > 100 else ""
+        lost = (m["2%"] - m["10%"]) if m.get("2%") is not None and m.get("10%") is not None else None
+        leave.append(f"{name}: {_pct(m.get('10%'))} at the 10% mark{loop}, {_pct(m.get('25%'))} a quarter in, "
+                     f"{_pct(m.get('50%'))} at halfway" + (f"; {lost:.0f} points lost in the opening" if lost and lost > 0 else "")
                      + (f"; most sharp drops happen in the {z}." if z else "."))
     words = [w["word"] for fmt in ("long_form", "short_heuristic") for w in f["title_words"].get(fmt, [])][:6] \
         or [t["term"] for t in f["search_terms"][:6]]
     z_all = Counter()
     for r in f["retention"].values():
         z_all.update(r["drop_zones"])
-    opening = ("Most drops are in the opening: start with the guest's strongest answer, then introduce them."
-               if z_all and z_all.most_common(1)[0][0] == "opening" else
-               "Deliver what the title promises within the first 30 seconds; trim setup.")
+    lf = f["retention"].get("long_form", {}).get("still_watching_median_pct", {})
+    early_loss = (lf["2%"] - lf["10%"]) if lf.get("2%") is not None and lf.get("10%") is not None else 0
+    opening = (f"Long-form loses about {early_loss:.0f} points of viewers before the 10% mark: open with the guest's strongest "
+               "answer as a cold open, then introduce them." if early_loss >= 20 or (z_all and z_all.most_common(1)[0][0] == "opening")
+               else "Deliver what the title promises within the first 30 seconds; trim setup.")
     best = f["top"][0] if f["top"] else None
     return {
         "headline": (f"{best['title'].split('|')[0].strip()} is your strongest recent upload; build the next episode around that angle."
