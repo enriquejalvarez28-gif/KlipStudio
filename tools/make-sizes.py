@@ -56,6 +56,17 @@ for name in sorted(os.listdir(IMG)):
 with open(os.path.join(ROOT, 'data', 'srcset.json'), 'w', encoding='utf-8') as fh:
     json.dump(manifest, fh, indent=0, sort_keys=True)
 
+# data/webp.json is the guard the renderer checks before it emits a <picture>.
+# A photo whose .webp is missing from that list is rendered as a bare <img> —
+# no WebP and, worse, no responsive widths either, so a phone downloads the
+# full-size JPEG. It used to be maintained by hand, which meant every photo
+# added after it was written silently lost its srcset. Generate it from what
+# is actually on disk so the two can never disagree.
+webp = sorted(n for n in os.listdir(IMG) if n.lower().endswith('.webp'))
+with open(os.path.join(ROOT, 'data', 'webp.json'), 'w', encoding='utf-8') as fh:
+    json.dump(webp, fh, indent=0)
+
 total = sum(len(v) for v in manifest.values())
 print('%d new files; %d images with %d sources listed in data/srcset.json'
       % (made, len(manifest), total))
+print('%d full-size WebP files listed in data/webp.json' % len(webp))

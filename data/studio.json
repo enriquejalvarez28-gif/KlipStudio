@@ -47,6 +47,14 @@
           {
             "image": "img/klip-podcast-room-side-angle.jpg",
             "alt": "Klip Room — Side angle with the camera positions"
+          },
+          {
+            "image": "img/klip-podcast-room-clean-wide.jpg",
+            "alt": "Klip Room podcast set with leather chairs and round table"
+          },
+          {
+            "image": "img/klip-podcast-room-chairs.jpg",
+            "alt": "Klip Room seating and microphones against the stone wall"
           }
         ]
       },
@@ -76,6 +84,18 @@
           {
             "image": "img/klip-black-room-two-chair-setup.jpg",
             "alt": "Kapture Room — Two-chair conversation setup"
+          },
+          {
+            "image": "img/klip-black-room-purple-wide.jpg",
+            "alt": "Kapture Room table and microphones under purple accent lighting"
+          },
+          {
+            "image": "img/klip-black-room-table-screen.jpg",
+            "alt": "Kapture Room with the KLIP screen behind the interview table"
+          },
+          {
+            "image": "img/klip-black-room-mics.jpg",
+            "alt": "Two broadcast microphones on the Kapture Room table"
           }
         ]
       },
@@ -97,7 +117,24 @@
         "booking": "greenRoom",
         "anchor": "kreator-room",
         "focal": "50% 45%",
-        "gallery": []
+        "gallery": [
+          {
+            "image": "img/klip-green-screen-room-wide.jpg",
+            "alt": "Kreator Room green screen wall with lighting and stand"
+          },
+          {
+            "image": "img/klip-green-screen-room-stool.jpg",
+            "alt": "Kreator Room green screen with stool and microphone stand"
+          },
+          {
+            "image": "img/klip-green-screen-room-monitor.jpg",
+            "alt": "Kreator Room green screen with monitor and side table"
+          },
+          {
+            "image": "img/klip-green-screen-room-setup.jpg",
+            "alt": "Kreator Room green screen set up for a seated piece to camera"
+          }
+        ]
       },
       {
         "name": "Kanvas Room",
@@ -129,6 +166,18 @@
           {
             "image": "img/klip-content-headshot-room-close.jpg",
             "alt": "Kanvas Room — Interchangeable backdrops and lighting"
+          },
+          {
+            "image": "img/klip-white-wall-lights-wide.jpg",
+            "alt": "Kanvas Room white cyclorama with studio lighting and chairs"
+          },
+          {
+            "image": "img/klip-white-wall-full-setup.jpg",
+            "alt": "Kanvas Room photography setup with backdrops and lighting"
+          },
+          {
+            "image": "img/klip-white-wall-clean.jpg",
+            "alt": "Kanvas Room white backdrop with a stool, ready to shoot"
           }
         ]
       }

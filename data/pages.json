@@ -303,8 +303,8 @@
     "blocks": [
       {
         "type": "pagehero",
-        "image": "img/photo1.jpg",
-        "imageAlt": "Professional headshot session at Klip Studio",
+        "image": "img/klip-white-wall-lights-wide.jpg",
+        "imageAlt": "Kanvas Room white cyclorama lit for a headshot session",
         "eyebrow": "Klip Photography",
         "headline": [
           "Book A KLIP Photographer.",
@@ -333,7 +333,7 @@
         ],
         "items": [
           {
-            "image": "img/photo1.jpg",
+            "image": "img/klip-white-wall-lights-wide.jpg",
             "title": "Headshots",
             "sub": "Professional portraits for teams and individuals",
             "booking": "photographySessions"
@@ -371,8 +371,8 @@
             "eyebrow": "With A KLIP Photographer",
             "title": "Book A Photographer",
             "text": "Choose a KLIP photographer or let us assign the first available. Studio, photographer and edited images in one booking.",
-            "image": "img/photo1.jpg",
-            "imageAlt": "KLIP photographer shooting a portrait session in studio",
+            "image": "img/klip-white-wall-lights-wide.jpg",
+            "imageAlt": "Kanvas Room white cyclorama lit for a headshot session",
             "cta": {
               "label": "Choose A Photographer",
               "photographers": true
@@ -449,8 +449,8 @@
       },
       {
         "type": "split",
-        "image": "img/room4.jpg",
-        "imageAlt": "White wall photography studio with lighting",
+        "image": "img/klip-white-wall-lights-wide.jpg",
+        "imageAlt": "Kanvas Room white cyclorama with studio lighting",
         "eyebrow": "Two Ways In",
         "headline": [
           "Book A Session.",
@@ -555,8 +555,8 @@
     "blocks": [
       {
         "type": "pagehero",
-        "image": "img/pod1.jpg",
-        "imageAlt": "Podcast recording at Klip Studio",
+        "image": "img/klip-podcast-room-clean-wide.jpg",
+        "imageAlt": "Klip Room podcast set with leather chairs and round table",
         "eyebrow": "Podcasts",
         "headline": [
           "Record Your Podcast",
@@ -600,7 +600,7 @@
         ],
         "items": [
           {
-            "image": "img/pod1.jpg",
+            "image": "img/klip-podcast-room-clean-wide.jpg",
             "show": "Always Algo",
             "title": "La Verdad Sobre el Crédito",
             "time": "1:24",
@@ -608,7 +608,7 @@
             "kind": "episode"
           },
           {
-            "image": "img/pod2.jpg",
+            "image": "img/klip-gear-microphones.jpg",
             "show": "Respect Your Journey",
             "title": "Player Development",
             "time": "1:37",
@@ -616,7 +616,7 @@
             "kind": "episode"
           },
           {
-            "image": "img/pod3.jpg",
+            "image": "img/klip-black-room-mics.jpg",
             "show": "Business Talk",
             "title": "Marketing Que Funciona",
             "time": "1:15",
@@ -624,7 +624,7 @@
             "kind": "clip"
           },
           {
-            "image": "img/pod4.jpg",
+            "image": "img/klip-black-room-purple-wide.jpg",
             "show": "Health & Lifestyle",
             "title": "Mindset y Bienestar",
             "time": "1:42",
@@ -706,8 +706,8 @@
     "blocks": [
       {
         "type": "pagehero",
-        "image": "img/work1.jpg",
-        "imageAlt": "Branded podcast production at Klip Studio",
+        "image": "img/klip-podcast-room-clean-wide.jpg",
+        "imageAlt": "Klip Room podcast set with leather chairs and round table",
         "eyebrow": "Selected Work",
         "headline": [
           "Real Work.",
@@ -732,7 +732,7 @@
         "cols": 3,
         "items": [
           {
-            "image": "img/work1.jpg",
+            "image": "img/klip-podcast-room-clean-wide.jpg",
             "title": "Branded Podcast Series",
             "sub": "Podcast · Multicam",
             "href": "podcasts.html",
@@ -756,7 +756,7 @@
             "format": "landscape"
           },
           {
-            "image": "img/work4.jpg",
+            "image": "img/klip-black-room-purple-wide.jpg",
             "title": "Short-Form Social",
             "sub": "Reels · Vertical",
             "href": "media.html",
@@ -764,7 +764,7 @@
             "format": "reel"
           },
           {
-            "image": "img/work5.jpg",
+            "image": "img/klip-white-wall-lights-wide.jpg",
             "title": "Portrait & Branding",
             "sub": "Photography",
             "href": "photography.html",
@@ -878,8 +878,8 @@
     "blocks": [
       {
         "type": "pagehero",
-        "image": "img/about.jpg",
-        "imageAlt": "Behind the scenes on a KLIP production",
+        "image": "img/klip-lobby-lounge.jpg",
+        "imageAlt": "KLIP reception lounge with seating under the neon sign",
         "eyebrow": "About",
         "headline": [
           "More Than",

@@ -1,2 +1,11 @@
 __pycache__/
 *.pyc
+
+# Photo staging. Drop a shoot's files in here and run
+# tools/apply-photo-selection.py; only the photos the site actually uses get
+# committed, into img/. Keeping the full shoot out of the repo matters —
+# Cloudflare Pages publishes everything in it, so an unused 34 MB of source
+# frames would be served to the public for no reason.
+img/drive-in/
+img/drive-2048/
+img/rooms-in/

@@ -12,7 +12,7 @@
     },
     "items": [
       {
-        "image": "img/pod1.jpg",
+        "image": "img/klip-podcast-room-clean-wide.jpg",
         "show": "Always Algo",
         "title": "La Verdad Sobre el Crédito",
         "time": "1:24",
@@ -22,7 +22,7 @@
         "previewMp4": ""
       },
       {
-        "image": "img/pod2.jpg",
+        "image": "img/klip-gear-microphones.jpg",
         "show": "Respect Your Journey",
         "title": "Player Development",
         "time": "1:37",
@@ -32,7 +32,7 @@
         "previewMp4": ""
       },
       {
-        "image": "img/pod3.jpg",
+        "image": "img/klip-black-room-mics.jpg",
         "show": "Business Talk",
         "title": "Marketing Que Funciona",
         "time": "1:15",
@@ -42,7 +42,7 @@
         "previewMp4": ""
       },
       {
-        "image": "img/pod4.jpg",
+        "image": "img/klip-black-room-purple-wide.jpg",
         "show": "Health & Lifestyle",
         "title": "Mindset y Bienestar",
         "time": "1:42",
@@ -55,14 +55,14 @@
         "show": "Always Algo",
         "title": "Tasas y Mercado",
         "time": "0:58",
-        "image": "img/pod1.jpg",
+        "image": "img/klip-podcast-room-clean-wide.jpg",
         "kind": "clip"
       },
       {
         "show": "Respect Your Journey",
         "title": "Mentalidad De Atleta",
         "time": "1:06",
-        "image": "img/pod2.jpg",
+        "image": "img/klip-gear-microphones.jpg",
         "kind": "clip"
       }
     ]

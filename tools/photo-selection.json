@@ -1,0 +1,37 @@
+{
+  "_note": "Frames chosen from the Drive 'estudio' set (Oct 2026 shoot) and where each one goes. Source frame -> target filename in img/. The 2048px export of each frame is used, not the 1080px one. 'people' marks a photo showing identifiable faces: those are held back until Enrique confirms releases.",
+  "selection": [
+    {"frame": "_DSC0875", "target": "klip-green-screen-room-wide.jpg",      "room": "Kreator Room", "alt": "Kreator Room green screen wall with lighting and stand"},
+    {"frame": "_DSC0872", "target": "klip-green-screen-room-stool.jpg",     "room": "Kreator Room", "alt": "Kreator Room green screen with stool and microphone stand"},
+    {"frame": "_DSC0873", "target": "klip-green-screen-room-monitor.jpg",   "room": "Kreator Room", "alt": "Kreator Room green screen with monitor and side table"},
+    {"frame": "_DSC0871", "target": "klip-green-screen-room-setup.jpg",     "room": "Kreator Room", "alt": "Kreator Room green screen set up for a seated piece to camera"},
+
+    {"frame": "_DSC0837", "target": "klip-black-room-purple-wide.jpg",      "room": "Kapture Room", "alt": "Kapture Room table and microphones under purple accent lighting"},
+    {"frame": "_DSC0870", "target": "klip-black-room-table-screen.jpg",     "room": "Kapture Room", "alt": "Kapture Room with the KLIP screen behind the interview table"},
+    {"frame": "_DSC0868", "target": "klip-black-room-mics.jpg",             "room": "Kapture Room", "alt": "Two broadcast microphones on the Kapture Room table"},
+
+    {"frame": "_DSC0787", "target": "klip-podcast-room-clean-wide.jpg",     "room": "Klip Room",    "alt": "Klip Room podcast set with leather chairs and round table"},
+    {"frame": "_DSC0788", "target": "klip-podcast-room-chairs.jpg",         "room": "Klip Room",    "alt": "Klip Room seating and microphones against the stone wall"},
+
+    {"frame": "_DSC0879", "target": "klip-white-wall-lights-wide.jpg",      "room": "Kanvas Room",  "alt": "Kanvas Room white cyclorama with studio lighting and chairs"},
+    {"frame": "_DSC0877", "target": "klip-white-wall-full-setup.jpg",       "room": "Kanvas Room",  "alt": "Kanvas Room photography setup with backdrops and lighting"},
+    {"frame": "_DSC0882", "target": "klip-white-wall-clean.jpg",            "room": "Kanvas Room",  "alt": "Kanvas Room white backdrop with a stool, ready to shoot"},
+
+    {"frame": "_DSC0831", "target": "klip-lobby-lounge.jpg",                "room": null, "use": "facility", "alt": "KLIP reception lounge with seating under the neon sign"},
+    {"frame": "_DSC0833", "target": "klip-lobby-wide.jpg",                  "room": null, "use": "facility", "alt": "KLIP entrance hallway and waiting area"},
+    {"frame": "_DSC0830", "target": "klip-neon-sign.jpg",                   "room": null, "use": "facility", "alt": "The KLIP Studio neon sign"},
+    {"frame": "_DSC0898", "target": "klip-makeup-room.jpg",                 "room": null, "use": "facility", "alt": "Makeup and dressing room with a lit vanity mirror"},
+    {"frame": "_DSC0900", "target": "klip-makeup-hats.jpg",                 "room": null, "use": "facility", "alt": "Wardrobe hats on the dressing room wall"},
+
+    {"frame": "_DSC0813", "target": "klip-gear-camera.jpg",                 "room": null, "use": "gear", "alt": "Sony cinema camera and lens on a studio rig"},
+    {"frame": "_DSC0814", "target": "klip-gear-teleprompter.jpg",           "room": null, "use": "gear", "alt": "Teleprompter loaded with a script"},
+    {"frame": "_DSC0815", "target": "klip-gear-audio-board.jpg",            "room": null, "use": "gear", "alt": "Audio mixing board for multi-guest recording"},
+    {"frame": "_DSC0864", "target": "klip-gear-microphones.jpg",            "room": null, "use": "gear", "alt": "Broadcast microphones on the studio table"},
+    {"frame": "_DSC0785", "target": "klip-editing-suite.jpg",               "room": null, "use": "gear", "alt": "Edit suite with a colour-grading panel and timeline"},
+
+    {"frame": "_DSC0909", "target": "klip-headshot-session.jpg",            "room": null, "use": "photography", "people": true, "alt": "A KLIP photographer shooting a seated headshot on the white backdrop"},
+    {"frame": "_DSC0914", "target": "klip-headshot-result.jpg",             "room": null, "use": "photography", "people": true, "alt": "Seated portrait taken on the KLIP white backdrop"},
+    {"frame": "_DSC0796", "target": "klip-podcast-session.jpg",             "room": null, "use": "inuse", "people": true, "alt": "A podcast being recorded in the Klip Room"},
+    {"frame": "_DSC0803", "target": "klip-podcast-handshake.jpg",           "room": null, "use": "inuse", "people": true, "alt": "Two people shaking hands at the end of a recording"}
+  ]
+}

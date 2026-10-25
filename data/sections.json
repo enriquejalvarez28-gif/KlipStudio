@@ -100,7 +100,7 @@
     },
     "items": [
       {
-        "image": "img/work4.jpg",
+        "image": "img/klip-black-room-purple-wide.jpg",
         "title": "Short-Form Social",
         "category": "Reels · Vertical",
         "href": "work.html#projects",
@@ -110,7 +110,7 @@
         "previewMp4": ""
       },
       {
-        "image": "img/work5.jpg",
+        "image": "img/klip-white-wall-lights-wide.jpg",
         "title": "Portrait & Branding",
         "category": "Photography",
         "href": "work.html#projects",
@@ -120,7 +120,7 @@
         "previewMp4": ""
       },
       {
-        "image": "img/work1.jpg",
+        "image": "img/klip-podcast-room-clean-wide.jpg",
         "title": "Branded Podcast Series",
         "category": "Podcast · Multicam",
         "href": "work.html#projects",
@@ -182,8 +182,8 @@
     ]
   },
   "about": {
-    "image": "img/about.jpg",
-    "imageAlt": "Behind the scenes on a KLIP production",
+    "image": "img/klip-lobby-lounge.jpg",
+    "imageAlt": "KLIP reception lounge with seating under the neon sign",
     "headline": [
       "More Than A Studio"
     ],
