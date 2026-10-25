@@ -303,6 +303,13 @@ MIGRATIONS = [
     """
     CREATE INDEX IF NOT EXISTS metrics_by_grain ON metrics (tenant_id, grain, metric_name, period_start);
     """,
+    # v8 (2026-10-25): one-click growth briefs (facts snapshot + written brief).
+    """
+    CREATE TABLE growth_briefs (
+        id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, brief_json TEXT NOT NULL, facts_json TEXT NOT NULL,
+        source TEXT NOT NULL, created_at TEXT NOT NULL
+    );
+    """,
 ]
 
 

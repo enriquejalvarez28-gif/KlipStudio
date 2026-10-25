@@ -109,7 +109,7 @@ function checkRow(c) {
 
 /* ── navigation ────────────────────────────────────────────────────── */
 const NAV = [
-  ["Overview", [["home", "Home", "⌂"], ["analytics", "Analytics overview", "◔"]]],
+  ["Overview", [["home", "Home", "⌂"], ["brief", "Growth brief", "✦"], ["analytics", "Analytics overview", "◔"]]],
   ["Content", [["episodes", "Episode intelligence", "▦"], ["youtube", "YouTube", "▶"], ["instagram", "Instagram", "◎"], ["podcasts", "Podcasts", "♪"]]],
   ["Labs", [["thumbnails", "Thumbnail lab", "▣"], ["titles", "Title lab", "T"], ["seo", "SEO & discoverability", "⌕"]]],
   ["Growth", [["monetization", "Monetization", "$"], ["discovery", "Discovery", "⌖"], ["trends", "Trend radar", "↗"], ["recommendations", "Recommendations", "✦"], ["calendar", "Content calendar", "▤"]]],
@@ -210,7 +210,7 @@ PAGES.home = async () => {
   const wrap = el("div", {});
   wrap.append(ph(b.is_demo ? "Synthetic demo" : "Owner dashboard", b.display_name,
     `Last 28 days on connected platforms. Platforms are shown separately; views, plays and listeners are never added together.`,
-    freshBadge(yt.data_as_of), el("button", { class: "btn", onclick: async () => { await api("/api/jobs/analytics_sync/run", { tenant_id: S.brand }); toast("Refresh queued"); } }, "↻ Refresh")));
+    freshBadge(yt.data_as_of), el("button", { class: "btn gold", onclick: () => { sessionSet("brief.run", "1"); location.hash = "#/brief"; } }, "✦ Analyze everything"), el("button", { class: "btn", onclick: async () => { await api("/api/jobs/analytics_sync/run", { tenant_id: S.brand }); toast("Refresh queued"); } }, "↻ Refresh")));
   if (d.alerts.length) wrap.append(el("div", { class: "callout", style: "border-color:var(--bad);margin-bottom:14px" },
     el("b", {}, `${d.alerts.length} job alert(s). `), d.alerts[0].source, ": ", d.alerts[0].message, " ", el("a", { href: "#/jobs" }, "Open job health")));
 
@@ -601,6 +601,47 @@ PAGES.monetization = async () => {
     el("ul", { style: "margin:0;padding-left:18px;line-height:1.7;font-size:13.5px" }, m.notes.map((n) => el("li", {}, n)),
       el("li", {}, `Shorts watch time in the last 90 days: ${nf(m.shorts_watch_hours_90d)} h (doesn't count toward the watch-hour goal).`)),
     el("div", { class: "foot" }, "Sources: ", m.sources.map((u, i) => el("a", { href: u, target: "_blank", rel: "noopener", style: "margin-right:10px" }, i ? "Expanded YPP" : "YPP overview")))));
+  return wrap;
+};
+
+PAGES.brief = async () => {
+  const run = sessionGet("brief.run", "") === "1"; sessionSet("brief.run", "");
+  const wrap = el("div", {});
+  const go = async (btn, force) => {
+    btn.disabled = true; const old = btn.textContent; btn.textContent = "Analyzing all dashboards… (up to a minute)";
+    try { await api(T("brief"), { force }); route(true); } catch (e) { toast(e.message, true); btn.disabled = false; btn.textContent = old; }
+  };
+  const runBtn = el("button", { class: "btn gold", onclick: (e) => go(e.target, false) }, "✦ Analyze everything");
+  const freshBtn = el("button", { class: "btn ghost", onclick: (e) => go(e.target, true) }, "Re-run fresh");
+  wrap.append(ph("Growth brief", "What's happening and what to do next", "One click reads every dashboard (views, watch time, retention, search terms, audience, traffic, thumbnails, trends) and writes a recap plus a plan for the next episode.", runBtn, freshBtn));
+  const d = await api(T("brief"));
+  if (run) setTimeout(() => go(runBtn, false), 0);
+  if (!d.brief) { wrap.append(emptyState({ title: "No brief yet.", body: "Press “Analyze everything”. It uses only your own data and changes nothing on YouTube." })); return wrap; }
+  const b = d.brief, n = b.next_episode || {}, f = d.facts || {};
+  const ul = (xs) => (xs && xs.length ? el("ul", { style: "margin:4px 0 0;padding-left:18px;line-height:1.65" }, xs.map((x) => el("li", {}, x))) : el("p", { class: "empty" }, "Not enough data yet."));
+  const kv = (k, v) => (v ? el("div", { style: "margin:6px 0" }, el("b", {}, k + ": "), v) : null);
+  wrap.append(el("div", { class: "callout sec", style: "font-size:16px" }, el("b", {}, b.headline || ""), el("div", { class: "faint", style: "font-size:12px;margin-top:4px" }, `${d.source} · ${ago(d.created_at)} · data through ${f.freshness || "—"}`)));
+  wrap.append(el("div", { class: "grid g3 sec" },
+    card("What's happening", null, ul(b.whats_happening)),
+    card("What's working", null, ul(b.whats_working)),
+    card("Where viewers leave", null, ul(b.where_viewers_leave))));
+  wrap.append(el("section", { class: "card sec" }, el("div", { class: "card-h" }, el("h2", {}, "Next episode plan")),
+    kv("Angle", n.angle), kv("Why", n.why), kv("Opening (first 30 s)", n.opening), kv("Ending", n.ending),
+    n.title_words && n.title_words.length ? el("div", { style: "margin:8px 0" }, el("b", {}, "Words that show up in what works: "), n.title_words.map((w) => el("span", { class: "tag", style: "margin:2px 4px 2px 0" }, w))) : null,
+    n.title_options && n.title_options.length ? el("div", {}, el("b", {}, "Title options"), el("ol", { style: "margin:4px 0;padding-left:20px" }, n.title_options.map((t) => el("li", {}, t)))) : null,
+    kv("Thumbnail", n.thumbnail), n.shorts_to_cut && n.shorts_to_cut.length ? el("div", {}, el("b", {}, "Shorts to cut"), ul(n.shorts_to_cut)) : null));
+  wrap.append(el("div", { class: "grid g2 sec" },
+    card("This week: 3 actions", null, el("ol", { style: "margin:4px 0 0;padding-left:20px;line-height:1.7" }, (b.this_week || []).map((x) => el("li", {}, x)))),
+    card("Watch next", null, el("p", { style: "margin:0" }, b.watch_next || "—"))));
+  const tw = f.title_words || {};
+  const twRows = Object.entries(tw).flatMap(([fmt, rows]) => rows.map((r) => el("tr", {}, el("td", {}, r.word), el("td", {}, fmtName(fmt)), el("td", { class: "r" }, `${r.in_top} of ${r.top_n}`), el("td", { class: "r" }, `${r.in_rest} of ${r.rest_n}`))));
+  const rp = f.retention || {};
+  wrap.append(el("details", { class: "card sec" }, el("summary", { style: "cursor:pointer;font-weight:600" }, "The numbers behind this brief"),
+    twRows.length ? el("div", { class: "tbl-wrap", style: "margin-top:10px" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["Word in title", "Format", "Top quarter", "Everything else"].map((h, i) => el("th", { class: i > 1 ? "r" : "" }, h)))), el("tbody", {}, twRows))) : el("p", { class: "faint" }, "Title words need at least 8 settled videos per format."),
+    Object.entries(rp).map(([fmt, r]) => el("p", { style: "font-size:13px" }, el("b", {}, `${fmtName(fmt)} retention (${r.videos} videos): `), Object.entries(r.still_watching_median_pct).map(([k, v]) => `${v ?? "—"}% still watching at ${k}`).join(" · "), r.drop_zones && Object.keys(r.drop_zones).length ? ` · sharp drops: ${Object.entries(r.drop_zones).map(([z, c]) => `${z} ${c}`).join(", ")}` : "")),
+    (f.search_terms || []).length ? el("p", { style: "font-size:13px" }, el("b", {}, "Top search terms: "), f.search_terms.slice(0, 10).map((t) => `${t.term} (${nf(t.views)})`).join(" · ")) : null,
+    el("p", { class: "faint", style: "font-size:12px" }, d.note)));
+  if (d.history.length > 1) wrap.append(el("div", { class: "faint sec", style: "font-size:12px" }, `Previous briefs: ${d.history.slice(1).map((h) => ago(h.created_at)).join(" · ")}`));
   return wrap;
 };
 

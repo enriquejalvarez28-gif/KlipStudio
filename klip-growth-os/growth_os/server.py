@@ -21,7 +21,7 @@ from datetime import date
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from growth_os import ai, analytics, api, brands, db, discovery, prep, reports, scheduler, thumbs, vault
+from growth_os import ai, analytics, api, brands, brief, db, discovery, prep, reports, scheduler, thumbs, vault
 from growth_os.connectors import podcast, youtube
 from growth_os.db import DATA_DIR, new_id, set_setting, utcnow
 from growth_os.http import BudgetExceeded, HttpError
@@ -211,6 +211,7 @@ class Handler(BaseHTTPRequestHandler):
             "monetization": lambda: analytics.monetization(c, t),
             "audience": lambda: analytics.audience(c, t),
             "discovery": lambda: discovery.page(c, t),
+            "brief": lambda: brief.latest(c, t),
             "cohorts": lambda: prep.cohorts(c, t, q.get("format") or None),
             "settings": lambda: api.settings(c, t),
             "tiles": lambda: tiles(c, t),
@@ -256,6 +257,8 @@ class Handler(BaseHTTPRequestHandler):
         return self._send(404, {"error": "not found"})
 
     def tenant_post(self, c, t, rest, body):
+        if rest == "brief":
+            return self._send(200, brief.generate(c, t, force=bool(body.get("force"))))
         m = re.fullmatch(r"recommendations/(rec_[a-f0-9]+)/(prepare|dry-run)", rest)
         if m or rest in ("discovery/distribution", "discovery/ai-sample", "discovery/plan"):
             try:

@@ -713,3 +713,40 @@ class TestSpecV5(unittest.TestCase):
         self.assertEqual(row[0], "blocked")
         data = reports.build_data(c, self.D, date.today() - timedelta(days=7), date.today())
         self.assertIn("BLOCKED", [a["state"] for a in data["actions"]])
+
+
+class TestGrowthBrief(unittest.TestCase):
+    D = "demo-synthetic"
+
+    def test_rule_brief_then_ai_brief(self):
+        from growth_os import brief
+        c, _ = fresh()
+        seed.seed_demo(c)
+        off = {"enabled": True, "cli_found": False, "daily_cap": 9, "used_today": 0, "reason": "no CLI in tests"}
+        with mock.patch.object(ai, "status", return_value=off):
+            d = brief.generate(c, self.D)
+        self.assertTrue(d["brief"]["_rule_based"])
+        self.assertTrue(d["source"].startswith("Rule-based"))
+        f = d["facts"]
+        self.assertTrue(f["kpis"] and f["top"] and f["formats"])
+        self.assertTrue(d["brief"]["whats_happening"] and d["brief"]["next_episode"]["opening"])
+        for rows in f["title_words"].values():  # only over-represented words, with real counts
+            self.assertTrue(all(r["in_top"] >= 2 and r["lift"] >= 1.5 for r in rows))
+        out = {"headline": "h", "whats_happening": ["a"], "whats_working": [], "where_viewers_leave": [],
+               "next_episode": {"title_words": ["coach"]}, "this_week": ["x", "y", "z"], "watch_next": "w"}
+        on = dict(off, cli_found=True)
+        with mock.patch.object(ai, "status", return_value=on):
+            d2 = brief.generate(c, self.D, runner=lambda p, m: {"result": json.dumps(out)})
+        self.assertEqual(d2["brief"]["headline"], "h")
+        self.assertIn("AI synthesis", d2["source"])
+        self.assertEqual(len(d2["history"]), 2)
+        self.assertIsNone(brief.latest(c, "ryj-media")["brief"])  # tenant isolation
+
+    def test_title_words_lift(self):
+        from growth_os import brief
+        mk = lambda i, t, vpd: {"asset_id": str(i), "title": t, "format": "long_form", "views_per_day": vpd, "age_days": 30,
+                                "metrics": {}}
+        vids = [mk(i, "Coach Secrets Revealed", 100 + i) for i in range(3)] + [mk(10 + i, "Weekly Update Show", 5) for i in range(9)]
+        words = {r["word"] for r in brief.title_words(vids)["long_form"]}
+        self.assertIn("coach", words)
+        self.assertNotIn("weekly", words)
