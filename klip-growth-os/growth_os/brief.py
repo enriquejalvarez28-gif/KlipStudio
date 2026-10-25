@@ -137,7 +137,7 @@ BRIEF_INSTRUCTIONS = (
     "the best performers: present them as 'words that show up in what works', not guarantees. If data is thin, say so. "
     "Retention: 'still_watching_median_pct' is the median share still watching at that point of the video; "
     "Values above 100% mean viewers rewatch or loop (common on Shorts), not more viewers. "
-    "'drop_zones' counts sharp drops by part of the video; compare '2%' with '10%' to see how many leave in the opening. "
+    "'drop_zones' counts sharp drops by part of the video; 100 minus the '10%' value is the share gone in the opening. "
     "Use them for opening/ending advice. "
     'Shape: {"headline":"one sentence","whats_happening":["3-5 bullets with numbers"],"whats_working":["2-4"],'
     '"where_viewers_leave":["2-3"],"next_episode":{"angle":"","why":"","opening":"how to open, first 30 s",'
@@ -170,9 +170,9 @@ def rule_brief(f):
         m = r["still_watching_median_pct"]
         z = max(r["drop_zones"], key=r["drop_zones"].get) if r["drop_zones"] else None
         loop = " (over 100% = rewatching/looping)" if (m.get("10%") or 0) > 100 else ""
-        lost = (m["2%"] - m["10%"]) if m.get("2%") is not None and m.get("10%") is not None else None
+        lost = (100 - m["10%"]) if m.get("10%") is not None and m["10%"] < 100 else None
         leave.append(f"{name}: {_pct(m.get('10%'))} at the 10% mark{loop}, {_pct(m.get('25%'))} a quarter in, "
-                     f"{_pct(m.get('50%'))} at halfway" + (f"; {lost:.0f} points lost in the opening" if lost and lost > 0 else "")
+                     f"{_pct(m.get('50%'))} at halfway" + (f"; about {lost:.0f}% of viewers are gone before the 10% mark" if lost else "")
                      + (f"; most sharp drops happen in the {z}." if z else "."))
     words = [w["word"] for fmt in ("long_form", "short_heuristic") for w in f["title_words"].get(fmt, [])][:6] \
         or [t["term"] for t in f["search_terms"][:6]]
@@ -180,8 +180,8 @@ def rule_brief(f):
     for r in f["retention"].values():
         z_all.update(r["drop_zones"])
     lf = f["retention"].get("long_form", {}).get("still_watching_median_pct", {})
-    early_loss = (lf["2%"] - lf["10%"]) if lf.get("2%") is not None and lf.get("10%") is not None else 0
-    opening = (f"Long-form loses about {early_loss:.0f} points of viewers before the 10% mark: open with the guest's strongest "
+    early_loss = (100 - lf["10%"]) if lf.get("10%") is not None else 0
+    opening = (f"About {early_loss:.0f}% of long-form viewers leave before the 10% mark: open with the guest's strongest "
                "answer as a cold open, then introduce them." if early_loss >= 20 or (z_all and z_all.most_common(1)[0][0] == "opening")
                else "Deliver what the title promises within the first 30 seconds; trim setup.")
     best = f["top"][0] if f["top"] else None
