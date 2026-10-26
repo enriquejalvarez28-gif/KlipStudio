@@ -607,6 +607,42 @@
 "img/klip-green-screen-room-wide.webp"
 ]
 ],
+"img/klip-headshot-result.jpg": [
+[
+480,
+"img/r/klip-headshot-result-480.webp"
+],
+[
+768,
+"img/r/klip-headshot-result-768.webp"
+],
+[
+1200,
+"img/r/klip-headshot-result-1200.webp"
+],
+[
+1365,
+"img/klip-headshot-result.webp"
+]
+],
+"img/klip-headshot-session.jpg": [
+[
+480,
+"img/r/klip-headshot-session-480.webp"
+],
+[
+768,
+"img/r/klip-headshot-session-768.webp"
+],
+[
+1200,
+"img/r/klip-headshot-session-1200.webp"
+],
+[
+1365,
+"img/klip-headshot-session.webp"
+]
+],
 "img/klip-lobby-lounge.jpg": [
 [
 480,
@@ -711,6 +747,28 @@
 [
 2000,
 "img/klip-neon-sign.webp"
+]
+],
+"img/klip-podcast-handshake.jpg": [
+[
+480,
+"img/r/klip-podcast-handshake-480.webp"
+],
+[
+768,
+"img/r/klip-podcast-handshake-768.webp"
+],
+[
+1200,
+"img/r/klip-podcast-handshake-1200.webp"
+],
+[
+1600,
+"img/r/klip-podcast-handshake-1600.webp"
+],
+[
+2000,
+"img/klip-podcast-handshake.webp"
 ]
 ],
 "img/klip-podcast-room-behind-the-scenes.jpg": [
@@ -843,6 +901,28 @@
 [
 2000,
 "img/klip-podcast-room-wide-angle.webp"
+]
+],
+"img/klip-podcast-session.jpg": [
+[
+480,
+"img/r/klip-podcast-session-480.webp"
+],
+[
+768,
+"img/r/klip-podcast-session-768.webp"
+],
+[
+1200,
+"img/r/klip-podcast-session-1200.webp"
+],
+[
+1600,
+"img/r/klip-podcast-session-1600.webp"
+],
+[
+2000,
+"img/klip-podcast-session.webp"
 ]
 ],
 "img/klip-white-wall-chair-and-stool.jpg": [

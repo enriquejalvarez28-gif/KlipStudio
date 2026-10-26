@@ -237,6 +237,55 @@
         "body": "Choose the room and the production style that fits what you are making."
       },
       {
+        "type": "cards",
+        "id": "amenities",
+        "ratio": "portrait",
+        "eyebrow": "What Else Is Here",
+        "headline": [
+          "Everything Around",
+          "The Room"
+        ],
+        "lede": "The room is the booking. These come with the building.",
+        "items": [
+          {
+            "image": "img/klip-makeup-room.jpg",
+            "title": "Makeup + Dressing Room",
+            "sub": "A lit vanity mirror and a private space to get ready",
+            "alt": "Dressing room with a lit vanity mirror"
+          },
+          {
+            "image": "img/klip-makeup-hats.jpg",
+            "title": "Props + Wardrobe",
+            "sub": "Hats and simple props on the wardrobe wall",
+            "alt": "Hats hanging on the dressing room wall"
+          },
+          {
+            "image": "img/klip-lobby-wide.jpg",
+            "title": "Reception + Lounge",
+            "sub": "Somewhere for guests to sit before they are on",
+            "alt": "KLIP entrance hallway and waiting area"
+          },
+          {
+            "image": "img/klip-gear-camera.jpg",
+            "title": "Cinema Cameras",
+            "sub": "Sony cinema bodies, set up and ready in the rooms",
+            "alt": "Sony cinema camera and lens on a studio rig"
+          },
+          {
+            "image": "img/klip-gear-audio-board.jpg",
+            "title": "Broadcast Audio",
+            "sub": "Broadcast microphones on a dedicated mixing board",
+            "alt": "Audio mixing board for multi-guest recording"
+          },
+          {
+            "image": "img/klip-gear-teleprompter.jpg",
+            "title": "Teleprompter",
+            "sub": "For scripted segments and straight-to-camera reads",
+            "alt": "Teleprompter loaded with a script"
+          }
+        ]
+      },
+      {
         "type": "split",
         "reverse": true,
         "image": "img/location.jpg",
@@ -333,7 +382,7 @@
         ],
         "items": [
           {
-            "image": "img/klip-white-wall-lights-wide.jpg",
+            "image": "img/klip-headshot-result.jpg",
             "title": "Headshots",
             "sub": "Professional portraits for teams and individuals",
             "booking": "photographySessions"

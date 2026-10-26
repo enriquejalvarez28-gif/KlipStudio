@@ -1,7 +1,7 @@
 {
   "hero": {
-    "image": "img/hero.jpg",
-    "imageAlt": "Microphone being set up in a darkened recording studio",
+    "image": "img/klip-neon-sign.jpg",
+    "imageAlt": "The KLIP Studio neon sign",
     "videoMp4": "video/klip-hero.mp4",
     "videoWebm": "video/klip-hero.webm",
     "videoMobile": "video/klip-hero-mobile.mp4",
