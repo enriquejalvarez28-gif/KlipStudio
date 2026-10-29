@@ -594,7 +594,7 @@ class TestThumbnailStrategy(unittest.TestCase):
         self.assertEqual((ex[0]["id"], ex[0]["result"]["winner"]), (e["id"], "A"))
         self.assertIn("confounded", ex[0]["result"]["caveat"])
         st = api.thumb_studio(c, "ryj-media", "vT")
-        self.assertEqual((st["recommended"], st["current_format"]), ("trio", "guest"))
+        self.assertEqual((st["recommended"], st["current_format"]), ("viral", "guest"))
         self.assertGreaterEqual(len(st["previews"]), 1)  # two renders in the same second share a stamp
 
 
@@ -917,3 +917,25 @@ class TestDeepDiveAndTitles(TestAutopilot):
         self.assertEqual(ap.cap(c, self.T), 5)
         with self.assertRaises(ValueError):
             ap.set_cap(c, self.T, 50)
+
+
+class TestViralThumbnail(unittest.TestCase):
+    def test_layout_sharp_faces_only_and_inside_frame(self):
+        from PIL import Image, ImageDraw
+        from growth_os import viral
+        d = db.DATA_DIR / "viraltest"
+        d.mkdir(exist_ok=True)
+        src = d / "orig.jpg"
+        Image.new("RGB", (1280, 720), (30, 30, 30)).save(src)
+        cuts = {}
+        for role, col, face in (("jamar", (220, 0, 0), 150), ("guest", (0, 220, 0), 260), ("enrique", (0, 0, 220), 80)):
+            im = Image.new("RGBA", (400, 500), (0, 0, 0, 0))
+            ImageDraw.Draw(im).ellipse([60, 40, 340, 500], fill=col + (255,))
+            im.save(d / f"{role}.png")
+            cuts[role] = (d / f"{role}.png", {"face_px": face})
+        out = viral.render(src, "IS HE THE *BEST?*", cuts)
+        px = [out.getpixel((x, y)) for x in range(520, 1280, 8) for y in range(200, 720, 8)]
+        self.assertTrue(any(p[1] > 180 and p[0] < 80 for p in px))       # guest (green) is in
+        self.assertTrue(any(p[0] > 180 and p[1] < 80 for p in px))       # sharp host (red) is in
+        self.assertFalse(any(p[2] > 180 and p[0] < 80 and p[1] < 80 for p in px))  # blurry wide-shot host left out
+        self.assertEqual(out.size, (1280, 720))

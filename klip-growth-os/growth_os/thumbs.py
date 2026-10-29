@@ -27,7 +27,8 @@ from growth_os import analytics
 from growth_os.db import DATA_DIR, new_id, utcnow
 
 MIN_IMPRESSIONS = 100  # below this a video's CTR is noise (e.g. 0 clicks on 12 impressions)
-FORMATS = {"guest": "Guest-focused", "host_guest": "Host + guest", "host_led": "Host-led", "trio": "Host + co-host + guest"}
+FORMATS = {"guest": "Guest-focused", "host_guest": "Host + guest", "host_led": "Host-led", "trio": "Host + co-host + guest",
+           "viral": "Viral cut-out (big faces, outline, few words)"}
 W, H = 1280, 720
 ASSETS = Path(__file__).resolve().parent / "assets"
 BRAND_DIR = DATA_DIR / "brand"
@@ -121,8 +122,9 @@ def recommend_format(conn, tenant_id, asset_id):
     if not v:
         raise LookupError("video not found for this brand")
     base, why = suggest_format(v["title"])
-    if v["format"] == "long_form":  # owner rule (2026-10-28): episodes show host, co-host and guest from that episode
-        base, why = "trio", "RYJ episode standard: both hosts and the guest, cut from this episode's own frames"
+    if v["format"] == "long_form":  # owner rules (2026-10-28): this episode's own people, viral style
+        base, why = "viral", ("Viral RYJ style: the guest big and in front with whichever host is sharp in this episode's "
+                              "frames, cut out with a white outline, 2-4 huge words")
     current = tags(conn, tenant_id).get(asset_id)
     perf = [r for r in format_performance(conn, tenant_id)["rows"] if r["video_format"] == v["format"]]
     evidence = None
@@ -482,7 +484,20 @@ def previews(conn, tenant_id, asset_id, headlines, fmt="guest", credential=""):
                 cast = cast_mod.load(tenant_id, asset_id)
         except Exception:
             cast = {}
-    fmt = fit_format(fmt, cast)
+    cuts = {}
+    if fmt == "viral":
+        cuts = cast_mod.load_cuts(tenant_id, asset_id)
+        if not cuts:
+            try:  # casts built before cut-outs existed: rebuild once
+                if cast_mod.available()[0]:
+                    cast_mod.build(conn, tenant_id, asset_id)
+                    cuts, cast = cast_mod.load_cuts(tenant_id, asset_id), cast_mod.load(tenant_id, asset_id)
+            except Exception:
+                cuts = {}
+        if not cuts:
+            fmt = "trio"
+    if fmt != "viral":
+        fmt = fit_format(fmt, cast)
     out_dir = DATA_DIR / "previews" / tenant_id / asset_id
     out_dir.mkdir(parents=True, exist_ok=True)
     stamp = utcnow().replace(":", "").replace("-", "")[:15]
@@ -490,7 +505,12 @@ def previews(conn, tenant_id, asset_id, headlines, fmt="guest", credential=""):
     made, labels = [], []
     for i, h in enumerate([h for h in headlines if h and h.strip()][:2]):
         name = f"{stamp}-{fmt}-{'AB'[i]}.jpg"
-        img = render(src, h, fmt=fmt, credential=credential, cast=cast, out_path=out_dir / name)
+        if fmt == "viral":
+            from growth_os import viral
+            frames = sorted((DATA_DIR / "frames" / tenant_id).glob(f"{asset_id}_*.jpg"))
+            img = viral.render(src, h, cuts, out_path=out_dir / name, backdrop=frames[0] if frames else None)
+        else:
+            img = render(src, h, fmt=fmt, credential=credential, cast=cast, out_path=out_dir / name)
         made.append({"file": name, "headline": h, "format": fmt, "url": f"/preview/{tenant_id}/{asset_id}/{name}"})
         labels.append(f"{'AB'[i]}: {FORMATS[fmt]}")
     sheet = f"{stamp}-{fmt}-sheet.jpg"
