@@ -22,7 +22,7 @@ MODELS = {
     "rec": ("face_recognition_sface_2021dec.onnx",
             "https://github.com/opencv/opencv_zoo/raw/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx"),
 }
-HOST_MATCH = 0.50      # SFace cosine: hosts score 0.55–0.98 on RYJ frames, guests < 0.40
+HOST_MATCH = 0.62      # SFace cosine: real host matches score 0.66–1.0 on RYJ frames; look-alikes 0.55–0.57; guests < 0.40
 UNSURE = 0.36          # between UNSURE and HOST_MATCH: not sure who it is → not used at all
 GUEST_MATCH = 0.45     # a Short belongs to the episode when its guest face matches this well
 SHORTS_WINDOW_DAYS = 45
@@ -139,8 +139,8 @@ def _crop(img, f, out_path):
     """Portrait around the face: shoulders up, face a bit above center. Returns horizontal focus (0–1)."""
     H, W = img.shape[:2]
     x, y, w, h = (float(v) for v in f[:4])
-    cw = min(W, w * 3.2)
-    top, bot = max(0, y - h * 1.1), min(H, y + h * 4.2)
+    cw = min(W, w * 2.6)
+    top, bot = max(0, y - h * 1.0), min(H, y + h * 2.4)  # shoulders up: stops above burned-in captions
     cx = x + w / 2
     x0 = int(max(0, min(W - cw, cx - cw / 2)))
     crop = img[int(top):int(bot), x0:int(x0 + cw)]
