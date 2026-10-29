@@ -11,6 +11,13 @@ from growth_os import ai, analytics, thumbs
 from growth_os.db import DATA_DIR, utcnow
 
 NO_REPACKAGE = ("double_down", "funnel")  # winners / funnel fixes keep their packaging
+SEO_INSTRUCTIONS = (
+    "Write YouTube description opening lines and tags for the video in INPUT (a sports interview podcast). "
+    "first_lines: 2 short sentences (max 300 characters) that say what the viewer will learn, naming the guest if given, "
+    "using one natural search phrase from INPUT.search_terms or the title. Only facts in INPUT: no invented credentials, "
+    "stats, quotes or links. tags: 8-12 specific tags about THIS video's subject (no unrelated topics, no hashtags). "
+    'Shape: {"first_lines":"","tags":[""]}'
+)
 PREP_STRATEGIES = ["search_driven", "curiosity", "hybrid_search_plus_curiosity"]
 
 
@@ -153,8 +160,22 @@ def asset_pack(conn, tenant_id, asset_id, *, diagnosis="", runner=None, thumbnai
     lead = base + ("" if not base or base[-1] in ".?!" else ".")
     if guest:
         lead += f" {guest} joins {show} to talk {keyword or 'sports'}." if show else f" With {guest}."
+    low = (v["title"] or "").lower()
+    relevant_kws = [k for k in kws if k.lower() in low]  # only brand topics this video is actually about
+    if guest and keyword and kw_basis.startswith("first brand topic"):
+        lead = lead.replace(f" to talk {keyword}.", ".")  # don't claim a topic the video may not cover
+    ai_seo = {}
+    try:
+        seo_payload = {"title": v["title"], "guest": guest, "show": show, "format": v["format"],
+                       "search_terms": [s["term"] for s in d["search_terms"][:8]], "related_topics": relevant_kws[:6]}
+        ai_seo, _ = ai.ask(conn, tenant_id, f"prep_seo:{asset_id}", seo_payload, SEO_INSTRUCTIONS, runner=runner)
+        if ai_seo.get("first_lines"):
+            lead = str(ai_seo["first_lines"]).strip()[:400]
+    except (ai.AIUnavailable, ValueError, KeyError):
+        pass
     tags, seen = [], set()
-    for t in [s["term"] for s in d["search_terms"][:6]] + ([guest] if guest else []) + ([show] if show else []) + kws[:6]:
+    for t in [s["term"] for s in d["search_terms"][:6]] + list(ai_seo.get("tags") or [])[:10] \
+            + ([guest] if guest else []) + ([show] if show else []) + relevant_kws[:4]:
         k = (t or "").strip()
         if k and k.lower() not in seen and len(k) <= 60:
             seen.add(k.lower())
