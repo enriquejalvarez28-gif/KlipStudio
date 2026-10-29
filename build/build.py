@@ -186,6 +186,25 @@ def footer(D, here):
 
 
 # --------------------------------------------------------------- homepage
+# The homepage, in order. Everything home_main builds is keyed by name, so
+# shortening the page is a matter of removing a name here rather than
+# deleting the code that makes it — and putting one back is one word.
+#
+# Parked, and why: 'work', 'photography', 'industries', 'about-klip' and
+# 'on-location' each have their own page in the nav and were costing about
+# five phone screens between them on the way to the rooms. The homepage sells
+# the rooms and points at the rest; it does not try to be the rest.
+HOME_ORDER = [
+    'top',          # hero
+    'doors',        # what KLIP is, and the four ways in - media included
+    'studio',       # the rooms: the thing a visitor can actually book
+    'podcasts',     # the reason most of them are here
+    'services',     # the media side, one block
+    'visibility',   # the free check, a real lead source
+    'contact',
+]
+
+
 def home_main(D):
     esc, btn, pic, icon, headline, act = R.esc, R.btn, R.pic, R.icon, R.headline, R.act
     H = D['hero']
@@ -218,7 +237,8 @@ def home_main(D):
         % (esc(poster_m), esc(poster), esc(H.get('imageAlt', '')),
            esc(H.get('videoMobileWebm', '')), esc(H.get('videoWebm', '')),
            esc(H.get('videoMobile', '')), esc(H.get('videoMp4', ''))))
-    out = [
+    sec = {}
+    sec['top'] = (
         '<section class="hero" id="top">'
         '<div class="hero-media">%s</div>%s'
         '<div class="hero-scrim" aria-hidden="true"></div>'
@@ -232,22 +252,28 @@ def home_main(D):
            esc(H.get('eyebrow', '')), headline(H['headline']), esc(H.get('body', '')),
            btn(H['primaryCta'], 'btn--solid'), btn(H['secondaryCta'], 'btn--ghost'),
            ''.join('<span class="fade">%s</span>' % esc(p) for p in H.get('proof', [])),
-           R.lines(H.get('sideNote', [])))]
+           R.lines(H.get('sideNote', []))))
 
     S = D['services']
-    out.append(
+    # Nine service cards with a paragraph each cost 2.3 phone screens here,
+    # and every one of them is explained properly on the Media page. On the
+    # homepage the job is only to say that KLIP does this at all, and how
+    # broad it is, so the same nine ship as a dense list of names with one
+    # way through. The descriptions stay on /media where someone reading
+    # them has already chosen to.
+    sec['services'] = (
         '<section class="sec sec--paper" id="services"><div class="wrap">'
         '<div class="sec-head rv"><div class="titles"><p class="eyebrow fade">%s</p><h2>%s</h2></div>'
         '<div class="aside"><p class="lede fade">%s</p>%s</div></div>'
-        '<div class="svc-grid rv">%s</div></div></section>'
+        '<ul class="svc-list rv">%s</ul></div></section>'
         % (esc(S['eyebrow']), headline(S['headline']), esc(S['body']),
            btn(S.get('cta'), 'btn--outline'),
-           ''.join('<a class="svc fade" href="%s">%s<h3>%s</h3><p>%s</p></a>'
-                   % (esc(i['href']), icon(i['icon']), esc(i['title']), esc(i['text']))
+           ''.join('<li class="fade"><a href="%s">%s<span>%s</span></a></li>'
+                   % (esc(i['href']), icon(i['icon']), esc(i['title']))
                    for i in S['items'])))
 
     W = D['why']
-    out.append(
+    sec['why'] = (
         '<section class="sec sec--paper" id="why" style="padding-top:0"><div class="wrap">'
         '<div class="why-split rv"><div><h2>%s</h2>'
         '<p class="lede fade" style="margin-top:20px">%s</p></div>'
@@ -256,8 +282,9 @@ def home_main(D):
            ''.join('<div class="why-point fade"><b>%s</b><span>%s</span></div>'
                    % (esc(p['title']), esc(p['text'])) for p in W['points'])))
 
-    out.append(R.visibility({}, D).replace('<section class="sec sec--paper" id="visibility">',
-                                           '<section class="sec sec--paper" id="visibility" style="padding-top:0">'))
+    sec['visibility'] = R.visibility({}, D).replace(
+        '<section class="sec sec--paper" id="visibility">',
+        '<section class="sec sec--paper" id="visibility" style="padding-top:0">')
 
     K = D['work']
     # A set of exactly two reels and two landscape projects tiles perfectly on
@@ -282,7 +309,7 @@ def home_main(D):
                   % (cls, esc(w['href']), prev,
                      pic(w['image'], w['title'], 'loading="lazy" decoding="async" width="1500" height="940"'),
                      esc(w['category']), esc(w['title']), R.AR))
-    out.append(
+    sec['work'] = (
         '<section class="sec sec--dark" id="work"><div class="wrap">'
         '<div class="sec-head rv"><div class="titles"><p class="eyebrow on-dark fade">%s</p><h2>%s</h2></div>'
         '<div class="aside right">%s</div></div><div class="work-grid work-grid--home%s rv">%s</div></div></section>'
@@ -294,7 +321,7 @@ def home_main(D):
     clips = [c for c in P['items'] if (c.get('kind') or 'episode') == 'clip']
     # Episodes are the rail that auto-advances on a phone; clips sit two to a
     # row underneath and never auto-scroll. Same split as the Podcasts page.
-    out.append(
+    sec['podcasts'] = (
         '<section class="sec sec--paper" id="podcasts"><div class="wrap">'
         '<div class="sec-head rv"><div class="titles"><p class="eyebrow fade">%s</p><h2>%s</h2></div>'
         '<div class="aside right"><div style="display:flex;align-items:center;gap:26px" class="fade">'
@@ -348,7 +375,7 @@ def home_main(D):
                            'data-track="book_room" data-track-room="%s">Book Room %s</a>'
                            % (esc(book['href']), book['attr'], esc(name), R.AR))
                           if book else ''))
-    out.append(
+    sec['studio'] = (
         '<section id="studio" style="background:var(--paper);padding-bottom:clamp(44px,5vw,78px)">'
         '<div class="studio-split rv"><figure>%s</figure>'
         '<div class="studio-copy"><p class="eyebrow fade">%s</p><h2>%s</h2>'
@@ -363,7 +390,7 @@ def home_main(D):
            btn(T.get('featuresCta'), 'btn--ghost')))
 
     F = D['photography']
-    out.append(
+    sec['photography'] = (
         '<section class="sec" id="photography" style="background:var(--paper);'
         'padding-top:clamp(30px,3vw,46px)"><div class="wrap"><div class="photo-split rv">'
         '<div><p class="eyebrow fade">%s</p><h2>%s</h2>'
@@ -380,7 +407,7 @@ def home_main(D):
                       esc(p['label'])) for p in F['items'])))
 
     L = D['location']
-    out.append(
+    sec['on-location'] = (
         '<section class="location" id="on-location"><div class="bg">%s</div>'
         '<div class="scrim" aria-hidden="true"></div><div class="wrap">'
         '<div class="loc-copy rv"><h2>%s</h2>'
@@ -392,7 +419,7 @@ def home_main(D):
            ''.join('<div class="fade">%s</div>' % esc(c) for c in L['categories'])))
 
     I = D['industries']
-    out.append(
+    sec['industries'] = (
         '<section class="sec sec--paper" id="industries"><div class="wrap">'
         '<div class="sec-head rv"><div class="titles"><h2>%s</h2></div>'
         '<div class="aside"><p class="lede fade">%s</p></div></div>'
@@ -406,7 +433,7 @@ def home_main(D):
                       esc(t['title']), esc(t['examples'])) for t in I['items'])))
 
     A = D['about']
-    out.append(
+    sec['about-klip'] = (
         '<section class="sec sec--paper" id="about-klip" style="padding-top:0"><div class="wrap">'
         '<div class="about-split rv"><figure>%s</figure><div><h2>%s</h2>'
         '<p class="lede fade" style="margin-top:20px">%s</p>'
@@ -415,8 +442,29 @@ def home_main(D):
                'loading="lazy" decoding="async" width="1400" height="933"'),
            headline(A['headline']), esc(A['body']), btn(A.get('cta'), 'btn--dark')))
 
-    out.append(R.cta({}, D))
-    return '\n'.join(out)
+    sec['contact'] = R.cta({}, D)
+
+    # The four doors, straight under the hero: what KLIP is and where to go,
+    # inside one phone screen. This is also where the media side is stated,
+    # rather than being discovered eight screens down.
+    DO = D.get('doors') or {}
+    if DO.get('items'):
+        sec['doors'] = (
+            '<section class="sec sec--warm doors" id="doors"><div class="wrap">'
+            '<div class="sec-head rv"><div class="titles">'
+            '<p class="eyebrow fade">%s</p><h2>%s</h2></div>'
+            '<div class="aside"><p class="lede fade">%s</p></div></div>'
+            '<div class="door-grid rv">%s</div></div></section>'
+            % (esc(DO.get('eyebrow', '')), headline(DO.get('headline') or []),
+               esc(DO.get('body', '')),
+               ''.join('<a class="door fade" href="%s"><span class="door-n">%02d</span>'
+                       '<b>%s</b><span class="door-sub">%s</span>'
+                       '<span class="go">%s</span></a>'
+                       % (esc(i.get('href', '#')), n, esc(i.get('title', '')),
+                          esc(i.get('sub', '')), R.AR)
+                       for n, i in enumerate(DO['items'], 1))))
+
+    return '\n'.join(sec[k] for k in HOME_ORDER if sec.get(k))
 
 
 # ------------------------------------------------------------------ pages

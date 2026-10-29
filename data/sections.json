@@ -1,4 +1,34 @@
 {
+  "doors": {
+    "eyebrow": "Studio + Media Company",
+    "headline": [
+      "Book The Room.",
+      "Or Hand Us The Whole Thing"
+    ],
+    "body": "Four rooms you can book by the hour, and a team that can run the content after.",
+    "items": [
+      {
+        "title": "Studio Rooms",
+        "sub": "Podcast, video, photo. Book by the hour.",
+        "href": "studio.html"
+      },
+      {
+        "title": "Podcast Production",
+        "sub": "Self-service, with a tech, or a finished episode.",
+        "href": "podcasts.html"
+      },
+      {
+        "title": "Photography",
+        "sub": "Headshots, branding and product.",
+        "href": "photography.html"
+      },
+      {
+        "title": "Content + Marketing",
+        "sub": "Editing, social, ads and automations.",
+        "href": "media.html"
+      }
+    ]
+  },
   "services": {
     "eyebrow": "Klip Media",
     "headline": [

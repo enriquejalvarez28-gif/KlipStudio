@@ -1107,6 +1107,55 @@ figure.has-gallery{position:relative}
 }
 
 /* ------------------------------------------------------------------
+   The four doors, directly under the hero. Text only, no images: it has
+   to render instantly and fit inside one phone screen, because its whole
+   job is telling someone what KLIP is before they decide to scroll.
+   Two across on a phone, four across from tablet up.
+   ------------------------------------------------------------------ */
+/* The homepage's media list: nine service names, two across on a phone.
+   Names only - the descriptions live on the Media page. */
+.svc-list{list-style:none;margin:20px 0 0;padding:0;display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;
+  background:var(--line);border:1px solid var(--line)}
+.svc-list li{background:var(--white)}
+.svc-list a{display:flex;align-items:center;gap:10px;padding:14px 15px;
+  text-decoration:none;color:inherit;font-family:'Montserrat',sans-serif;
+  font-size:12.5px;letter-spacing:-.01em;transition:background .25s ease}
+.svc-list a:hover{background:var(--paper);color:var(--red)}
+.svc-list .ki{width:18px;height:18px;flex:0 0 18px}
+/* An odd number of services leaves a dead cell in the two-column phone
+   grid; the last one takes the full width instead. Nine into three on
+   desktop divides exactly, so this is phone-only. */
+@media (max-width:760px){
+  .svc-list li:last-child:nth-child(odd){grid-column:1/-1}
+}
+@media (min-width:761px){
+  .svc-list{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .svc-list a{font-size:14px;padding:17px 18px}
+}
+
+.doors{padding-bottom:clamp(30px,3.5vw,54px)}
+.door-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:1px;background:var(--line);border:1px solid var(--line);margin-top:20px}
+.door{display:flex;flex-direction:column;gap:5px;background:var(--white);
+  padding:clamp(14px,2vw,22px);text-decoration:none;color:inherit;
+  transition:background .25s ease}
+.door:hover{background:var(--paper)}
+.door-n{font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;
+  letter-spacing:.18em;color:var(--red)}
+.door b{font-family:'Montserrat',sans-serif;font-size:14px;letter-spacing:-.01em;
+  line-height:1.25}
+.door-sub{font-size:13px;line-height:1.45;color:var(--gray)}
+.door .go{margin-top:auto;padding-top:10px;font-family:'Montserrat',sans-serif;
+  font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink)}
+.door:hover .go{color:var(--red)}
+@media (min-width:761px){
+  .door-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .door b{font-size:16px}
+}
+
+/* ------------------------------------------------------------------
    FAQ. <details> so it works with the keyboard and without JavaScript,
    and so every answer is in the HTML for search engines whether the
    row is open or shut. The marker is replaced, not hidden, so the

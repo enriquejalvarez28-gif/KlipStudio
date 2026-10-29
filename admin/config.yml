@@ -142,6 +142,34 @@ collections:
     label: Homepage sections
     file: data/sections.json
     fields:
+    - name: doors
+      label: Four doors under the hero
+      widget: object
+      fields:
+      - name: eyebrow
+        label: Eyebrow
+        widget: string
+        required: false
+      - name: headline
+        label: Headline lines
+        widget: list
+      - name: body
+        label: Lede
+        widget: text
+        required: false
+      - name: items
+        label: Doors
+        widget: list
+        fields:
+        - name: title
+          label: Title
+          widget: string
+        - name: sub
+          label: One line under the title
+          widget: string
+        - name: href
+          label: Links to
+          widget: string
     - name: services
       label: Services grid
       widget: object
