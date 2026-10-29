@@ -206,6 +206,14 @@ def host_photos():
     return sorted([p for p in (BRAND_DIR / "hosts").glob("*") if p.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp")])
 
 
+def host_focus():
+    """Optional data/brand/hosts.json: {"enrique": 0.42} = where the face sits across each host photo (0–1)."""
+    try:
+        return {k: float(v) for k, v in json.loads((BRAND_DIR / "hosts.json").read_text()).items()}
+    except (OSError, ValueError, AttributeError):
+        return {}
+
+
 def _cover(img, w, h, focus_x=0.5):
     """Scale-and-crop to fill w×h (no distortion, no face edits)."""
     s = max(w / img.width, h / img.height)
@@ -286,6 +294,7 @@ def parse_headline(text, max_lines=3):
     text = re.sub(r"\s+", " ", (text or "").strip().upper())
     if not text:
         return []
+    text = re.sub(r"\*([^*]+)\*([?!.,]+)", r"*\1\2*", text)  # keep "?" with its gold word
     gold_spans = set()
     toks, gold = [], False
     for raw in re.split(r"(\*|/)", text):
@@ -332,18 +341,21 @@ def render(orig_path, headline, *, fmt="guest", credential="", host_paths=(), go
         canvas.paste(portrait, (W - portrait.width, 0))
     else:
         # Split the right panel: guest keeps the larger share; hosts come from real host photos only.
-        people = [_portrait_from_original(orig)] if fmt == "host_guest" else []
-        people += [Image.open(p).convert("RGB") for p in host_paths[: (1 if fmt == "host_guest" else 2)]]
-        widths = [int(pw * 0.6), pw - int(pw * 0.6)] if fmt == "host_guest" else [pw // len(people)] * len(people)
+        hints = host_focus()
+        hosts = list(host_paths[: (1 if fmt == "host_guest" else 2)])
+        people = ([(_portrait_from_original(orig), 0.5)] if fmt == "host_guest" else []) + \
+            [(Image.open(p).convert("RGB"), hints.get(Path(p).stem, 0.5)) for p in hosts]
+        widths = [int(pw * 0.55), pw - int(pw * 0.55)] if fmt == "host_guest" else [pw // len(people)] * len(people)
         x = right_x
-        for img, w in zip(people, widths):
-            canvas.paste(_cover(img, w, ph, 0.5), (x, 0))
+        for (img, fx), w in zip(people, widths):
+            canvas.paste(_cover(img, w, ph, fx), (x, 0))
             x += w
     # Fade the photo into the black panel (same treatment as the originals).
     fade = Image.new("L", (W, H), 0)
     fd = ImageDraw.Draw(fade)
-    for i in range(220):
-        fd.line([(right_x + i, 0), (right_x + i, H)], fill=int(255 * (1 - i / 220) ** 1.6))
+    fw = 220 if fmt == "guest" or not host_paths else 60  # narrow fade when several faces share the panel
+    for i in range(fw):
+        fd.line([(right_x + i, 0), (right_x + i, H)], fill=int(255 * (1 - i / fw) ** 1.6))
     fd.rectangle([0, 0, right_x, H], fill=255)
     canvas = Image.composite(Image.new("RGB", (W, H), (8, 8, 8)), canvas, fade)
     d = ImageDraw.Draw(canvas)
