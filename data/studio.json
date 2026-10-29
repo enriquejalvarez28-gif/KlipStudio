@@ -135,8 +135,8 @@
       {
         "name": "Kanvas Room",
         "role": "Photography + E-Commerce",
-        "image": "img/klip-white-wall-full-setup.jpg",
-        "imageAlt": "Kanvas Room photography setup with backdrops and lighting",
+        "image": "img/klip-white-wall-studio-wide.jpg",
+        "imageAlt": "Kanvas Room white wall with a chair and two studio lights",
         "card": "White cyc wall, backdrops, GVM lighting and a private prep area",
         "summary": "A clean photo and product-content space for headshots, e-commerce, UGC and campaign work.",
         "capabilities": [
@@ -152,8 +152,12 @@
         "focal": "50% 44%",
         "gallery": [
           {
-            "image": "img/klip-white-wall-studio-wide.jpg",
-            "alt": "Kanvas Room seamless white cyc wall with professional lighting"
+            "image": "img/klip-photographer-shooting.jpg",
+            "alt": "A KLIP photographer shooting a seated portrait on the white wall"
+          },
+          {
+            "image": "img/klip-white-wall-full-setup.jpg",
+            "alt": "Kanvas Room photography setup with backdrops and lighting"
           },
           {
             "image": "img/klip-white-wall-chair-and-stool.jpg",

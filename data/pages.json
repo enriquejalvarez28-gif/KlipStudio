@@ -498,8 +498,8 @@
       },
       {
         "type": "split",
-        "image": "img/klip-white-wall-lights-wide.jpg",
-        "imageAlt": "Kanvas Room white cyclorama with studio lighting",
+        "image": "img/klip-photographer-shooting-wide.jpg",
+        "imageAlt": "A KLIP photographer shooting a seated portrait on the white wall",
         "eyebrow": "Two Ways In",
         "headline": [
           "Book A Session.",
@@ -538,8 +538,8 @@
         "type": "split",
         "id": "for-photographers",
         "reverse": true,
-        "image": "img/photo4.jpg",
-        "imageAlt": "Kanvas room white wall with professional lighting",
+        "image": "img/klip-white-wall-studio-wide.jpg",
+        "imageAlt": "Kanvas Room white wall lit and ready for a session",
         "roomGallery": "kanvas-room",
         "roomGalleryLabel": "View The Photo Studio",
         "eyebrow": "For Photographers",
