@@ -178,7 +178,17 @@ def _balanced(d, lines):
     return [words[:k], words[k:]]
 
 
-def render(cast_crops, headline, *, gold=None, out_path=None, backdrop_src=None, logo=None, frames=None):
+import threading
+
+_LOCK = threading.Lock()  # OpenCV nets aren't thread-safe; the server renders drafts on several threads
+
+
+def render(cast_crops, headline, **kw):
+    with _LOCK:
+        return _render(cast_crops, headline, **kw)
+
+
+def _render(cast_crops, headline, *, gold=None, out_path=None, backdrop_src=None, logo=None, frames=None):
     """cast_crops: {role: crop_path} for this episode (cast.load); frames: {role: full frame path}.
     Needs the guest and at least one host."""
     t = _tools()
