@@ -371,8 +371,9 @@ def render(orig_path, headline, *, fmt="guest", credential="", host_paths=(), go
     if fmt == "trio" and cast is not None:  # organised lineup (cut-outs, even spacing); boxes only as a fallback
         try:
             return _lineup(cast, orig, headline, gold, out_path)
-        except Exception:
-            pass
+        except Exception as e:  # keep going with the boxed layout, but say why
+            import sys
+            print(f"lineup thumbnail fell back to boxes: {str(e)[:200]}", file=sys.stderr, flush=True)
     multi = fmt != "guest" and (cast is not None or host_paths)
     right_x = int(W * 0.44) if fmt == "trio" else (int(W * 0.48) if multi else min(int(W * 0.50), W - portrait.width))
     pw, ph = W - right_x, H
