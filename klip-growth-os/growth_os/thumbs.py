@@ -252,6 +252,13 @@ def _portrait_from_original(orig):
 
 
 def _logo_from_original(orig):
+    saved = BRAND_DIR / "logo.jpg"  # a clean RYJ badge cut once from a good thumbnail: always preferred
+    if saved.exists():
+        return Image.open(saved).convert("RGB")
+    return _logo_crop(orig)
+
+
+def _logo_crop(orig):
     o = orig.convert("RGB").resize((W, H))
     box = o.crop((30, 20, 190, 170))
     lum = [sum(p) / 3 for p in box.resize((40, 38)).getdata()]
