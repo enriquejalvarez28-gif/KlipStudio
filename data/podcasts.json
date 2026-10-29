@@ -60,10 +60,11 @@
       },
       {
         "show": "Respect Your Journey",
-        "title": "Mentalidad De Atleta",
-        "time": "1:06",
-        "image": "img/klip-gear-microphones.jpg",
-        "kind": "clip"
+        "title": "Discipline Wins When Motivation Fades",
+        "time": "",
+        "image": "img/clip-ryj-discipline.jpg",
+        "kind": "clip",
+        "video": "https://youtube.com/shorts/v5zBISNMH3M"
       }
     ]
   }

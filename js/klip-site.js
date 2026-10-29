@@ -497,11 +497,17 @@
     /* lightbox — no iframe exists until a card is clicked */
     var lb=document.getElementById('lightbox'), lbInner=document.getElementById('lb-inner');
     function ytEmbed(u){ var m=String(u).match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{6,})/); return m?'https://www.youtube.com/embed/'+m[1]+'?autoplay=1&rel=0':''; }
-    function closeLb(){ lb.classList.remove('is-open'); var f=lbInner.querySelector('iframe'); if(f) f.remove(); document.body.style.overflow=''; }
+    function closeLb(){ lb.classList.remove('is-open'); lb.classList.remove('lb--portrait'); var f=lbInner.querySelector('iframe'); if(f) f.remove(); document.body.style.overflow=''; }
     document.addEventListener('click',function(e){
       var card=e.target.closest('[data-video]'); if(!card) return;
       var src=ytEmbed(card.dataset.video); if(!src) return;
       e.preventDefault();
+      /* Vertical when the card says so, or when the link is a Short. A
+         9:16 video inside the 16:9 box plays as a thin strip between two
+         black bars, which on a phone is most of the screen wasted. */
+      var vert = card.getAttribute('data-orient')==='portrait'
+                 || /\/shorts\//.test(String(card.dataset.video));
+      lb.classList.toggle('lb--portrait', !!vert);
       var f=document.createElement('iframe'); f.src=src; f.allow='autoplay; encrypted-media; picture-in-picture'; f.allowFullscreen=true;
       lbInner.appendChild(f); lb.classList.add('is-open'); document.body.style.overflow='hidden';
       document.getElementById('lb-close').focus();

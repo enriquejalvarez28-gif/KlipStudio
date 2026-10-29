@@ -569,12 +569,21 @@ def clips(b, D):
         if c.get('preview') or c.get('previewMp4'):
             prev = (' data-preview="%s" data-preview-mp4="%s"'
                     % (esc(c.get('preview', '')), esc(c.get('previewMp4', ''))))
-        return ('<a class="pod pod--%s fade" href="%s"%s%s><div class="pod-thumb">%s</div>'
+        # A clip is shot 9:16. The player has to know that before it opens,
+        # or a vertical video plays as a thin strip inside a 16:9 black box.
+        orient = ' data-orient="portrait"' if kind == 'clip' else ''
+        return ('<a class="pod pod--%s fade" href="%s"%s%s%s><div class="pod-thumb">%s</div>'
                 '<div class="pod-meta"><div><span class="label">%s</span><h3>%s</h3></div>%s</div></a>'
                 % (kind, esc(c.get('video') or '#'),
                    ' data-video="%s"' % esc(c['video']) if c.get('video') else '', prev,
+                   orient,
+                   # The size hint has to match the shape of the card, or the
+                   # browser reserves a 16:9 box for a 9:16 thumbnail and the
+                   # row jumps once the image lands.
                    pic(c.get('image', ''), c.get('title', ''),
-                       'loading="lazy" decoding="async" width="1000" height="700"'),
+                       'loading="lazy" decoding="async" '
+                       + ('width="1080" height="1920"' if kind == 'clip'
+                          else 'width="1000" height="700"')),
                    esc(c.get('show', '')), esc(c.get('title', '')),
                    '<span class="pod-time">%s</span>' % esc(c['time']) if c.get('time') else ''))
 
