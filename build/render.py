@@ -161,6 +161,22 @@ def editorial(b, D):
     """A list of services. The `services` variant gives each one a number,
     an outcome line and a card weight, so nine services stop reading as
     nine identical text boxes (KLIP_GLOBAL §5)."""
+    # The Media page listed all nine services as full cards - number, icon,
+    # outcome and a paragraph each, 3.5 phone screens - and then explained
+    # the same nine in full sections directly underneath. The 'jump' variant
+    # is that block doing its real job: an index that gets you to the one you
+    # came for. The selling copy stays in the section it belongs to.
+    if b.get('variant') == 'jump':
+        items = ''.join(
+            '<li class="fade"><a href="%s">%s<span>%s</span></a></li>'
+            % (esc(i.get('href') or '#'), icon(i.get('icon', '')),
+               esc(i.get('title', '')))
+            for i in (b.get('items') or []))
+        return ('<section class="sec sec--grid"%s><div class="wrap">%s'
+                '<ul class="svc-list rv">%s</ul></div></section>'
+                % (' id="%s"' % esc(b['id']) if b.get('id') else '',
+                   head_block(b), items))
+
     if b.get('variant') == 'services':
         items = ''
         for n, i in enumerate(b.get('items') or [], 1):
@@ -851,6 +867,11 @@ def service_depth(b, D):
     if not items:
         return ''
     out = ''
+    # One CTA per service meant the same sentence nine times down one page.
+    # On a phone the sticky bar at the bottom already carries Let's Talk at
+    # all times, so the inline ask only needs to exist where someone is
+    # likely to stop: the first section and the last.
+    cta_at = {1, len(items)}
     for n, sv in enumerate(items, 1):
         mode = sv.get('mode') or 'sec--warm'
         dark = mode in ('sec--dark', 'sec--image', 'sec--band', 'sec--ink')
@@ -870,16 +891,18 @@ def service_depth(b, D):
             '<div class="sv-title"><h2>%s</h2>'
             '<p class="sv-outcome">%s</p></div></div>'
             '<div class="sv-body rv">'
-            '<div class="sv-why"><p class="sv-label">Why it helps</p><p>%s</p>'
-            '<a class="btn %s" href="%s"%s>%s %s</a></div>'
+            '<div class="sv-why"><p class="sv-label">Why it helps</p><p>%s</p>%s</div>'
             '<div class="sv-does"><p class="sv-label">What it can include</p>'
             '<ul>%s</ul></div></div></div></section>'
             % (mode, esc(sv['slug']), bg, n, icon(sv.get('icon', '')),
                esc(sv['title']), esc(sv.get('outcome', '')),
                esc(sv.get('why', '')),
-               'btn--solid' if dark else 'btn--dark',
-               esc(a['href']), a['attr'],
-               esc(sv.get('ctaLabel') or "Let's Talk About This"), AR, does))
+               ('<a class="btn %s" href="%s"%s>%s %s</a>'
+                % ('btn--solid' if dark else 'btn--dark',
+                   esc(a['href']), a['attr'],
+                   esc(sv.get('ctaLabel') or "Let's Talk About This"), AR))
+               if n in cta_at else '',
+               does))
     return out
 
 
