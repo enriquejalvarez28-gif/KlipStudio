@@ -559,7 +559,7 @@ def render_documentary(frame_path, headline, *, orig_path=None, kicker="", gold=
         kf = _font(30)
         d.text((60, H - 268), kicker.upper(), font=kf, fill=gold)
     d.rectangle([60, H - 222, 200, H - 214], fill=gold)
-    _draw_headline(d, parse_headline(headline, max_lines=2), (60, H - 205, W - 140, 170), gold, start=130, max_lines=2, stroke=2)
+    _draw_headline(d, parse_headline(headline, max_lines=2), (60, H - 205, W - 380, 170), gold, start=130, max_lines=2, stroke=2)
     if out_path:
         canvas.save(out_path, "JPEG", quality=92)
     return canvas
