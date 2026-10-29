@@ -20,8 +20,8 @@
       {
         "name": "Klip Room",
         "role": "Podcast + Interview Studio",
-        "image": "img/klip-podcast-room-main-front.jpg",
-        "imageAlt": "Klip Room podcast set with branded screen, seating and microphones",
+        "image": "img/klip-podcast-room-clean-wide.jpg",
+        "imageAlt": "Klip Room podcast set with leather chairs and round table",
         "card": "Multicam podcasts and interviews · 3 × Sony FX30, RØDECaster workflow, teleprompter",
         "summary": "A premium multi-camera room for podcasts, interviews, courses, coaching and professional conversations.",
         "capabilities": [
@@ -37,6 +37,10 @@
         "focal": "50% 38%",
         "gallery": [
           {
+            "image": "img/klip-podcast-room-main-front.jpg",
+            "alt": "Klip Room podcast set with branded screen, seating and microphones"
+          },
+          {
             "image": "img/klip-podcast-room-behind-the-scenes.jpg",
             "alt": "Klip Room — Behind the scenes during a session"
           },
@@ -47,10 +51,6 @@
           {
             "image": "img/klip-podcast-room-side-angle.jpg",
             "alt": "Klip Room — Side angle with the camera positions"
-          },
-          {
-            "image": "img/klip-podcast-room-clean-wide.jpg",
-            "alt": "Klip Room podcast set with leather chairs and round table"
           },
           {
             "image": "img/klip-podcast-room-chairs.jpg",
@@ -69,8 +69,8 @@
       {
         "name": "Kapture Room",
         "role": "Short-Form + Personal Brand",
-        "image": "img/klip-black-room-desk-main.jpg",
-        "imageAlt": "Kapture Room dark set with desk, lighting and branded screen",
+        "image": "img/klip-black-room-purple-wide.jpg",
+        "imageAlt": "Kapture Room table and microphones under purple accent lighting",
         "card": "Short-form, talking-head and personal brand · single Sony FX30",
         "summary": "A focused set for reels, talking-head video, course modules, personal-brand content and UGC.",
         "capabilities": [
@@ -86,16 +86,16 @@
         "focal": "50% 42%",
         "gallery": [
           {
+            "image": "img/klip-black-room-desk-main.jpg",
+            "alt": "Kapture Room dark set with desk, lighting and branded screen"
+          },
+          {
             "image": "img/klip-black-room-interview-table.jpg",
             "alt": "Kapture Room — Interview table setup"
           },
           {
             "image": "img/klip-black-room-two-chair-setup.jpg",
             "alt": "Kapture Room — Two-chair conversation setup"
-          },
-          {
-            "image": "img/klip-black-room-purple-wide.jpg",
-            "alt": "Kapture Room table and microphones under purple accent lighting"
           },
           {
             "image": "img/klip-black-room-table-screen.jpg",
@@ -110,8 +110,8 @@
       {
         "name": "Kreator Room",
         "role": "Green Screen + Flexible Content",
-        "image": "img/klip-green-screen-room-main.jpg",
-        "imageAlt": "Kreator Room green screen wall with lighting and monitor",
+        "image": "img/klip-green-screen-room-wide.jpg",
+        "imageAlt": "Kreator Room green screen wall with lighting and stand",
         "card": "Green screen and flexible content setups",
         "summary": "A flexible green-screen room for courses, training, product demos and creative content.",
         "capabilities": [
@@ -127,8 +127,8 @@
         "focal": "50% 45%",
         "gallery": [
           {
-            "image": "img/klip-green-screen-room-wide.jpg",
-            "alt": "Kreator Room green screen wall with lighting and stand"
+            "image": "img/klip-green-screen-room-main.jpg",
+            "alt": "Kreator Room green screen wall with lighting and monitor"
           },
           {
             "image": "img/klip-green-screen-room-stool.jpg",
@@ -147,8 +147,8 @@
       {
         "name": "Kanvas Room",
         "role": "Photography + E-Commerce",
-        "image": "img/klip-white-wall-studio-wide.jpg",
-        "imageAlt": "Kanvas Room seamless white cyc wall with professional lighting",
+        "image": "img/klip-white-wall-full-setup.jpg",
+        "imageAlt": "Kanvas Room photography setup with backdrops and lighting",
         "card": "White cyc wall, backdrops, GVM lighting and a private prep area",
         "summary": "A clean photo and product-content space for headshots, e-commerce, UGC and campaign work.",
         "capabilities": [
@@ -164,6 +164,10 @@
         "focal": "50% 44%",
         "gallery": [
           {
+            "image": "img/klip-white-wall-studio-wide.jpg",
+            "alt": "Kanvas Room seamless white cyc wall with professional lighting"
+          },
+          {
             "image": "img/klip-white-wall-chair-and-stool.jpg",
             "alt": "Kanvas Room — White cyc with seating"
           },
@@ -178,10 +182,6 @@
           {
             "image": "img/klip-white-wall-lights-wide.jpg",
             "alt": "Kanvas Room white cyclorama with studio lighting and chairs"
-          },
-          {
-            "image": "img/klip-white-wall-full-setup.jpg",
-            "alt": "Kanvas Room photography setup with backdrops and lighting"
           },
           {
             "image": "img/klip-white-wall-clean.jpg",
