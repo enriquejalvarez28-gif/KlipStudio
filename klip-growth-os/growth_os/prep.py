@@ -125,7 +125,7 @@ def draft_titles(title, keyword, guest):
                             ("hybrid", hybrid, "keeps the current hook and adds the search phrase"))]
 
 
-def asset_pack(conn, tenant_id, asset_id, *, diagnosis="", runner=None, thumbnails_wanted=True):
+def asset_pack(conn, tenant_id, asset_id, *, diagnosis="", runner=None, thumbnails_wanted=True, title_max=None):
     """3 titles, 2 thumbnail previews (long-form), SEO draft (first lines, tags, chapters) for one video. Local only."""
     from growth_os import api  # local import: api imports analytics
     d = api.video_detail(conn, tenant_id, asset_id)
@@ -138,6 +138,8 @@ def asset_pack(conn, tenant_id, asset_id, *, diagnosis="", runner=None, thumbnai
         payload = {"title": v["title"], "format": v["format"], "duration_min": round((v["duration_s"] or 0) / 60),
                    "search_terms": [s["term"] for s in d["search_terms"][:8]], "topic_keywords": kws[:10],
                    "strategies": PREP_STRATEGIES, "diagnosis": diagnosis}
+        if title_max:
+            payload["max_chars"] = title_max
         out, meta = ai.ask(conn, tenant_id, f"prep_titles:{asset_id}", payload, ai.TITLE_INSTRUCTIONS, runner=runner)
         pack["titles"] = [dict(x, source=f"AI draft ({meta['model']})") for x in out.get("titles", [])][:3]
     except (ai.AIUnavailable, ValueError, KeyError) as e:

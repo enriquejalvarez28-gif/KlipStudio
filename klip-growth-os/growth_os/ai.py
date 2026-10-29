@@ -96,7 +96,7 @@ TITLE_STRATEGIES = ["clear_educational", "curiosity", "expert_authority", "debat
 
 TITLE_INSTRUCTIONS = (
     "You are a YouTube packaging editor for a podcast/media brand. Write alternative titles for the video in INPUT. "
-    "Produce exactly one title per strategy in INPUT.strategies. Max 70 characters each. No clickbait that the "
+    "Produce exactly one title per strategy in INPUT.strategies. Max 70 characters each, or at most INPUT.max_chars when given (count carefully). No clickbait that the "
     "episode cannot deliver, no ALL CAPS words, no made-up facts, names or numbers not present in INPUT. "
     "Use INPUT.search_terms and INPUT.topic_keywords where natural. For each give a one-sentence 'why' tied to "
     "INPUT evidence. Never state a predicted CTR or virality probability. "

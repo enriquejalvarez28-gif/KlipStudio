@@ -29,7 +29,9 @@ MODES = {
     "auto_missing": "Fills only what's missing (empty description, no tags) automatically; everything else waits for approval.",
     "auto_all": "Applies its daily changes automatically (titles, descriptions, tags, thumbnails). You get a log and undo.",
 }
-DAILY_CAP = 3
+DAILY_CAP = 3          # default; the owner can raise it (CAP_CHOICES)
+CAP_CHOICES = (3, 5, 10)
+LONG_TITLE = 60        # YouTube cuts titles off around here on phones and in search
 COOLDOWN_DAYS = 14
 MIN_IMPRESSIONS = 500
 UPLOAD_URL = "https://www.googleapis.com/upload/youtube/v3/thumbnails/set"
@@ -52,6 +54,20 @@ def set_mode(conn, tenant_id, m):
     set_setting(conn, f"autopilot.mode.{tenant_id}", m)
     audit(conn, tenant_id, "owner", "autopilot.mode", {"mode": m})
     return {"mode": m}
+
+
+def cap(conn, tenant_id):
+    n = get_setting(conn, f"autopilot.cap.{tenant_id}", DAILY_CAP)
+    return n if n in CAP_CHOICES else DAILY_CAP
+
+
+def set_cap(conn, tenant_id, n):
+    n = int(n)
+    if n not in CAP_CHOICES:
+        raise ValueError("daily limit must be 3, 5 or 10")
+    set_setting(conn, f"autopilot.cap.{tenant_id}", n)
+    audit(conn, tenant_id, "owner", "autopilot.cap", {"cap": n})
+    return {"cap": n}
 
 
 def _account(conn, tenant_id):
@@ -107,6 +123,9 @@ def candidates(conn, tenant_id):
             out.append({"v": v, "reason": "low_ctr", "score": 3 + (imp.get("value") or 0) / 1e4, "missing": missing,
                         "evidence": [f"CTR {ctr['value']:.2f}% vs {ctr.get('peer_median'):.2f}% for similar videos, on "
                                      f"{int(imp.get('value') or 0):,} impressions"]})
+        elif len(v["title"] or "") > LONG_TITLE and not winner:
+            out.append({"v": v, "reason": "long_title", "score": 2.5, "missing": missing,
+                        "evidence": [f"Title is {len(v['title'])} characters; phones and search cut it off around {LONG_TITLE}"]})
         elif missing:
             out.append({"v": v, "reason": "missing", "score": 2, "missing": missing,
                         "evidence": [f"Missing: {', '.join(missing)}"]})
@@ -118,9 +137,10 @@ def candidates(conn, tenant_id):
 
 def _proposal(conn, tenant_id, c, runner=None):
     v = c["v"]
-    want_thumb = c["reason"] == "low_ctr" and v["format"] == "long_form"
-    pack = prep.asset_pack(conn, tenant_id, v["asset_id"], diagnosis="packaging" if want_thumb else "", runner=runner,
-                           thumbnails_wanted=want_thumb)
+    repackage = c["reason"] in ("low_ctr", "long_title")
+    want_thumb = repackage and v["format"] == "long_form"
+    pack = prep.asset_pack(conn, tenant_id, v["asset_id"], diagnosis="packaging" if repackage else "", runner=runner,
+                           thumbnails_wanted=want_thumb, title_max=LONG_TITLE)
     old_tags = json.loads(_latest(conn, tenant_id, v["asset_id"], "tags") or "[]")
     merged = list(dict.fromkeys(old_tags + pack["seo"]["tags"]))
     while len(",".join(merged)) > 480:  # YouTube caps tags at 500 characters
@@ -133,19 +153,21 @@ def _proposal(conn, tenant_id, c, runner=None):
                           if th else None),
             "keyword": pack["keyword"], "notes": pack["notes"], "format": v["format"],
             "fills_missing_only": c["reason"] in ("missing", "new_upload")}
-    chosen = {"title": (pack["titles"][0]["title"] if c["reason"] == "low_ctr" and pack.get("titles") else None),
+    fits = [t["title"] for t in pack.get("titles", []) if len(t.get("title") or "") <= LONG_TITLE]
+    chosen = {"title": (fits[0] if repackage and fits else None),
               "description": True, "tags": bool(prop["added_tags"]),
               "thumbnail": th[0]["file"] if th else None}
     return prop, chosen
 
 
-def daily_run(conn, tenant_id, *, transport=None, runner=None, cap=DAILY_CAP):
+def daily_run(conn, tenant_id, *, transport=None, runner=None, limit=None):
     if conn.execute("SELECT kind FROM tenants WHERE tenant_id=?", (tenant_id,)).fetchone()[0] == "demo":
         return {"skipped": "demo brand: never written"}
     today_n = conn.execute("SELECT COUNT(*) FROM channel_changes WHERE tenant_id=? AND created_at>=?",
                            (tenant_id, date.today().isoformat())).fetchone()[0]
     made, applied, errors = [], [], []
-    for c in candidates(conn, tenant_id)[:max(0, cap - today_n)]:
+    limit = limit or cap(conn, tenant_id)
+    for c in candidates(conn, tenant_id)[:max(0, limit - today_n)]:
         try:
             prop, chosen = _proposal(conn, tenant_id, c, runner=runner)
         except Exception as e:  # one video must not stop the run
@@ -373,12 +395,14 @@ def page(conn, tenant_id):
         r["video_title"] = titles.get(r["asset_id"])
         r["current_thumb"] = f"/thumb/{tenant_id}/{r['asset_id']}.jpg"
     return {"mode": mode(conn, tenant_id), "modes": MODES, "write": write_status(conn, tenant_id),
-            "daily_cap": DAILY_CAP, "cooldown_days": COOLDOWN_DAYS,
+            "daily_cap": cap(conn, tenant_id), "cap_choices": CAP_CHOICES, "cooldown_days": COOLDOWN_DAYS,
+            "title_max": LONG_TITLE,
             "pending": [r for r in rows if r["status"] in OPEN],
             "done": [r for r in rows if r["status"] not in OPEN],
             "hosts_available": [p.stem for p in prep.thumbs.host_photos()],
             "rules": ["Winners (top quarter by views/day) keep their title and thumbnail.",
-                      f"At most {DAILY_CAP} new changes a day and one change per video every {COOLDOWN_DAYS} days.",
+                      f"At most {cap(conn, tenant_id)} new changes a day and one change per video every {COOLDOWN_DAYS} days.",
+                      f"New titles stay under {LONG_TITLE} characters so they aren't cut off.",
                       "Descriptions keep your existing text underneath the new first lines.",
                       "Custom thumbnails only on long-form; Shorts thumbnails are picked in the YouTube app.",
                       "Every change saves the original first; Undo restores it.",

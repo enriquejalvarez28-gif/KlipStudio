@@ -8,11 +8,12 @@ is built from the same facts. Nothing here touches YouTube.
 """
 
 import json
+from datetime import date, timedelta
 import re
 import statistics
 from collections import Counter
 
-from growth_os import ai, analytics, thumbs, trends
+from growth_os import ai, analytics, discovery, thumbs, trends
 from growth_os.db import new_id, utcnow
 
 STOP = set(trends.STOP) | set("i you we he she they my your our his her their me us them do does did not no yes what "
@@ -127,7 +128,35 @@ def facts(conn, tenant_id, days=28):
         "open_recommendations": recs,
         "trend_radar": trs,
         "freshness": analytics.freshness(conn, tenant_id).get("youtube", {}).get("through"),
+        "title_audit": title_audit(vids, settled),
+        "seo_audit": seo_audit(conn, tenant_id, vids),
+        "competition": discovery.competition_facts(conn, tenant_id),
     }
+
+
+def title_audit(vids, settled):
+    out = {}
+    for fmt in ("short_heuristic", "long_form"):
+        g = [len(v["title"] or "") for v in vids if v["format"] == fmt]
+        s = [v for v in settled if v["format"] == fmt]
+        top = sorted(len(v["title"] or "") for v in s[: max(2, len(s) // 4)])
+        if g:
+            out[fmt] = {"videos": len(g), "median_chars": sorted(g)[len(g) // 2], "over_60": sum(x > 60 for x in g),
+                        "over_70": sum(x > 70 for x in g), "top_quarter_median_chars": top[len(top) // 2] if top else None}
+    return out
+
+
+def seo_audit(conn, tenant_id, vids):
+    def latest(a, field):
+        r = conn.execute("SELECT value FROM asset_history WHERE tenant_id=? AND asset_id=? AND field=? "
+                         "ORDER BY observed_at DESC LIMIT 1", (tenant_id, a, field)).fetchone()
+        return r[0] if r else None
+    no_desc = sum(1 for v in vids if len((latest(v["asset_id"], "description") or "").strip()) < 40)
+    no_tags = sum(1 for v in vids if (latest(v["asset_id"], "tags") or "[]") == "[]")
+    search_views = conn.execute("SELECT SUM(value) FROM metrics WHERE tenant_id=? AND grain='traffic_source' AND period_start='YT_SEARCH'",
+                                (tenant_id,)).fetchone()[0]
+    return {"videos": len(vids), "missing_description": no_desc, "missing_tags": no_tags,
+            "lifetime_views_from_search": int(search_views or 0)}
 
 
 BRIEF_INSTRUCTIONS = (
@@ -139,10 +168,15 @@ BRIEF_INSTRUCTIONS = (
     "Values above 100% mean viewers rewatch or loop (common on Shorts), not more viewers. "
     "'drop_zones' counts sharp drops by part of the video; 100 minus the '10%' value is the share gone in the opening. "
     "Use them for opening/ending advice. "
+    "'competition' = public view counts of comparable channels' latest uploads (null if not researched yet): compare "
+    "their best titles/topics/formats with ours. 'title_audit' and 'seo_audit' are our own packaging gaps. "
     'Shape: {"headline":"one sentence","whats_happening":["3-5 bullets with numbers"],"whats_working":["2-4"],'
     '"where_viewers_leave":["2-3"],"next_episode":{"angle":"","why":"","opening":"how to open, first 30 s",'
     '"ending":"how to end/CTA","title_words":["4-6 words from INPUT.title_words or search_terms"],'
     '"title_options":["3 titles"],"thumbnail":"which format and why","shorts_to_cut":["2-3 clip ideas"]},'
+    '"competition":["3-4 bullets: what is getting views for comparable channels and what RYJ should take from it"],'
+    '"seo":["3 bullets: search terms, descriptions/tags gaps, what to fix"],'
+    '"title_rules":["4-5 short rules for future titles, each tied to an INPUT number"],'
     '"this_week":["exactly 3 actions"],"watch_next":"one metric and target"}'
 )
 
@@ -196,12 +230,32 @@ def rule_brief(f):
                          "title_words": words, "title_options": [], "thumbnail": "", "shorts_to_cut": []},
         "this_week": (f["open_recommendations"][:3] or ["Run the daily review to get this week's actions."]),
         "watch_next": "Median % viewed on the next upload vs the format median above.",
+        "competition": [f"{v['channel']}: “{v['title']}” — {v['views_per_day']:,} views/day" for v in
+                        ((f.get("competition") or {}).get("top_videos") or [])[:4]],
+        "seo": [f"{f['seo_audit']['missing_description']} of {f['seo_audit']['videos']} videos have no real description; "
+                f"{f['seo_audit']['missing_tags']} have no tags.",
+                "Top search terms: " + ", ".join(t["term"] for t in f["search_terms"][:6])] if f.get("seo_audit") else [],
+        "title_rules": [f"{fmt_name}: median title {a['median_chars']} characters; {a['over_60']} of {a['videos']} are over 60 "
+                        "(cut off on phones). Keep new titles under 60." for fmt_name, a in
+                        (("Shorts" if k == "short_heuristic" else "Long-form", v) for k, v in (f.get("title_audit") or {}).items())],
         "_rule_based": True,
     }
 
 
-def generate(conn, tenant_id, *, force=False, runner=None):
+COMPETITION_MAX_AGE_DAYS = 7
+
+
+def generate(conn, tenant_id, *, force=False, runner=None, transport=None):
+    comp_note = None
+    last = conn.execute("SELECT MAX(fetched_at) FROM competitor_videos WHERE tenant_id=?", (tenant_id,)).fetchone()[0]
+    if not last or last[:10] < (date.today() - timedelta(days=COMPETITION_MAX_AGE_DAYS)).isoformat():
+        try:
+            discovery.research_competitors(conn, tenant_id, transport=transport)
+        except Exception as e:  # competition is additive; never block the brief
+            comp_note = f"Competition research unavailable: {str(e)[:120]}"
     f = facts(conn, tenant_id)
+    if comp_note:
+        f["competition_note"] = comp_note
     try:
         out, meta = ai.ask(conn, tenant_id, "brief", f, BRIEF_INSTRUCTIONS, model="sonnet", runner=runner, force=force)
         brief, source = out, f"AI synthesis of the facts below ({meta['model']}{', cached' if meta.get('cached') else ''})"

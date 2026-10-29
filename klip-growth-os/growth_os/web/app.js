@@ -630,6 +630,8 @@ PAGES.brief = async () => {
     n.title_words && n.title_words.length ? el("div", { style: "margin:8px 0" }, el("b", {}, "Words that show up in what works: "), n.title_words.map((w) => el("span", { class: "tag", style: "margin:2px 4px 2px 0" }, w))) : null,
     n.title_options && n.title_options.length ? el("div", {}, el("b", {}, "Title options"), el("ol", { style: "margin:4px 0;padding-left:20px" }, n.title_options.map((t) => el("li", {}, t)))) : null,
     kv("Thumbnail", n.thumbnail), n.shorts_to_cut && n.shorts_to_cut.length ? el("div", {}, el("b", {}, "Shorts to cut"), ul(n.shorts_to_cut)) : null));
+  if ((b.competition || []).length || (b.seo || []).length || (b.title_rules || []).length) wrap.append(el("div", { class: "grid g3 sec" },
+    card("Competition", null, ul(b.competition)), card("SEO & search", null, ul(b.seo)), card("Title rules", null, ul(b.title_rules))));
   wrap.append(el("div", { class: "grid g2 sec" },
     card("This week: 3 actions", null, el("ol", { style: "margin:4px 0 0;padding-left:20px;line-height:1.7" }, (b.this_week || []).map((x) => el("li", {}, x)))),
     card("Watch next", null, el("p", { style: "margin:0" }, b.watch_next || "—"))));
@@ -639,6 +641,8 @@ PAGES.brief = async () => {
   wrap.append(el("details", { class: "card sec" }, el("summary", { style: "cursor:pointer;font-weight:600" }, "The numbers behind this brief"),
     twRows.length ? el("div", { class: "tbl-wrap", style: "margin-top:10px" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["Word in title", "Format", "Top quarter", "Everything else"].map((h, i) => el("th", { class: i > 1 ? "r" : "" }, h)))), el("tbody", {}, twRows))) : el("p", { class: "faint" }, "Title words need at least 8 settled videos per format."),
     Object.entries(rp).map(([fmt, r]) => el("p", { style: "font-size:13px" }, el("b", {}, `${fmtName(fmt)} retention (${r.videos} videos): `), Object.entries(r.still_watching_median_pct).map(([k, v]) => `${v ?? "—"}% still watching at ${k}`).join(" · "), r.drop_zones && Object.keys(r.drop_zones).length ? ` · sharp drops: ${Object.entries(r.drop_zones).map(([z, c]) => `${z} ${c}`).join(", ")}` : "")),
+    f.competition ? el("div", { class: "tbl-wrap", style: "margin-top:10px" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["Comparable channel", "Video", "Views", "Views/day"].map((h, i) => el("th", { class: i > 1 ? "r" : "" }, h)))),
+      el("tbody", {}, f.competition.top_videos.map((v) => el("tr", {}, el("td", {}, v.channel), el("td", {}, v.title, el("span", { class: "faint" }, ` · ${v.format}`)), el("td", { class: "r" }, nf(v.views)), el("td", { class: "r" }, nf(v.views_per_day))))))) : el("p", { class: "faint" }, f.competition_note || "Competition data appears after the first research run."),
     (f.search_terms || []).length ? el("p", { style: "font-size:13px" }, el("b", {}, "Top search terms: "), f.search_terms.slice(0, 10).map((t) => `${t.term} (${nf(t.views)})`).join(" · ")) : null,
     el("p", { class: "faint", style: "font-size:12px" }, d.note)));
   if (d.history.length > 1) wrap.append(el("div", { class: "faint sec", style: "font-size:12px" }, `Previous briefs: ${d.history.slice(1).map((h) => ago(h.created_at)).join(" · ")}`));
@@ -655,8 +659,11 @@ PAGES.autopilot = async () => {
       : el("div", {}, el("p", { style: "margin:0 0 8px" }, el("span", { class: "st warn" }, "READ-ONLY"), " ", w.note || ""), el("a", { class: "btn sm gold", href: "#/accounts" }, "Open Manage accounts → Grant write access"))),
     card("Mode", null, el("div", { class: "list" }, Object.entries(d.modes).map(([k, txt]) => el("label", { class: "li", style: "cursor:pointer;align-items:flex-start;gap:8px" },
       el("input", { type: "radio", name: "apmode", checked: d.mode === k, style: "margin-top:4px", onchange: async () => { try { await api(T("autopilot/mode"), { mode: k }); toast("Mode saved"); } catch (e) { toast(e.message, true); } route(true); } }),
-      el("div", { class: "body" }, el("div", { class: "t" }, { approve: "Approve each change (recommended)", auto_missing: "Auto-fill missing only", auto_all: "Fully automatic" }[k]), el("div", { class: "d" }, txt))))))));
-  if (!d.hosts_available.length) wrap.append(el("div", { class: "note sec", style: "font-size:13px" }, "No host photos yet, so thumbnails use the guest's photo from the video. Add clear photos of each host to data/brand/hosts/ (e.g. enrique.jpg, jamar.jpg) to unlock host and host + guest thumbnails."));
+      el("div", { class: "body" }, el("div", { class: "t" }, { approve: "Approve each change", auto_missing: "Auto-fill missing only", auto_all: "Fully automatic" }[k]), el("div", { class: "d" }, txt))))),
+      el("div", { class: "row", style: "margin-top:10px;gap:8px;align-items:center" }, el("span", { class: "faint", style: "font-size:13px" }, "Changes per day:"),
+        seg(d.cap_choices.map((n) => [String(n), String(n)]), String(d.daily_cap), async (v) => { try { await api(T("autopilot/cap"), { cap: Number(v) }); toast("Saved"); } catch (e) { toast(e.message, true); } route(true); })))));
+  if (d.hosts_available.length) wrap.append(el("div", { class: "faint sec", style: "font-size:12.5px" }, `Host photos: ${d.hosts_available.join(", ")} (from your own episodes). Debate and ranking episodes get host thumbnails.`));
+  else wrap.append(el("div", { class: "note sec", style: "font-size:13px" }, "No host photos yet, so thumbnails use the guest's photo from the video. Add clear photos of each host to data/brand/hosts/ (e.g. enrique.jpg, jamar.jpg) to unlock host and host + guest thumbnails."));
   const sel = {};
   const pend = d.pending.map((r) => {
     const p = r.proposal, ch = r.chosen; sel[r.id] = { ...ch };
@@ -664,7 +671,7 @@ PAGES.autopilot = async () => {
       .concat((p.titles || []).map((t) => el("label", { style: "display:block" }, el("input", { type: "radio", name: `t_${r.id}`, checked: ch.title === t.title, onchange: () => { sel[r.id].title = t.title; } }), " ", t.title, el("span", { class: "faint", style: "font-size:11.5px" }, ` · ${(t.strategy || "").replaceAll("_", " ")}`))));
     const chk = (k, label) => el("label", { style: "display:block;margin-top:6px" }, el("input", { type: "checkbox", checked: !!ch[k], onchange: (e) => { sel[r.id][k] = e.target.checked ? (k === "thumbnail" ? p.thumbnail.file : true) : (k === "thumbnail" ? null : false); } }), " ", label);
     return el("section", { class: "card rec" },
-      el("div", { class: "card-h" }, el("div", {}, el("span", { class: `st ${r.reason === "low_ctr" ? "warn" : "na"}` }, { low_ctr: "Low clicks", missing: "Missing info", new_upload: "New upload" }[r.reason] || r.reason),
+      el("div", { class: "card-h" }, el("div", {}, el("span", { class: `st ${r.reason === "low_ctr" ? "warn" : "na"}` }, { low_ctr: "Low clicks", long_title: "Title too long", missing: "Missing info", new_upload: "New upload" }[r.reason] || r.reason),
         el("h2", { style: "font-size:15px;margin-top:4px" }, r.video_title)), el("div", { class: "r" }, el("a", { class: "btn sm ghost", href: `#/episode/${r.asset_id}` }, "Episode"))),
       el("div", { class: "faint", style: "font-size:12.5px" }, r.evidence.join(" · ")),
       el("div", { class: "sub" }, el("b", {}, "Title"), titleOpts),

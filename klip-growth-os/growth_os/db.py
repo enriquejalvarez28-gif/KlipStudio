@@ -321,6 +321,14 @@ MIGRATIONS = [
     );
     CREATE INDEX channel_changes_by_status ON channel_changes (tenant_id, status, created_at);
     """,
+    # v10 (2026-10-28): public stats of comparable channels' recent uploads (competition deep dive).
+    """
+    CREATE TABLE competitor_videos (
+        tenant_id TEXT NOT NULL, channel_id TEXT NOT NULL, channel_name TEXT, video_id TEXT NOT NULL, title TEXT,
+        published_at TEXT, views INTEGER, duration_s INTEGER, fetched_at TEXT NOT NULL,
+        PRIMARY KEY (tenant_id, video_id)
+    );
+    """,
 ]
 
 

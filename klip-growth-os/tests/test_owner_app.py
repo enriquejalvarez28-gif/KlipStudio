@@ -848,3 +848,59 @@ class TestAutopilot(unittest.TestCase):
             ap.apply(c, self.T, cid, transport=g)
         seed.seed_demo(c)
         self.assertIn("skipped", ap.daily_run(c, "demo-synthetic"))
+
+
+class CompGoogle(WriteGoogle):
+    def __call__(self, method, url, headers, body):
+        q = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(url).query))
+        if "/search" in url:
+            return 200, json.dumps({"items": [{"snippet": {"channelId": c}} for c in ("UC_COMP1", "UC_TINY", RYJ_CH)]}).encode()
+        if "/channels" in url and "statistics" in q.get("part", "") and "id" in q:
+            subs = {"UC_COMP1": "50000", "UC_TINY": "40"}
+            return 200, json.dumps({"items": [{"id": c, "snippet": {"title": c}, "statistics": {"subscriberCount": subs.get(c, "0"), "videoCount": "100"},
+                                               "contentDetails": {"relatedPlaylists": {"uploads": "UU" + c}}} for c in q["id"].split(",") if c in subs]}).encode()
+        if "/playlistItems" in url and q.get("playlistId", "").startswith("UUUC_"):
+            return 200, json.dumps({"items": [{"contentDetails": {"videoId": "cv1"}}]}).encode()
+        if "/videos" in url and q.get("id") == "cv1":
+            return 200, json.dumps({"items": [{"id": "cv1", "snippet": {"title": "Why Kids Quit Sports", "publishedAt": "2026-10-01T00:00:00Z"},
+                                               "statistics": {"viewCount": "27000"}, "contentDetails": {"duration": "PT41M"}}]}).encode()
+        return super().__call__(method, url, headers, body)
+
+
+class TestDeepDiveAndTitles(TestAutopilot):
+    def test_competition_research_and_brief_sections(self):
+        from growth_os import brief, discovery
+        g = CompGoogle()
+        c, ap = self._setup(g)
+        with mock.patch("growth_os.vault.load_client", return_value=CLIENT):
+            r = discovery.research_competitors(c, self.T, transport=g, queries=["youth sports podcast"])
+        self.assertEqual(r["channels"], ["UC_COMP1"])  # own channel and tiny channels excluded
+        comp = discovery.competition_facts(c, self.T)
+        self.assertEqual(comp["top_videos"][0]["title"], "Why Kids Quit Sports")
+        f = brief.facts(c, self.T)
+        self.assertEqual(f["seo_audit"]["missing_description"], 1)
+        self.assertIn("long_form", f["title_audit"])
+        rb = brief.rule_brief(f)
+        self.assertTrue(rb["competition"] and rb["seo"] and rb["title_rules"])
+
+    def test_long_title_gets_short_title_and_thumbnail_request(self):
+        g = WriteGoogle()
+        c, ap = self._setup(g)
+        long_t = "This Is A Very Long Episode Title About Youth Sports Development And Parents | Coach Ray"
+        c.execute("UPDATE assets SET title=? WHERE asset_id='vW'", (long_t,))
+        youtube_sync.record_history(c, self.T, "youtube", "vW", "description", "A real description that is long enough to count here.", "t")
+        youtube_sync.record_history(c, self.T, "youtube", "vW", "tags", '["x"]', "t2")
+        [cand] = ap.candidates(c, self.T)
+        self.assertEqual(cand["reason"], "long_title")
+        on = {"enabled": True, "cli_found": True, "daily_cap": 9, "used_today": 0}
+        titles = [{"strategy": s, "title": t, "why": "w"} for s, t in
+                  (("search_driven", "Youth Sports Development: What Parents Get Wrong About It All Day Long"),
+                   ("curiosity", "What Parents Get Wrong in Youth Sports"), ("hybrid", "Youth Sports: Parents' Biggest Mistake"))]
+        with mock.patch.object(ai, "status", return_value=on):
+            prop, chosen = ap._proposal(c, self.T, cand, runner=lambda p, m: {"result": json.dumps({"titles": titles})})
+        self.assertEqual(chosen["title"], "What Parents Get Wrong in Youth Sports")  # first option under 60 chars
+        self.assertTrue(all(len(x) <= 60 for x in [chosen["title"]]))
+        ap.set_cap(c, self.T, 5)
+        self.assertEqual(ap.cap(c, self.T), 5)
+        with self.assertRaises(ValueError):
+            ap.set_cap(c, self.T, 50)

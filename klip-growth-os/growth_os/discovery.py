@@ -6,6 +6,7 @@ no invented search volumes, no autonomous AI querying.
 
 import json
 import re
+from collections import Counter
 import urllib.parse
 import xml.etree.ElementTree as ET
 from datetime import date
@@ -230,3 +231,89 @@ def operator_dry_run(conn, tenant_id, rec_id, target_channel_id):
         return dict(plan, result="BLOCKED", reason="awaiting authorization: the YouTube connection is read-only "
                                                    "(no write scope). Apply it yourself in YouTube Studio, then mark Executed.")
     return dict(plan, result="READY", reason="write scope present; a real run would apply, read back and log rollback")
+
+
+# ── Competition research (public YouTube data via the channel's read-only token) ──
+
+COMPETITOR_QUERIES = ["youth sports podcast", "athlete development podcast", "sports parents podcast",
+                      "youth soccer development podcast", "high school athletes recruiting podcast"]
+
+
+def _yt(conn, tenant_id, transport=None):
+    from growth_os import vault
+    from growth_os.connectors import youtube
+    from growth_os.http import Client
+    a = conn.execute("SELECT * FROM platform_accounts WHERE tenant_id=? AND platform='youtube' AND state IN (?,?,?)",
+                     (tenant_id, brands.ASSIGNED, brands.ACTIVE, brands.SYNCING)).fetchone()
+    if not a:
+        raise ValueError("connect and assign the YouTube channel first")
+    http, client = Client(conn, tenant_id, transport=transport), vault.load_client("youtube")
+    return a, (lambda path, params, q=1: youtube._get(http, conn, tenant_id, a["credential_id"], client,
+                                                       f"{youtube.DATA_API}/{path}", params, quota_units=q))
+
+
+def _dur(iso):
+    m = re.fullmatch(r"P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", iso or "")
+    if not m:
+        return None
+    d, h, mi, se = (int(x or 0) for x in m.groups())
+    return d * 86400 + h * 3600 + mi * 60 + se
+
+
+def research_competitors(conn, tenant_id, *, transport=None, queries=COMPETITOR_QUERIES, keep=10):
+    """Find comparable channels (YouTube search) and store their recent uploads' public stats. ~550 quota units."""
+    a, get = _yt(conn, tenant_id, transport)
+    seen = Counter()
+    for q in queries:
+        for it in get("search", {"part": "snippet", "type": "channel", "q": q, "maxResults": 10}, 100).get("items", []):
+            cid = it["snippet"]["channelId"]
+            if cid != a["platform_account_id"]:
+                seen[cid] += 1
+    existing = [r[0] for r in conn.execute("SELECT ref FROM competitors WHERE tenant_id=? AND platform='youtube'", (tenant_id,))]
+    ids = list(dict.fromkeys(existing + [c for c, _ in seen.most_common(30)]))
+    chans = []
+    for i in range(0, len(ids), 50):
+        chans += get("channels", {"part": "snippet,statistics,contentDetails", "id": ",".join(ids[i:i + 50])}).get("items", [])
+    def ok(ch):
+        st = ch.get("statistics", {})
+        subs, vids = int(st.get("subscriberCount") or 0), int(st.get("videoCount") or 0)
+        return ch["id"] in existing or (1000 <= subs <= 2_000_000 and vids >= 20)
+    chans = sorted([c for c in chans if ok(c)], key=lambda c: (c["id"] not in existing, -seen[c["id"]]))[:keep]
+    now = utcnow()
+    stored = 0
+    for ch in chans:
+        name = ch["snippet"]["title"]
+        conn.execute("INSERT OR IGNORE INTO competitors VALUES (?,?,?,?)", (tenant_id, "youtube", ch["id"], name))
+        up = ch.get("contentDetails", {}).get("relatedPlaylists", {}).get("uploads")
+        if not up:
+            continue
+        vids = [x["contentDetails"]["videoId"] for x in
+                get("playlistItems", {"part": "contentDetails", "playlistId": up, "maxResults": 15}).get("items", [])]
+        if not vids:
+            continue
+        for v in get("videos", {"part": "snippet,statistics,contentDetails", "id": ",".join(vids)}).get("items", []):
+            conn.execute("INSERT OR REPLACE INTO competitor_videos VALUES (?,?,?,?,?,?,?,?,?)",
+                         (tenant_id, ch["id"], name, v["id"], v["snippet"]["title"], v["snippet"]["publishedAt"],
+                          int(v.get("statistics", {}).get("viewCount") or 0), _dur(v.get("contentDetails", {}).get("duration")), now))
+            stored += 1
+    return {"channels": [c["snippet"]["title"] for c in chans], "videos": stored}
+
+
+def competition_facts(conn, tenant_id, top=12):
+    rows = [dict(r) for r in conn.execute("SELECT * FROM competitor_videos WHERE tenant_id=?", (tenant_id,))]
+    if not rows:
+        return None
+    today = date.today()
+    for r in rows:
+        age = max(1, (today - date.fromisoformat(r["published_at"][:10])).days) if r["published_at"] else None
+        r["views_per_day"] = round(r["views"] / age, 1) if age else None
+        r["format"] = "short" if (r["duration_s"] or 0) <= 180 else "long"
+    rows = [r for r in rows if r["views_per_day"] is not None]
+    best = sorted(rows, key=lambda r: -r["views_per_day"])
+    lens = sorted(len(r["title"]) for r in best[: max(5, len(best) // 4)])
+    return {"channels": sorted({r["channel_name"] for r in rows}), "videos_seen": len(rows),
+            "fetched_at": max(r["fetched_at"] for r in rows),
+            "top_videos": [{"channel": r["channel_name"], "title": r["title"], "views": r["views"],
+                            "views_per_day": r["views_per_day"], "format": r["format"]} for r in best[:top]],
+            "top_title_median_chars": lens[len(lens) // 2] if lens else None,
+            "note": "Public view counts of comparable channels' latest uploads. Their impressions and retention are private."}
