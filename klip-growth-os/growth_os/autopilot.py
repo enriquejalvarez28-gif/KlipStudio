@@ -100,12 +100,13 @@ def candidates(conn, tenant_id):
         winner = (vpd.get("percentile") or 0) >= 75
         missing = [k for k, bad in (("description", len(desc.strip()) < 40), ("tags", not tags)) if bad]
         low_ctr = (v["format"] == "long_form" and not winner and (v["age_days"] or 0) >= 14
-                   and (a in packaging or ((ctr.get("percentile") is not None and ctr["percentile"] <= 25)
-                                           and (imp.get("value") or 0) >= MIN_IMPRESSIONS)))
+                   and (imp.get("value") or 0) >= MIN_IMPRESSIONS and ctr.get("value") is not None
+                   and ((ctr.get("percentile") is not None and ctr["percentile"] <= 25)
+                        or (a in packaging and ctr["value"] < (ctr.get("peer_median") or 0))))
         if low_ctr:
             out.append({"v": v, "reason": "low_ctr", "score": 3 + (imp.get("value") or 0) / 1e4, "missing": missing,
-                        "evidence": [f"CTR {ctr.get('value')}% vs peers {ctr.get('peer_median')}% on {int(imp.get('value') or 0):,} impressions"
-                                     if ctr.get("value") is not None else "Flagged by the packaging check"]})
+                        "evidence": [f"CTR {ctr['value']:.2f}% vs {ctr.get('peer_median'):.2f}% for similar videos, on "
+                                     f"{int(imp.get('value') or 0):,} impressions"]})
         elif missing:
             out.append({"v": v, "reason": "missing", "score": 2, "missing": missing,
                         "evidence": [f"Missing: {', '.join(missing)}"]})
