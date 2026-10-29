@@ -674,7 +674,8 @@ PAGES.autopilot = async () => {
   const d = await api(T("autopilot"));
   const w = d.write;
   const wrap = el("div", {}, ph("Operator", "YouTube Autopilot", "Every morning at 7:30 it reads the analytics and drafts new titles, descriptions, tags and thumbnails for the videos that need them. Approved changes go live on YouTube, get checked, and can be undone.",
-    el("button", { class: "btn", onclick: async (e) => { e.target.disabled = true; try { const r = await api(T("autopilot/run"), {}); toast(`${r.proposed} new draft(s)${r.auto_applied ? `, ${r.auto_applied} applied` : ""}${r.errors.length ? ` · ${r.errors[0]}` : ""}`, !!r.errors.length); route(true); } catch (x) { toast(x.message, true); e.target.disabled = false; } } }, "Run now")));
+    el("button", { class: "btn", onclick: async (e) => { e.target.disabled = true; try { const r = await api(T("autopilot/run"), {}); toast(`${r.proposed} new draft(s)${r.auto_applied ? `, ${r.auto_applied} applied` : ""}${r.errors.length ? ` · ${r.errors[0]}` : ""}`, !!r.errors.length); route(true); } catch (x) { toast(x.message, true); e.target.disabled = false; } } }, "Run now"),
+    el("button", { class: "btn gold", title: "Removes the unrelated search-term tags added on Oct 29 and adds clean tags to videos that still have none. Titles and thumbnails are not touched.", onclick: async (e) => { e.target.disabled = true; try { await api(T("autopilot/cleanup"), {}); toast("Tag cleanup queued. Check Jobs in a few minutes."); } catch (x) { toast(x.message, true); e.target.disabled = false; } } }, "Fix tags (Oct 29 batch)")));
   wrap.append(el("div", { class: "grid g2 sec" },
     card("Write access", null, w.has_write ? el("p", { style: "margin:0" }, el("span", { class: "st ok" }, "ON"), ` Can change ${w.channel} (authorized by ${w.authorized_by || "owner"}).`)
       : el("div", {}, el("p", { style: "margin:0 0 8px" }, el("span", { class: "st warn" }, "READ-ONLY"), " ", w.note || ""), el("a", { class: "btn sm gold", href: "#/accounts" }, "Open Manage accounts → Grant write access"))),
@@ -695,7 +696,7 @@ PAGES.autopilot = async () => {
       el("div", { class: "card-h" }, el("div", {}, el("span", { class: `st ${r.reason === "low_ctr" ? "warn" : "na"}` }, { low_ctr: "Low clicks", long_title: "Title too long", missing: "Missing info", new_upload: "New upload", thumb_changed: "Thumbnail changed" }[r.reason] || r.reason),
         el("h2", { style: "font-size:15px;margin-top:4px" }, r.video_title)), el("div", { class: "r" }, el("a", { class: "btn sm ghost", href: `#/episode/${r.asset_id}` }, "Episode"))),
       el("div", { class: "faint", style: "font-size:12.5px" }, r.evidence.join(" · ")),
-      p.thumbnail_text ? el("div", { class: "sub" }, el("b", {}, "Thumbnail says: "), el("span", { class: "faint" }, `“${p.thumbnail_text.toUpperCase()}” (read from the image; titles are written to match it, not repeat it)`)) : null,
+      p.thumbnail_text ? el("div", { class: "sub" }, el("b", {}, "Thumbnail says: "), el("span", { class: "faint" }, `“${p.thumbnail_text.toUpperCase()}” (${p.thumbnail ? "the NEW thumbnail's headline" : "read from the current image"}; the title is written to go with it, not repeat it)`)) : null,
       el("div", { class: "sub" }, el("b", {}, "Title"), titleOpts),
       p.thumbnail ? el("div", { class: "sub" }, el("b", {}, "Thumbnail: current → new"), el("div", { class: "row", style: "gap:8px;flex-wrap:wrap;margin-top:4px" },
         el("img", { src: r.current_thumb, alt: "current", style: "width:240px;border-radius:6px" }), el("img", { src: p.thumbnail.url, alt: "new", style: "width:240px;border-radius:6px" })), chk("thumbnail", "Use the new thumbnail")) : null,

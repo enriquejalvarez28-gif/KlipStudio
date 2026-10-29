@@ -269,11 +269,15 @@ class Handler(BaseHTTPRequestHandler):
         return self._send(404, {"error": "not found"})
 
     def tenant_post(self, c, t, rest, body):
-        m = re.fullmatch(r"autopilot/(?:(run|mode|cap|approve-all)|(chg_[a-f0-9]+)/(approve|skip|undo|retry|redraft))", rest)
+        m = re.fullmatch(r"autopilot/(?:(run|mode|cap|approve-all|cleanup)|(chg_[a-f0-9]+)/(approve|skip|undo|retry|redraft))", rest)
         if m:
             try:
                 if m.group(1) == "run":
                     return self._send(200, autopilot.daily_run(c, t))
+                if m.group(1) == "cleanup":  # owner clicked: fix today's tags, then finish any still-missing tags
+                    a1, _ = scheduler.enqueue(c, "clean_tags", tenant_id=t, trigger="manual")
+                    a2, _ = scheduler.enqueue(c, "fill_missing", tenant_id=t, trigger="manual")
+                    return self._send(200, {"queued": [a1, a2]})
                 if m.group(1) == "cap":
                     return self._send(200, autopilot.set_cap(c, t, body.get("cap", 0)))
                 if m.group(1) == "mode":

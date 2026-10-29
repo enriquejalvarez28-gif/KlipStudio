@@ -43,6 +43,9 @@ class AutopilotError(Exception):
     pass
 
 
+THUMBS_FROM = "2026-10-29T19:50"  # thumbnail uploads re-enabled by the owner; only drafts approved by a person after this
+
+
 def mode(conn, tenant_id):
     m = get_setting(conn, f"autopilot.mode.{tenant_id}", "approve")
     return m if m in MODES else "approve"
@@ -101,7 +104,7 @@ def candidates(conn, tenant_id):
     since = (date.today() - timedelta(days=COOLDOWN_DAYS)).isoformat()
     busy = {r[0] for r in conn.execute(
         """SELECT asset_id FROM channel_changes WHERE tenant_id=? AND (status IN ('proposed','approved')
-           OR (created_at>=? AND status NOT IN ('skipped')))""", (tenant_id, since))}
+           OR (created_at>=? AND status NOT IN ('skipped') AND reason NOT IN ('missing','tag_cleanup')))""", (tenant_id, since))}
     packaging = {r[0] for r in conn.execute("SELECT asset_id FROM recommendations WHERE tenant_id=? AND status='open' "
                                             "AND kind='thumbnail_title_review'", (tenant_id,))}
     out = []
@@ -153,7 +156,8 @@ def candidates(conn, tenant_id):
 def _proposal(conn, tenant_id, c, runner=None):
     v = c["v"]
     repackage = c["reason"] in ("low_ctr", "long_title", "thumb_changed")
-    want_thumb = False  # owner rule (2026-10-29): keep the current thumbnails; Autopilot never drafts or changes them
+    # Owner (2026-10-29, later the same day): draft new thumbnails again for weak long-form videos, approve each one.
+    want_thumb = repackage and v["format"] == "long_form"
     pack = prep.asset_pack(conn, tenant_id, v["asset_id"], diagnosis="packaging" if repackage else "", runner=runner,
                            thumbnails_wanted=want_thumb, title_max=LONG_TITLE)
     old_tags = json.loads(_latest(conn, tenant_id, v["asset_id"], "tags") or "[]")
@@ -185,7 +189,8 @@ def _proposal(conn, tenant_id, c, runner=None):
 def daily_run(conn, tenant_id, *, transport=None, runner=None, limit=None):
     if conn.execute("SELECT kind FROM tenants WHERE tenant_id=?", (tenant_id,)).fetchone()[0] == "demo":
         return {"skipped": "demo brand: never written"}
-    today_n = conn.execute("SELECT COUNT(*) FROM channel_changes WHERE tenant_id=? AND created_at>=?",
+    today_n = conn.execute("SELECT COUNT(*) FROM channel_changes WHERE tenant_id=? AND created_at>=? "
+                           "AND reason NOT IN ('missing','tag_cleanup')",  # one-off batches don't use the daily draft budget
                            (tenant_id, date.today().isoformat())).fetchone()[0]
     made, applied, errors = [], [], []
     limit = limit or cap(conn, tenant_id)
@@ -345,7 +350,7 @@ def apply(conn, tenant_id, cid, *, transport=None, actor="owner"):
             call("PUT", f"{youtube.DATA_API}/videos", params={"part": "snippet"},
                  json_body={"id": vid, "snippet": new}, quota_units=50, log_name="youtube.videos.update")
         thumb_err = None
-        if False and ch.get("thumbnail"):  # thumbnails are off by owner rule; older drafts can't change them either
+        if ch.get("thumbnail") and r["decided_at"] and r["decided_at"] >= THUMBS_FROM and not r["auto"]:  # owner-approved only
             p = DATA_DIR / "previews" / tenant_id / vid / ch["thumbnail"]
             try:
                 call("POST", UPLOAD_URL, params={"videoId": vid, "uploadType": "media"}, data=p.read_bytes(),
@@ -445,7 +450,7 @@ def page(conn, tenant_id):
                       f"At most {cap(conn, tenant_id)} new changes a day and one change per video every {COOLDOWN_DAYS} days.",
                       f"New titles stay under {LONG_TITLE} characters so they aren't cut off.",
                       "Descriptions keep your existing text underneath the new first lines.",
-                      "Thumbnails are never changed (owner rule): only titles, descriptions and tags.",
+                      "Thumbnails: drafted for weak long-form videos (3-person lineup from the episode's own frames); each one goes live only when you approve it.",
                       "Every change saves the original first; Undo restores it.",
                       "If someone else changes a video after us, it is logged and left alone."]}
 

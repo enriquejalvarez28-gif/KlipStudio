@@ -941,23 +941,28 @@ class TestViralThumbnail(unittest.TestCase):
         self.assertEqual(out.size, (1280, 720))
 
 
-class TestThumbnailsFrozen(TestAutopilot):
-    def test_autopilot_never_touches_thumbnails(self):
+class TestThumbnailApproval(TestAutopilot):
+    def _draft(self, c, auto):
+        from growth_os.db import DATA_DIR
+        d = DATA_DIR / "previews" / self.T / "vW"
+        d.mkdir(parents=True, exist_ok=True)
+        (d / "x.jpg").write_bytes(b"\xff\xd8fakejpeg")
+        cid = "chg_" + ("b" if auto else "a") * 16
+        prop = {"current_title": "Old Title", "titles": [], "description_lines": "", "tags": [], "added_tags": [],
+                "thumbnail": {"file": "x.jpg"}, "fills_missing_only": False}
+        c.execute("INSERT INTO channel_changes (id, tenant_id, asset_id, reason, proposal_json, chosen_json, status, auto, decided_at, created_at) "
+                  "VALUES (?,?,?,?,?,?,'approved',?,?,?)", (cid, self.T, "vW", "low_ctr", json.dumps(prop),
+                                                           json.dumps({"thumbnail": "x.jpg"}), 1 if auto else 0, utcnow(), utcnow()))
+        return cid
+
+    def test_thumbnail_goes_live_only_when_a_person_approved_it(self):
         g = WriteGoogle()
         c, ap = self._setup(g)
-        c.execute("UPDATE assets SET title=? WHERE asset_id='vW'", ("A Very Long Episode Title About Youth Sports Development And Parents | Coach Ray",))
-        [cand] = [x for x in ap.candidates(c, self.T)]
-        prop, chosen = ap._proposal(c, self.T, cand)
-        self.assertIsNone(prop["thumbnail"])
-        self.assertIsNone(chosen["thumbnail"])
-        # even an older draft that still carries a thumbnail can't change it
-        cid = "chg_" + "a" * 16
-        prop["thumbnail"] = {"file": "x.jpg"}
-        c.execute("INSERT INTO channel_changes (id, tenant_id, asset_id, reason, proposal_json, chosen_json, status, decided_at, created_at) "
-                  "VALUES (?,?,?,?,?,?,'approved',?,?)", (cid, self.T, "vW", "low_ctr", json.dumps(prop),
-                                                        json.dumps(dict(chosen, thumbnail="x.jpg", description=True)), utcnow(), utcnow()))
-        ap.apply(c, self.T, cid, transport=g)
-        self.assertEqual(g.thumb_posts, 0)
+        ap.apply(c, self.T, self._draft(c, auto=True), transport=g)
+        self.assertEqual(g.thumb_posts, 0)           # auto modes never change thumbnails
+        r = ap.apply(c, self.T, self._draft(c, auto=False), transport=g)
+        self.assertEqual(g.thumb_posts, 1)
+        self.assertIn("thumbnail", r["changed"])
 
 
 class TestTitleMatchesThumbnail(TestAutopilot):

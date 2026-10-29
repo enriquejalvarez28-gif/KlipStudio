@@ -142,28 +142,6 @@ def asset_pack(conn, tenant_id, asset_id, *, diagnosis="", runner=None, thumbnai
     keyword, kw_basis = _keyword(d, kws)
     guest = thumbs.guest_of(v["title"])
     pack = {"prepared_at": utcnow(), "keyword": keyword, "keyword_basis": kw_basis, "notes": [], "titles": []}
-    try:
-        if skip_titles:  # description/tags-only jobs don't need title drafts (saves an AI call per video)
-            raise LookupError("skip")
-        payload = {"title": v["title"], "format": v["format"], "duration_min": round((v["duration_s"] or 0) / 60),
-                   "search_terms": [s["term"] for s in d["search_terms"][:8]], "topic_keywords": kws[:10],
-                   "strategies": PREP_STRATEGIES, "diagnosis": diagnosis}
-        if title_max:
-            payload["max_chars"] = title_max
-        from growth_os import thumbtext
-        tt = thumbtext.read(tenant_id, asset_id)
-        if tt:
-            payload["thumbnail_text"] = tt
-            pack["thumbnail_text"] = tt
-        out, meta = ai.ask(conn, tenant_id, f"prep_titles:{asset_id}", payload, ai.TITLE_INSTRUCTIONS, runner=runner)
-        pack["titles"] = [dict(x, source=f"AI draft ({meta['model']})") for x in out.get("titles", [])][:3]
-        pack["keep_current"] = bool(out.get("keep_current")) and len(v["title"] or "") <= (title_max or 100)
-        pack["keep_reason"] = out.get("keep_reason")
-    except LookupError:
-        pass
-    except (ai.AIUnavailable, ValueError, KeyError) as e:
-        pack["titles"] = draft_titles(v["title"], keyword, guest)
-        pack["notes"].append(f"AI titles unavailable ({str(e)[:80]}); rule-based drafts shown.")
     pack["thumbnails"] = None
     if thumbnails_wanted:
         heads = thumbs.default_headlines(v["title"])
@@ -178,10 +156,37 @@ def asset_pack(conn, tenant_id, asset_id, *, diagnosis="", runner=None, thumbnai
         try:
             rf = thumbs.recommend_format(conn, tenant_id, asset_id)
             fmt = rf["recommended"]  # previews() degrades to what this episode's own frames can fill
+            from growth_os import cast as cast_mod
+            if {"jamar", "enrique", "guest"} <= set(cast_mod.load(tenant_id, asset_id)):
+                fmt = "trio"  # both hosts and the guest were found in this episode: organised 3-person lineup
             pack["thumbnails"] = thumbs.previews(conn, tenant_id, asset_id, heads, fmt=fmt)
             pack["thumbnails"]["format_why"] = rf["why"]
         except (ValueError, LookupError) as e:
             pack["notes"].append(f"Thumbnail previews: {e}")
+    try:
+        if skip_titles:  # description/tags-only jobs don't need title drafts (saves an AI call per video)
+            raise LookupError("skip")
+        payload = {"title": v["title"], "format": v["format"], "duration_min": round((v["duration_s"] or 0) / 60),
+                   "search_terms": [s["term"] for s in d["search_terms"][:8]], "topic_keywords": kws[:10],
+                   "strategies": PREP_STRATEGIES, "diagnosis": diagnosis}
+        if title_max:
+            payload["max_chars"] = title_max
+        from growth_os import thumbtext
+        new_thumb = ((pack.get("thumbnails") or {}).get("variants") or [None])[0]
+        # The title must read as one message with the thumbnail it will sit next to: the NEW one if we're proposing one.
+        tt = new_thumb["headline"].replace("*", "").replace("/", " ") if new_thumb else thumbtext.read(tenant_id, asset_id)
+        if tt:
+            payload["thumbnail_text"] = tt
+            pack["thumbnail_text"] = tt
+        out, meta = ai.ask(conn, tenant_id, f"prep_titles:{asset_id}", payload, ai.TITLE_INSTRUCTIONS, runner=runner)
+        pack["titles"] = [dict(x, source=f"AI draft ({meta['model']})") for x in out.get("titles", [])][:3]
+        pack["keep_current"] = bool(out.get("keep_current")) and len(v["title"] or "") <= (title_max or 100)
+        pack["keep_reason"] = out.get("keep_reason")
+    except LookupError:
+        pass
+    except (ai.AIUnavailable, ValueError, KeyError) as e:
+        pack["titles"] = draft_titles(v["title"], keyword, guest)
+        pack["notes"].append(f"AI titles unavailable ({str(e)[:80]}); rule-based drafts shown.")
     segs = load_transcript(tenant_id, asset_id) or []
     chs = chapters(segs, v["duration_s"])
     brand = conn.execute("SELECT display_name FROM tenants WHERE tenant_id=?", (tenant_id,)).fetchone()
