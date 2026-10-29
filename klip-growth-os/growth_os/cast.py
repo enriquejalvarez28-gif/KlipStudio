@@ -22,10 +22,11 @@ MODELS = {
     "rec": ("face_recognition_sface_2021dec.onnx",
             "https://github.com/opencv/opencv_zoo/raw/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx"),
 }
-HOST_MATCH = 0.40      # SFace cosine: same person ≥ ~0.36; hosts score 0.55–0.94 on RYJ frames, guests < 0.40
+HOST_MATCH = 0.50      # SFace cosine: hosts score 0.55–0.98 on RYJ frames, guests < 0.40
+UNSURE = 0.36          # between UNSURE and HOST_MATCH: not sure who it is → not used at all
 GUEST_MATCH = 0.45     # a Short belongs to the episode when its guest face matches this well
 SHORTS_WINDOW_DAYS = 45
-FRAME_URL = "https://i.ytimg.com/vi/{vid}/maxres{n}.jpg"
+FRAME_URLS = ("https://i.ytimg.com/vi/{vid}/maxres{n}.jpg", "https://i.ytimg.com/vi/{vid}/sd{n}.jpg")
 ROLES = ("jamar", "guest", "enrique")  # studio order, left → right
 
 
@@ -104,7 +105,9 @@ class _Faces:
             s = max(self.sim(e, r) for r in embs)
             if s > score:
                 best, score = name, s
-        return (best, score) if score >= HOST_MATCH else ("guest", score)
+        if score >= HOST_MATCH:
+            return best, score
+        return ("unsure" if score >= UNSURE else "guest"), score
 
 
 def _frames(tenant_id, vid, fetch):
@@ -113,13 +116,14 @@ def _frames(tenant_id, vid, fetch):
     out = []
     for n in (1, 2, 3):
         p = d / f"{vid}_{n}.jpg"
-        if not p.exists():
+        for url in FRAME_URLS if not p.exists() else ():
             try:
-                data = fetch(FRAME_URL.format(vid=vid, n=n))
-                if data and len(data) > 5000:
-                    p.write_bytes(data)
+                data = fetch(url.format(vid=vid, n=n))
             except Exception:
                 continue
+            if data and len(data) > 8000:  # YouTube's grey placeholder is tiny
+                p.write_bytes(data)
+                break
         if p.exists():
             out.append(p)
     return out
@@ -163,6 +167,8 @@ def build(conn, tenant_id, asset_id, *, fetch=None, faces=None):
             for f in fs:
                 e = fx.embed(img, f)
                 role, score = fx.who(e)
+                if role == "unsure":
+                    continue
                 if role == "guest":
                     if guest_only and guest_embs and max(fx.sim(e, g) for g in guest_embs) < GUEST_MATCH:
                         continue
