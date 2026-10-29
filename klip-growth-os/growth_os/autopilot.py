@@ -104,7 +104,7 @@ def candidates(conn, tenant_id):
     since = (date.today() - timedelta(days=COOLDOWN_DAYS)).isoformat()
     busy = {r[0] for r in conn.execute(
         """SELECT asset_id FROM channel_changes WHERE tenant_id=? AND (status IN ('proposed','approved')
-           OR (created_at>=? AND status NOT IN ('skipped') AND reason NOT IN ('missing','tag_cleanup')))""", (tenant_id, since))}
+           OR (created_at>=? AND status NOT IN ('skipped') AND reason<>'tag_cleanup' AND COALESCE(chosen_json,'') NOT LIKE '%only_if_empty": true%'))""", (tenant_id, since))}
     packaging = {r[0] for r in conn.execute("SELECT asset_id FROM recommendations WHERE tenant_id=? AND status='open' "
                                             "AND kind='thumbnail_title_review'", (tenant_id,))}
     out = []
@@ -190,7 +190,7 @@ def daily_run(conn, tenant_id, *, transport=None, runner=None, limit=None):
     if conn.execute("SELECT kind FROM tenants WHERE tenant_id=?", (tenant_id,)).fetchone()[0] == "demo":
         return {"skipped": "demo brand: never written"}
     today_n = conn.execute("SELECT COUNT(*) FROM channel_changes WHERE tenant_id=? AND created_at>=? "
-                           "AND reason NOT IN ('missing','tag_cleanup')",  # one-off batches don't use the daily draft budget
+                           "AND reason<>'tag_cleanup' AND COALESCE(chosen_json,'') NOT LIKE '%only_if_empty\": true%'",  # one-off batches don't use the daily draft budget
                            (tenant_id, date.today().isoformat())).fetchone()[0]
     made, applied, errors = [], [], []
     limit = limit or cap(conn, tenant_id)
