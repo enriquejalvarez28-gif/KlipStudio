@@ -958,3 +958,31 @@ class TestThumbnailsFrozen(TestAutopilot):
                                                         json.dumps(dict(chosen, thumbnail="x.jpg", description=True)), utcnow(), utcnow()))
         ap.apply(c, self.T, cid, transport=g)
         self.assertEqual(g.thumb_posts, 0)
+
+
+class TestTitleMatchesThumbnail(TestAutopilot):
+    def test_thumbnail_text_reaches_title_draft_and_swap_triggers_recheck(self):
+        from growth_os import thumbtext
+        g = WriteGoogle()
+        c, ap = self._setup(g)
+        seen = {}
+
+        def runner(prompt, model):
+            seen.setdefault("prompts", []).append(prompt)
+            return {"result": json.dumps({"titles": [{"strategy": "curiosity", "title": "Why Coach Ray Says Kids Quit", "why": "w"}]})}
+        on = {"enabled": True, "cli_found": True, "daily_cap": 99, "used_today": 0}
+        c.execute("UPDATE assets SET title=? WHERE asset_id='vW'", ("A Very Long Episode Title About Youth Sports Development And Parents | Coach Ray",))
+        with mock.patch.object(thumbtext, "read", return_value="stop calling kidssoft"), \
+                mock.patch.object(ai, "status", return_value=on):
+            [cand] = ap.candidates(c, self.T)
+            prop, chosen = ap._proposal(c, self.T, cand, runner=runner)
+        self.assertEqual(prop["thumbnail_text"], "stop calling kidssoft")
+        self.assertTrue(any('"thumbnail_text":"stop calling kidssoft"' in p for p in seen["prompts"]))
+        # our title went live, then the other agent swapped the thumbnail → re-check queued despite cooldown
+        cid = "chg_" + "b" * 16
+        c.execute("INSERT INTO channel_changes (id, tenant_id, asset_id, reason, proposal_json, chosen_json, status, applied_at, created_at) "
+                  "VALUES (?,?,?,?,?,?,'verified','2026-10-01T00:00:00+00:00',?)", (cid, self.T, "vW", "long_title", json.dumps(prop),
+                                                                                   json.dumps({"title": "Why Coach Ray Says Kids Quit"}), utcnow()))
+        youtube_sync.record_history(c, self.T, "youtube", "vW", "thumbnail", "newhash", "thumbnail bytes")
+        reasons = [x["reason"] for x in ap.candidates(c, self.T)]
+        self.assertEqual(reasons, ["thumb_changed"])

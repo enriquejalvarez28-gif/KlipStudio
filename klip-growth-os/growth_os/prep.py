@@ -147,6 +147,11 @@ def asset_pack(conn, tenant_id, asset_id, *, diagnosis="", runner=None, thumbnai
                    "strategies": PREP_STRATEGIES, "diagnosis": diagnosis}
         if title_max:
             payload["max_chars"] = title_max
+        from growth_os import thumbtext
+        tt = thumbtext.read(tenant_id, asset_id)
+        if tt:
+            payload["thumbnail_text"] = tt
+            pack["thumbnail_text"] = tt
         out, meta = ai.ask(conn, tenant_id, f"prep_titles:{asset_id}", payload, ai.TITLE_INSTRUCTIONS, runner=runner)
         pack["titles"] = [dict(x, source=f"AI draft ({meta['model']})") for x in out.get("titles", [])][:3]
         pack["keep_current"] = bool(out.get("keep_current")) and len(v["title"] or "") <= (title_max or 100)

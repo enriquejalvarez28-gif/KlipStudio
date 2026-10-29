@@ -671,9 +671,10 @@ PAGES.autopilot = async () => {
       .concat((p.titles || []).map((t) => el("label", { style: "display:block" }, el("input", { type: "radio", name: `t_${r.id}`, checked: ch.title === t.title, onchange: () => { sel[r.id].title = t.title; } }), " ", t.title, el("span", { class: "faint", style: "font-size:11.5px" }, ` · ${(t.strategy || "").replaceAll("_", " ")}`))));
     const chk = (k, label) => el("label", { style: "display:block;margin-top:6px" }, el("input", { type: "checkbox", checked: !!ch[k], onchange: (e) => { sel[r.id][k] = e.target.checked ? (k === "thumbnail" ? p.thumbnail.file : true) : (k === "thumbnail" ? null : false); } }), " ", label);
     return el("section", { class: "card rec" },
-      el("div", { class: "card-h" }, el("div", {}, el("span", { class: `st ${r.reason === "low_ctr" ? "warn" : "na"}` }, { low_ctr: "Low clicks", long_title: "Title too long", missing: "Missing info", new_upload: "New upload" }[r.reason] || r.reason),
+      el("div", { class: "card-h" }, el("div", {}, el("span", { class: `st ${r.reason === "low_ctr" ? "warn" : "na"}` }, { low_ctr: "Low clicks", long_title: "Title too long", missing: "Missing info", new_upload: "New upload", thumb_changed: "Thumbnail changed" }[r.reason] || r.reason),
         el("h2", { style: "font-size:15px;margin-top:4px" }, r.video_title)), el("div", { class: "r" }, el("a", { class: "btn sm ghost", href: `#/episode/${r.asset_id}` }, "Episode"))),
       el("div", { class: "faint", style: "font-size:12.5px" }, r.evidence.join(" · ")),
+      p.thumbnail_text ? el("div", { class: "sub" }, el("b", {}, "Thumbnail says: "), el("span", { class: "faint" }, `“${p.thumbnail_text.toUpperCase()}” (read from the image; titles are written to match it, not repeat it)`)) : null,
       el("div", { class: "sub" }, el("b", {}, "Title"), titleOpts),
       p.thumbnail ? el("div", { class: "sub" }, el("b", {}, "Thumbnail: current → new"), el("div", { class: "row", style: "gap:8px;flex-wrap:wrap;margin-top:4px" },
         el("img", { src: r.current_thumb, alt: "current", style: "width:240px;border-radius:6px" }), el("img", { src: p.thumbnail.url, alt: "new", style: "width:240px;border-radius:6px" })), chk("thumbnail", "Use the new thumbnail")) : null,

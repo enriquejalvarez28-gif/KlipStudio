@@ -105,6 +105,20 @@ def candidates(conn, tenant_id):
     packaging = {r[0] for r in conn.execute("SELECT asset_id FROM recommendations WHERE tenant_id=? AND status='open' "
                                             "AND kind='thumbnail_title_review'", (tenant_id,))}
     out = []
+    pending = {r[0] for r in conn.execute("SELECT asset_id FROM channel_changes WHERE tenant_id=? AND status IN "
+                                          "('proposed','approved')", (tenant_id,))}
+    # Thumbnails belong to the other agent. If it replaced a thumbnail after we changed that video's title,
+    # re-check that the title still reads as one message with the new picture (this skips the cooldown).
+    by_id = {v["asset_id"]: v for v in vids}
+    for r in conn.execute("""SELECT asset_id, MAX(applied_at) at FROM channel_changes WHERE tenant_id=?
+                             AND status IN ('verified','partial') AND chosen_json LIKE '%"title": "%' GROUP BY asset_id""",
+                          (tenant_id,)):
+        thumb_at = conn.execute("SELECT MAX(observed_at) FROM asset_history WHERE tenant_id=? AND asset_id=? AND field='thumbnail'",
+                                (tenant_id, r["asset_id"])).fetchone()[0]
+        if r["asset_id"] in by_id and r["asset_id"] not in pending and thumb_at and r["at"] and thumb_at > r["at"]:
+            out.append({"v": by_id[r["asset_id"]], "reason": "thumb_changed", "score": 2.8, "missing": [], "shorten": True,
+                        "evidence": ["The thumbnail was replaced after our title change; re-checking the title fits the new image"]})
+            busy.add(r["asset_id"])
     for v in vids:
         a = v["asset_id"]
         if a in busy or (_latest(conn, tenant_id, a, "privacy") or "public") != "public":
@@ -138,7 +152,7 @@ def candidates(conn, tenant_id):
 
 def _proposal(conn, tenant_id, c, runner=None):
     v = c["v"]
-    repackage = c["reason"] in ("low_ctr", "long_title")
+    repackage = c["reason"] in ("low_ctr", "long_title", "thumb_changed")
     want_thumb = False  # owner rule (2026-10-29): keep the current thumbnails; Autopilot never drafts or changes them
     pack = prep.asset_pack(conn, tenant_id, v["asset_id"], diagnosis="packaging" if repackage else "", runner=runner,
                            thumbnails_wanted=want_thumb, title_max=LONG_TITLE)
@@ -154,6 +168,7 @@ def _proposal(conn, tenant_id, c, runner=None):
                           if th else None),
             "keyword": pack["keyword"], "notes": pack["notes"], "format": v["format"],
             "keep_current": pack.get("keep_current"), "keep_reason": pack.get("keep_reason"),
+            "thumbnail_text": pack.get("thumbnail_text"),
             "fills_missing_only": c["reason"] in ("missing", "new_upload")}
     # Prefer hook-style titles (question/curiosity) over keyword-first ones: clicks come from the hook.
     order = {"hybrid_search_plus_curiosity": 0, "hybrid": 0, "curiosity": 1, "search_driven": 2}

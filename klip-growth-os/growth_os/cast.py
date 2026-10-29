@@ -24,6 +24,9 @@ MODELS = {
     "fer": ("facial_expression_recognition_mobilefacenet_2022july.onnx",
             _ZOO + "facial_expression_recognition/facial_expression_recognition_mobilefacenet_2022july.onnx"),
     "seg": ("human_segmentation_pphumanseg_2023mar.onnx", _ZOO + "human_segmentation_pphumanseg/human_segmentation_pphumanseg_2023mar.onnx"),
+    # read the words already on a thumbnail so titles can complement them
+    "ocr_det": ("text_detection_en_ppocrv3_2023may.onnx", _ZOO + "text_detection_ppocr/text_detection_en_ppocrv3_2023may.onnx"),
+    "ocr_rec": ("text_recognition_CRNN_EN_2021sep.onnx", _ZOO + "text_recognition_crnn/text_recognition_CRNN_EN_2021sep.onnx"),
 }
 EMOTIONS = ("angry", "disgust", "fearful", "happy", "neutral", "sad", "surprised")
 HOST_MATCH = 0.65      # SFace cosine: real host matches score 0.66–1.0 on RYJ frames; look-alikes 0.55–0.57; guests < 0.40

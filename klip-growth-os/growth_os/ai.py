@@ -100,6 +100,10 @@ TITLE_INSTRUCTIONS = (
     "episode cannot deliver, no ALL CAPS words, no made-up facts, names or numbers not present in INPUT. "
     "Use INPUT.search_terms and INPUT.topic_keywords where natural. For each give a one-sentence 'why' tied to "
     "INPUT evidence. Never state a predicted CTR or virality probability. "
+    "INPUT.thumbnail_text, when present, is the headline already on the video's thumbnail (read by OCR, so spaces may "
+    "be missing, e.g. 'isaau amoney grabo' = 'IS AAU A MONEY GRAB?'). The thumbnail will NOT change, so every title must "
+    "work WITH it: never repeat the thumbnail words, never contradict them, and add what the thumbnail doesn't say "
+    "(who the guest is, the search phrase, the payoff). Title and thumbnail should read as one message. "
     'Shape: {"titles":[{"strategy":"...","title":"...","why":"..."}],"keep_current":true|false,"keep_reason":"..."}'
 )
 
