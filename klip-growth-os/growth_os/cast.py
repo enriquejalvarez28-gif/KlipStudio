@@ -22,7 +22,7 @@ MODELS = {
     "rec": ("face_recognition_sface_2021dec.onnx",
             "https://github.com/opencv/opencv_zoo/raw/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx"),
 }
-HOST_MATCH = 0.62      # SFace cosine: real host matches score 0.66–1.0 on RYJ frames; look-alikes 0.55–0.57; guests < 0.40
+HOST_MATCH = 0.65      # SFace cosine: real host matches score 0.66–1.0 on RYJ frames; look-alikes 0.55–0.57; guests < 0.40
 UNSURE = 0.36          # between UNSURE and HOST_MATCH: not sure who it is → not used at all
 GUEST_MATCH = 0.45     # a Short belongs to the episode when its guest face matches this well
 SHORTS_WINDOW_DAYS = 45
@@ -135,12 +135,12 @@ def _default_fetch(url):
         return r.read()
 
 
-def _crop(img, f, out_path):
+def _crop(img, f, out_path, below=2.4):
     """Portrait around the face: shoulders up, face a bit above center. Returns horizontal focus (0–1)."""
     H, W = img.shape[:2]
     x, y, w, h = (float(v) for v in f[:4])
     cw = min(W, w * 2.6)
-    top, bot = max(0, y - h * 1.0), min(H, y + h * 2.4)  # shoulders up: stops above burned-in captions
+    top, bot = max(0, y - h * 1.0), min(H, y + h * below)  # shoulders up: stops above burned-in captions
     cx = x + w / 2
     x0 = int(max(0, min(W - cw, cx - cw / 2)))
     crop = img[int(top):int(bot), x0:int(x0 + cw)]
@@ -161,6 +161,7 @@ def build(conn, tenant_id, asset_id, *, fetch=None, faces=None):
     guest_embs = []
 
     def scan(paths, center_only=False, guest_only=False):
+        weight = 0.7 if center_only else 1.0  # prefer the episode's own frames over Shorts (captions, upscaling)
         hit = False
         for p in paths:
             img = cv2.imread(str(p))
@@ -176,8 +177,8 @@ def build(conn, tenant_id, asset_id, *, fetch=None, faces=None):
                     if not guest_only:
                         guest_embs.append(e)
                     hit = True
-                if f[2] > found.get(role, (0,))[0]:
-                    found[role] = (float(f[2]), str(p), f, round(score, 2))
+                if f[2] * weight > found.get(role, (0,))[0]:
+                    found[role] = (float(f[2]) * weight, str(p), f, round(score, 2), center_only)
         return hit
 
     scan(_frames(tenant_id, asset_id, fetch))
@@ -207,9 +208,9 @@ def build(conn, tenant_id, asset_id, *, fetch=None, faces=None):
     out_dir = DATA_DIR / "cast" / tenant_id / asset_id
     out_dir.mkdir(parents=True, exist_ok=True)
     cast = {}
-    for role, (w, path, f, score) in found.items():
+    for role, (w, path, f, score, short) in found.items():
         img = cv2.imread(path)
-        focus = _crop(img, f, out_dir / f"{role}.jpg")
+        focus = _crop(img, f, out_dir / f"{role}.jpg", below=1.8 if short else 2.4)
         cast[role] = {"file": f"{role}.jpg", "focus": focus, "face_px": int(w), "match": score,
                       "from": path.rsplit("/", 1)[-1].rsplit("\\", 1)[-1]}
     meta = {"asset_id": asset_id, "built_at": utcnow(), "cast": cast, "shorts_used": used_shorts}

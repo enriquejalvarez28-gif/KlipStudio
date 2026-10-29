@@ -11,6 +11,13 @@ from growth_os import ai, analytics, thumbs
 from growth_os.db import DATA_DIR, utcnow
 
 NO_REPACKAGE = ("double_down", "funnel")  # winners / funnel fixes keep their packaging
+HEADLINE_INSTRUCTIONS = (
+    "Write 2 different YouTube thumbnail headlines for the sports interview in INPUT. Each 2-4 words, a complete "
+    "thought (never cut mid-phrase), punchy, true to the title (no invented claims or numbers), different from the "
+    "title wording. Mark exactly one gold word per headline with *asterisks*. Examples: 'TOO YOUNG TO *LIFT?*', "
+    "'SOCCER'S *BIGGEST* MISTAKE'. "
+    'Shape: {"headlines":["",""]}'
+)
 SEO_INSTRUCTIONS = (
     "Write YouTube description opening lines and tags for the video in INPUT (a sports interview podcast). "
     "first_lines: 2 short sentences (max 300 characters) that say what the viewer will learn, naming the guest if given, "
@@ -149,10 +156,19 @@ def asset_pack(conn, tenant_id, asset_id, *, diagnosis="", runner=None, thumbnai
         pack["notes"].append(f"AI titles unavailable ({str(e)[:80]}); rule-based drafts shown.")
     pack["thumbnails"] = None
     if thumbnails_wanted:
+        heads = thumbs.default_headlines(v["title"])
+        try:
+            out, _ = ai.ask(conn, tenant_id, f"thumb_headlines:{asset_id}", {"title": v["title"], "guest": guest,
+                            "search_terms": [x["term"] for x in d["search_terms"][:5]]}, HEADLINE_INSTRUCTIONS, runner=runner)
+            hs = [str(h).strip() for h in out.get("headlines", []) if str(h).strip()]
+            if len(hs) >= 2 and all(len(h.replace("*", "").split()) <= 5 for h in hs[:2]):
+                heads = hs[:2]
+        except (ai.AIUnavailable, ValueError, KeyError):
+            pass
         try:
             rf = thumbs.recommend_format(conn, tenant_id, asset_id)
             fmt = rf["recommended"]  # previews() degrades to what this episode's own frames can fill
-            pack["thumbnails"] = thumbs.previews(conn, tenant_id, asset_id, thumbs.default_headlines(v["title"]), fmt=fmt)
+            pack["thumbnails"] = thumbs.previews(conn, tenant_id, asset_id, heads, fmt=fmt)
             pack["thumbnails"]["format_why"] = rf["why"]
         except (ValueError, LookupError) as e:
             pack["notes"].append(f"Thumbnail previews: {e}")
