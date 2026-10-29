@@ -1040,3 +1040,25 @@ class TestConceptsAndInsights(TestThumbnailStrategy):
         for h in ("Episodes worth retesting", "Thumbnail styles", "Topics attracting new viewers",
                   "Topics generating subscribers", "Hook opportunities", "Experiments to run next"):
             self.assertIn(h, html)
+
+
+class TestFillMissing(TestAutopilot):
+    def test_fills_only_what_is_missing_and_never_titles(self):
+        g = WriteGoogle()
+        c, ap = self._setup(g)
+        g.snip.update(description="", tags=[])
+        r = ap.fill_missing(c, self.T, transport=g)
+        self.assertEqual((r["descriptions"], r["tags"], r["verified"], r["failed"]), (1, 1, 1, []))
+        sent = g.puts[-1]["snippet"]
+        self.assertEqual(sent["title"], "Old Title")          # title untouched
+        self.assertTrue(sent["description"] and sent["tags"])
+        self.assertEqual(g.thumb_posts, 0)                   # thumbnails never touched
+
+    def test_live_description_added_since_sync_is_left_alone(self):
+        g = WriteGoogle()
+        c, ap = self._setup(g)  # history says empty, but YouTube already has a real description now
+        g.snip["description"] = "A full description someone added in Studio after our last sync, with links."
+        r = ap.fill_missing(c, self.T, transport=g)
+        self.assertEqual(g.snip["description"], "A full description someone added in Studio after our last sync, with links.")
+        self.assertEqual(r["descriptions"], 0)
+        self.assertEqual(r["skipped_live"], 1)

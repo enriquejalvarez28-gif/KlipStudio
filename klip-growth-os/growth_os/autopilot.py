@@ -329,7 +329,9 @@ def apply(conn, tenant_id, cid, *, transport=None, actor="owner"):
         if ch.get("description"):
             first = prop["description_lines"].split("\n")[0].strip()
             old = before.get("description", "")
-            if first and first not in old:
+            if ch.get("only_if_empty") and len(old.strip()) >= 40:
+                pass  # someone added a description since our last sync: leave it alone
+            elif first and first not in old:
                 new["description"] = (prop["description_lines"] + ("\n\n" + old if old.strip() else ""))[:4900]
         if ch.get("tags"):  # merge with the LIVE tags (they may have changed since the last sync)
             tags = list(dict.fromkeys(list(before.get("tags", [])) + prop["tags"]))
@@ -433,3 +435,60 @@ def page(conn, tenant_id):
                       "Thumbnails are never changed (owner rule): only titles, descriptions and tags.",
                       "Every change saves the original first; Undo restores it.",
                       "If someone else changes a video after us, it is logged and left alone."]}
+
+
+# ── One-off owner-approved batch: fill missing descriptions and tags ──
+
+def fill_missing(conn, tenant_id, *, actor="owner", transport=None, runner=None, progress=lambda p, m: None, limit=None):
+    """Add descriptions where there are none and tags where there are none, highest search views first.
+    Never touches titles or thumbnails. Each change is checked live first, applied, read back, and has Undo."""
+    vids = analytics.videos(conn, tenant_id)
+    search = {r[0]: r[1] for r in conn.execute("SELECT asset_id, value FROM metrics WHERE tenant_id=? AND grain='traffic_source' "
+                                               "AND period_start='YT_SEARCH'", (tenant_id,))}
+    todo = []
+    for v in vids:
+        a = v["asset_id"]
+        if (_latest(conn, tenant_id, a, "privacy") or "public") != "public":
+            continue
+        no_desc = len((_latest(conn, tenant_id, a, "description") or "").strip()) < 40
+        no_tags = json.loads(_latest(conn, tenant_id, a, "tags") or "[]") == []
+        if no_desc or no_tags:
+            todo.append((search.get(a, 0), v.get("metrics", {}).get("views") or 0, v, no_desc, no_tags))
+    todo.sort(key=lambda x: (-x[0], -x[1]))
+    if limit:
+        todo = todo[:limit]
+    done = {"descriptions": 0, "tags": 0, "verified": 0, "failed": [], "skipped_live": 0, "order": []}
+    for i, (sv, _, v, no_desc, no_tags) in enumerate(todo):
+        a = v["asset_id"]
+        progress(int(100 * i / max(len(todo), 1)), f"{i + 1}/{len(todo)} {v['title'][:40]}")
+        for r in conn.execute("SELECT id FROM channel_changes WHERE tenant_id=? AND asset_id=? AND status IN ('proposed','approved')",
+                              (tenant_id, a)).fetchall():  # this batch replaces older drafts for the same video
+            conn.execute("UPDATE channel_changes SET status='skipped', error='superseded by the fill-missing batch' WHERE id=?",
+                         (r["id"],))
+        try:
+            pack = prep.asset_pack(conn, tenant_id, a, runner=runner, thumbnails_wanted=False, skip_titles=True)
+            old_tags = json.loads(_latest(conn, tenant_id, a, "tags") or "[]")
+            lines = pack["seo"]["first_lines"] + ("\n\n" + "\n".join(pack["seo"]["chapters"]) if pack["seo"]["chapters"] else "")
+            prop = {"current_title": v["title"], "titles": [], "description_lines": lines,
+                    "tags": list(dict.fromkeys(old_tags + pack["seo"]["tags"])), "added_tags": pack["seo"]["tags"],
+                    "thumbnail": None, "keyword": pack["keyword"], "notes": pack["notes"], "format": v["format"],
+                    "fills_missing_only": True, "search_views": int(sv)}
+            chosen = {"title": None, "description": no_desc, "only_if_empty": True, "tags": no_tags, "thumbnail": None}
+            cid = new_id("chg_")
+            conn.execute("""INSERT INTO channel_changes (id, tenant_id, asset_id, reason, evidence_json, proposal_json,
+                            chosen_json, status, decided_at, created_at) VALUES (?,?,?,?,?,?,?,'approved',?,?)""",
+                         (cid, tenant_id, a, "missing", json.dumps([f"Missing: {', '.join(k for k, b in (('description', no_desc), ('tags', no_tags)) if b)}",
+                                                                   f"{int(sv)} views from YouTube search"]),
+                          json.dumps(prop), json.dumps(chosen), utcnow(), utcnow()))
+            audit(conn, tenant_id, actor, "autopilot.approve", {"change": cid, "asset": a, "batch": "fill_missing"})
+            r = apply(conn, tenant_id, cid, transport=transport, actor=actor)
+            done["descriptions"] += "description" in r["changed"]
+            done["tags"] += "tags" in r["changed"]
+            done["verified"] += r["status"] == "verified"
+            if no_desc and "description" not in r["changed"]:
+                done["skipped_live"] += 1
+            done["order"].append({"title": v["title"][:60], "search_views": int(sv), "changed": r["changed"], "status": r["status"]})
+        except Exception as e:  # keep going; report every failure
+            done["failed"].append(f"{v['title'][:40]}: {str(e)[:160]}")
+    progress(100, "done")
+    return done

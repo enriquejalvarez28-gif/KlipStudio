@@ -48,6 +48,11 @@ def autopilot_daily(conn, tenant_id, progress):
     return out
 
 
+def fill_missing(conn, tenant_id, progress):
+    return {t: autopilot.fill_missing(conn, t, actor="owner (approved in chat 2026-10-29)", progress=progress)
+            for t in _tenants(conn, tenant_id, include_demo=False)}
+
+
 def _report(kind):
     def run(conn, tenant_id, progress):
         return {t: reports.generate(conn, t, kind) for t in _tenants(conn, tenant_id)}
@@ -60,6 +65,7 @@ REGISTRY = {
     "daily_review": daily_review,
     "packaging_check": packaging_check,
     "autopilot_daily": autopilot_daily,
+    "fill_missing": fill_missing,
     "weekly_report": _report("weekly"),
     "monthly_report": _report("monthly"),
 }
