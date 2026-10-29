@@ -258,7 +258,7 @@ class Handler(BaseHTTPRequestHandler):
         return self._send(404, {"error": "not found"})
 
     def tenant_post(self, c, t, rest, body):
-        m = re.fullmatch(r"autopilot/(?:(run|mode|approve-all)|(chg_[a-f0-9]+)/(approve|skip|undo|retry))", rest)
+        m = re.fullmatch(r"autopilot/(?:(run|mode|approve-all)|(chg_[a-f0-9]+)/(approve|skip|undo|retry|redraft))", rest)
         if m:
             try:
                 if m.group(1) == "run":
@@ -278,6 +278,8 @@ class Handler(BaseHTTPRequestHandler):
                 cid, act = m.group(2), m.group(3)
                 if act == "skip":
                     return self._send(200, autopilot.decide(c, t, cid, "skip"))
+                if act == "redraft":
+                    return self._send(200, autopilot.redraft(c, t, cid))
                 if act == "undo":
                     return self._send(200, autopilot.rollback(c, t, cid))
                 if act == "approve":

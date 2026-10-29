@@ -172,6 +172,22 @@ def daily_run(conn, tenant_id, *, transport=None, runner=None, cap=DAILY_CAP):
             "overridden_since": drift, "errors": errors}
 
 
+def redraft(conn, tenant_id, cid, runner=None):
+    """Rebuild a waiting draft with the current data and drafting rules."""
+    r = conn.execute("SELECT * FROM channel_changes WHERE id=? AND tenant_id=?", (cid, tenant_id)).fetchone()
+    if not r:
+        raise LookupError("change not found")
+    if r["status"] not in OPEN:
+        raise ValueError(f"change is already {r['status']}")
+    v = next((x for x in analytics.videos(conn, tenant_id) if x["asset_id"] == r["asset_id"]), None)
+    if not v:
+        raise LookupError("video not found")
+    prop, chosen = _proposal(conn, tenant_id, {"v": v, "reason": r["reason"]}, runner=runner)
+    conn.execute("UPDATE channel_changes SET proposal_json=?, chosen_json=?, status='proposed' WHERE id=?",
+                 (json.dumps(prop), json.dumps(chosen), cid))
+    return {"id": cid, "status": "proposed"}
+
+
 def decide(conn, tenant_id, cid, action, *, chosen=None, actor="owner", auto=False):
     r = conn.execute("SELECT * FROM channel_changes WHERE id=? AND tenant_id=?", (cid, tenant_id)).fetchone()
     if not r:
