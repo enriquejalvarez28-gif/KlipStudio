@@ -235,6 +235,7 @@ def operator_dry_run(conn, tenant_id, rec_id, target_channel_id):
 
 # ── Competition research (public YouTube data via the channel's read-only token) ──
 
+MIN_SUBS, MAX_SUBS = 1_000, 500_000
 COMPETITOR_QUERIES = ["youth sports podcast", "athlete development podcast", "sports parents podcast",
                       "youth soccer development podcast", "high school athletes recruiting podcast"]
 
@@ -277,7 +278,11 @@ def research_competitors(conn, tenant_id, *, transport=None, queries=COMPETITOR_
     def ok(ch):
         st = ch.get("statistics", {})
         subs, vids = int(st.get("subscriberCount") or 0), int(st.get("videoCount") or 0)
-        return ch["id"] in existing or (1000 <= subs <= 2_000_000 and vids >= 20)
+        return MIN_SUBS <= subs <= MAX_SUBS and vids >= 20  # comparable or a step ahead, not national media
+    drop = [c["id"] for c in chans if not ok(c)]
+    for cid in drop:  # keep the library comparable: remove channels that outgrew / never fit the band
+        conn.execute("DELETE FROM competitors WHERE tenant_id=? AND platform='youtube' AND ref=?", (tenant_id, cid))
+        conn.execute("DELETE FROM competitor_videos WHERE tenant_id=? AND channel_id=?", (tenant_id, cid))
     chans = sorted([c for c in chans if ok(c)], key=lambda c: (c["id"] not in existing, -seen[c["id"]]))[:keep]
     now = utcnow()
     stored = 0
@@ -309,7 +314,12 @@ def competition_facts(conn, tenant_id, top=12):
         r["views_per_day"] = round(r["views"] / age, 1) if age else None
         r["format"] = "short" if (r["duration_s"] or 0) <= 180 else "long"
     rows = [r for r in rows if r["views_per_day"] is not None]
-    best = sorted(rows, key=lambda r: -r["views_per_day"])
+    ranked, per = [], Counter()
+    for r in sorted(rows, key=lambda r: -r["views_per_day"]):
+        if per[r["channel_name"]] < 2:  # max 2 per channel so one big channel can't fill the list
+            ranked.append(r)
+            per[r["channel_name"]] += 1
+    best = ranked
     lens = sorted(len(r["title"]) for r in best[: max(5, len(best) // 4)])
     return {"channels": sorted({r["channel_name"] for r in rows}), "videos_seen": len(rows),
             "fetched_at": max(r["fetched_at"] for r in rows),
