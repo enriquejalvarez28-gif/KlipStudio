@@ -48,8 +48,18 @@ async def page_checks(b, page, label, w=1440, touch=False):
         if r is None:
             chk(False, f'{label}: {room} VIEW PHOTOS exists')
             continue
-        chk(r['open'] and r['n'] >= 4 and room in r['name'],
+        # What has to be true is that the gallery opens, names the right
+        # room, and its counter matches the number of photos it actually
+        # holds. How many that is, is an editorial call: Kreator is down to
+        # two on purpose because the rest of its frames were poor, and a
+        # thin set of good photos beats four with a bad one in them. Fewer
+        # than two is still a failure - a one-photo gallery is not a gallery.
+        chk(r['open'] and r['n'] >= 2 and room in r['name']
+            and r['count'].endswith(str(r['n'])),
             f'{label}: {room} opens {r["n"]} photos, counter {r["count"]}')
+        if r['n'] < 4:
+            print('        note: %s has %d photos; 4+ reads better if there '
+                  'are good ones to add' % (room, r['n']))
     await ctx.close()
 
 
@@ -144,8 +154,15 @@ async def main():
             return e?Math.round(e.getBoundingClientRect().height):0;}
           return {room:h('.rooms .room-img, .rooms .room-img--gal'),
                   work:h('.work-grid .w'), pod:h('#pod-grid .pod-thumb')};}""")
-        chk(sz['room'] > sz['work'] and sz['room'] > sz['pod'],
-            f'room image {sz["room"]}px > work {sz["work"]}px and podcast {sz["pod"]}px')
+        # The rooms must out-weigh anything else on the homepage. Sections
+        # that are no longer on the page score 0 and are skipped rather than
+        # counted as a win - the Work grid came off the homepage, and
+        # 'bigger than something absent' is not a measurement.
+        rivals = {k: v for k, v in (('work', sz['work']), ('podcast', sz['pod']))
+                  if v > 0}
+        chk(rivals and all(sz['room'] > v for v in rivals.values()),
+            'room image %dpx > %s' % (sz['room'], ', '.join(
+                '%s %dpx' % (k, v) for k, v in rivals.items()) or 'nothing on the page'))
         await ctx.close()
         await b.close()
 

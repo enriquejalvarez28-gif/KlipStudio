@@ -110,8 +110,8 @@
       {
         "name": "Kreator Room",
         "role": "Green Screen + Flexible Content",
-        "image": "img/klip-green-screen-room-wide.jpg",
-        "imageAlt": "Kreator Room green screen wall with lighting and stand",
+        "image": "img/klip-green-screen-room-main.jpg",
+        "imageAlt": "Kreator Room green screen wall with monitor, teleprompter and stool",
         "card": "Green screen and flexible content setups",
         "summary": "A flexible green-screen room for courses, training, product demos and creative content.",
         "capabilities": [
@@ -126,18 +126,6 @@
         "anchor": "kreator-room",
         "focal": "50% 45%",
         "gallery": [
-          {
-            "image": "img/klip-green-screen-room-main.jpg",
-            "alt": "Kreator Room green screen wall with lighting and monitor"
-          },
-          {
-            "image": "img/klip-green-screen-room-stool.jpg",
-            "alt": "Kreator Room green screen with stool and microphone stand"
-          },
-          {
-            "image": "img/klip-green-screen-room-monitor.jpg",
-            "alt": "Kreator Room green screen with monitor and side table"
-          },
           {
             "image": "img/klip-green-screen-room-setup.jpg",
             "alt": "Kreator Room green screen set up for a seated piece to camera"
@@ -182,10 +170,6 @@
           {
             "image": "img/klip-white-wall-lights-wide.jpg",
             "alt": "Kanvas Room white cyclorama with studio lighting and chairs"
-          },
-          {
-            "image": "img/klip-white-wall-clean.jpg",
-            "alt": "Kanvas Room white backdrop with a stool, ready to shoot"
           }
         ]
       }
