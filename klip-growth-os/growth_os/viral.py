@@ -73,10 +73,11 @@ def render(orig_path, headline, cuts, *, gold=None, out_path=None, backdrop=None
     # Who goes where (studio order Jamar | guest | Enrique). The guest is biggest and in front.
     # (role, target face px, centre x). Studio order Jamar | guest | Enrique; guest biggest and in front.
     if "guest" in have and len(have) == 3:
-        plan = [("jamar", 165, 700), ("enrique", 165, 1150), ("guest", 215, 930)]
+        plan = [("jamar", 160, 690), ("enrique", 160, 1170), ("guest", 210, 930)]
     elif "guest" in have and len(have) == 2:
         host = next(r for r in have if r != "guest")
-        plan = [(host, 185, 1120 if host == "enrique" else 720), ("guest", 230, 890 if host == "enrique" else 1010)]
+        # guest first, the host in front at the edge so both faces stay fully visible
+        plan = [("guest", 215, 830 if host == "enrique" else 1010), (host, 170, 1165 if host == "enrique" else 700)]
     elif "guest" in have:
         plan = [("guest", 250, 930)]
     elif len(have) == 2:
@@ -88,9 +89,8 @@ def render(orig_path, headline, cuts, *, gold=None, out_path=None, backdrop=None
     for role, target, cx in plan:
         st = _sticker(have[role], face[role], target)
         y = H - st.height + 40  # people sit on the bottom edge, slightly cropped like real thumbnails
-        x = int(cx - st.width / 2)
-        x = min(x, W + 40 - st.width)          # keep faces inside the frame on the right
-        x = max(x, int(W * 0.40) - 40)         # …and off the headline on the left
+        x = int(cx - st.width / 2)  # cut-outs are centred on the face, so cx is where the face lands
+        x = max(x, int(W * 0.40) - 140)  # keep bodies mostly off the headline on the left
         canvas.alpha_composite(st, (x, max(-120, y)))
     canvas = canvas.convert("RGB")
     d = ImageDraw.Draw(canvas)
