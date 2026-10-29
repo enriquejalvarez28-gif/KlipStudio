@@ -89,7 +89,13 @@ def build_data(conn, tenant_id, start, end):
            ON r.id=l.rec_id WHERE l.tenant_id=? AND l.at>=? AND l.at<? AND l.to_state IN
            ('approved','executed','verified','evaluated','reverted','blocked','failed') ORDER BY l.at""",
         (tenant_id, start.isoformat(), (end + timedelta(days=2)).isoformat()))]  # ledger is UTC; period is local
+    try:
+        from growth_os import insights
+        ins = insights.weekly(conn, tenant_id)
+    except Exception as e:  # insights are additive; never block the report
+        ins = {"error": str(e)[:200]}
     return {
+        "insights": ins,
         "actions": [{"state": analytics.STATE_LABELS.get(a["to_state"], a["to_state"]), "title": a["title"],
                      "at": a["at"][:10], "note": a["note"], "outcome": _outcome(a)} for a in acts],
         "brand": dict(brand), "start": start.isoformat(), "end": end.isoformat(),
@@ -172,6 +178,35 @@ def render(data, kind):
         for r in data["recs"]:
             h.append(f"<tr><td><b>{esc(r['title'])}</b><br><span class='muted'>{esc(r['detail'])}</span></td><td>{esc(r['basis'])}</td></tr>")
         h.append("</table>")
+    ins = data.get("insights") or {}
+    if ins and not ins.get("error"):
+        def tbl(head, rows):
+            return ("<table><tr>" + "".join(f"<th>{esc(x)}</th>" for x in head) + "</tr>" +
+                    "".join("<tr>" + "".join(f"<td>{esc(c)}</td>" for c in r) + "</tr>" for r in rows) + "</table>")
+        h.append("<h2>Episodes worth retesting</h2>")
+        h.append(tbl(["Episode", "Why"], [[r["title"], r["why"]] for r in ins["retest"]]) if ins["retest"] else
+                 "<p class='muted'>None right now: no episode combines below-typical clicks with above-typical holding.</p>")
+        hv = ins["styles"]["host_vs_guest"]
+        h.append("<h2>Thumbnail styles</h2>" + tbl(["Style (long-form)", "Videos", "Median CTR", "Median % viewed"],
+                 [[r["label"], r["n"], f"{r['median_ctr']:.1f}%" if r["median_ctr"] is not None else "—",
+                   f"{r['median_pct_viewed']:.1f}%" if r["median_pct_viewed"] is not None else "—"] for r in ins["styles"]["formats"]]))
+        h.append(tbl(["Thumbnail shows", "Videos", "Median % viewed", "Subs / 1,000 views", "Sample"],
+                 [[lab, g["n"], g["median_pct_viewed"] if g["median_pct_viewed"] is not None else "—",
+                   g["median_subs_per_1k"] if g["median_subs_per_1k"] is not None else "—", g["sample"]]
+                  for lab, g in (("A host (Jamar / Enrique)", hv["host_inclusive"]), ("Guest only", hv["guest_only"]))]))
+        h.append(f"<p class='muted'>{esc(hv['verdict'])}</p>")
+        h.append("<h2>Topics attracting new viewers</h2>" + tbl(["Topic", "Videos", "Share of views from discovery", "Sample"],
+                 [[r["topic"], r["videos"], f"{r['discovery_share']}%" if r["discovery_share"] is not None else "—", r["sample"]]
+                  for r in ins["topics_new_viewers"]]))
+        h.append("<h2>Topics generating subscribers</h2>" + tbl(["Topic", "Videos", "Subs per 1,000 views", "Sample"],
+                 [[r["topic"], r["videos"], r["subs_per_1k"] if r["subs_per_1k"] is not None else "—", r["sample"]]
+                  for r in ins["topics_subscribers"]]))
+        h.append("<h2>Hook opportunities (first 30 seconds)</h2>")
+        h.append(tbl(["Episode", "Still watching at 0:30", "Typical"], [[r["title"], f"{r['first30']}%", f"{ins['first30_median']}%"]
+                                                                           for r in ins["hooks"]]) if ins["hooks"] else
+                 "<p class='muted'>No episode is clearly below the typical 30-second hold.</p>")
+        h.append("<h2>Experiments to run next</h2><ol>" + "".join(f"<li>{esc(x)}</li>" for x in ins["experiments"]) + "</ol>")
+        h.append("<p class='muted'>" + esc(" ".join(ins["notes"])) + "</p>")
     if data.get("actions"):
         h.append("<h2>Approved actions and outcomes</h2><table><tr><th>Date</th><th>State</th><th>Change</th><th>Outcome</th></tr>")
         for a in data["actions"]:

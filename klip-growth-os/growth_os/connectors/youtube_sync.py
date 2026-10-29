@@ -179,6 +179,11 @@ def sync(conn, tenant_id, row_id, *, client, transport=None, today=None, progres
     progress(70, "impressions and CTR (reach reports)")
     try:
         out["reach"] = youtube_reporting.sync(conn, http, tenant_id, row_id, cred=cred, ch_id=ch_id, client=client)
+        try:  # impressions/CTR split by traffic source (separate, larger report)
+            out["reach_by_source"] = youtube_reporting.sync_by_source(conn, http, tenant_id, row_id, cred=cred,
+                                                                      ch_id=ch_id, client=client)
+        except Exception as e:
+            out["unavailable"].append(f"CTR by traffic source: {str(e)[:100]}")
         out["unavailable"] += out["reach"].pop("unavailable", [])
         if out["reach"]["rollup"]["videos"]:
             out["unavailable"] = [u for u in out["unavailable"] if not u.startswith("impressions/CTR not returned")]

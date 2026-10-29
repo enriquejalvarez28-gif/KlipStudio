@@ -67,14 +67,14 @@ def pick_report_type(types):
     return sorted(reach)[0] if reach else None
 
 
-def ensure_job(http, conn, tenant_id, row_id, cred, client):
+def ensure_job(http, conn, tenant_id, row_id, cred, client, want=None, suffix=""):
     """Return (job_id, report_type_id, created_now). Reuses an existing job."""
-    job_id = _cursor(conn, tenant_id, row_id, "reporting_job_id")
-    rtype = _cursor(conn, tenant_id, row_id, "reporting_report_type")
+    job_id = _cursor(conn, tenant_id, row_id, "reporting_job_id" + suffix)
+    rtype = _cursor(conn, tenant_id, row_id, "reporting_report_type" + suffix)
     if job_id:
         return job_id, rtype, False
     types = _call(http, conn, tenant_id, cred, client, "GET", f"{REPORTING_API}/reportTypes").get("reportTypes", [])
-    rtype = pick_report_type(types)
+    rtype = want if want and want in [t.get("id") for t in types] else (None if want else pick_report_type(types))
     if not rtype:
         raise ConnectorError("no_reach_report", "YouTube Reporting API offers no reach report for this channel")
     jobs = _call(http, conn, tenant_id, cred, client, "GET", f"{REPORTING_API}/jobs").get("jobs", [])
@@ -86,8 +86,8 @@ def ensure_job(http, conn, tenant_id, row_id, cred, client):
         job = _call(http, conn, tenant_id, cred, client, "POST", f"{REPORTING_API}/jobs",
                     json_body={"reportTypeId": rtype, "name": JOB_NAME})
         job_id, created = job["id"], True
-    _set_cursor(conn, tenant_id, row_id, "reporting_job_id", job_id)
-    _set_cursor(conn, tenant_id, row_id, "reporting_report_type", rtype)
+    _set_cursor(conn, tenant_id, row_id, "reporting_job_id" + suffix, job_id)
+    _set_cursor(conn, tenant_id, row_id, "reporting_report_type" + suffix, rtype)
     return job_id, rtype, created
 
 
@@ -192,3 +192,58 @@ def sync(conn, http, tenant_id, row_id, *, cred, ch_id, client, max_reports=60):
         out["unavailable"].append(
             "impressions/CTR: reach reporting job is set up; Google delivers the first daily files ~48 h after creation")
     return out
+
+
+# ── Impressions + CTR by traffic source (combined reach report) ───────
+
+COMBINED = "channel_reach_combined_a1"
+SRC_GRAIN = "day_video_src"
+
+
+def parse_reach_by_source(text):
+    """{(date, video_id, traffic_source): (impressions, clicks)} from a combined reach CSV."""
+    rd = csv.DictReader(io.StringIO(text))
+    cols = rd.fieldnames or []
+    if "video_thumbnail_impressions" not in cols or "traffic_source_type" not in cols:
+        return {}
+    acc = defaultdict(lambda: [0.0, 0.0])
+    for row in rd:
+        vid, day, src = row.get("video_id"), row.get("date"), row.get("traffic_source_type") or "UNKNOWN"
+        imp = _num(row.get("video_thumbnail_impressions")) or 0.0
+        if not vid or not day or imp <= 0:
+            continue
+        ctr = _num(row.get("video_thumbnail_impressions_ctr")) or 0.0
+        if ctr > 1:
+            ctr /= 100
+        a = acc[(f"{day[:4]}-{day[4:6]}-{day[6:8]}" if len(day) == 8 else day, vid, src)]
+        a[0] += imp
+        a[1] += imp * ctr
+    return dict(acc)
+
+
+def sync_by_source(conn, http, tenant_id, row_id, *, cred, ch_id, client, max_reports=30):
+    job_id, rtype, created = ensure_job(http, conn, tenant_id, row_id, cred, client, want=COMBINED, suffix="_combined")
+    if not job_id:
+        return {"unavailable": "combined reach report not offered for this channel"}
+    after = _cursor(conn, tenant_id, row_id, "reporting_created_after_combined")
+    reports = _call(http, conn, tenant_id, cred, client, "GET", f"{REPORTING_API}/jobs/{job_id}/reports",
+                    params={"createdAfter": after} if after else {}).get("reports", [])
+    done = {r[0] for r in conn.execute("SELECT value FROM asset_history WHERE tenant_id=? AND platform='youtube' "
+                                       "AND asset_id=? AND field='reach_report'", (tenant_id, job_id))}
+    fetched, new = utcnow(), 0
+    for rep in sorted(reports, key=lambda r: r.get("startTime", ""))[:max_reports]:
+        if rep["id"] in done or not rep.get("downloadUrl"):
+            continue
+        raw = _call(http, conn, tenant_id, cred, client, "GET", rep["downloadUrl"], raw=True)
+        text = raw.decode("utf-8", errors="replace") if isinstance(raw, bytes) else str(raw)
+        for (day, vid, src), (imp, clicks) in parse_reach_by_source(text).items():
+            youtube._put_metric(conn, tenant_id, ch_id, vid, "videoThumbnailImpressions", imp, "impressions",
+                                SRC_GRAIN, f"{day}|{src}", SOURCE, fetched, day, "verified")
+            youtube._put_metric(conn, tenant_id, ch_id, vid, "clicks", clicks, "clicks", SRC_GRAIN, f"{day}|{src}",
+                                SOURCE, fetched, day, "verified")
+        conn.execute("INSERT OR IGNORE INTO asset_history VALUES (?,?,?,?,?,?,?,?)",
+                     (tenant_id, "youtube", job_id, "reach_report", rep["id"], rep["id"][:16], fetched, SOURCE))
+        new += 1
+        if rep.get("createTime"):
+            _set_cursor(conn, tenant_id, row_id, "reporting_created_after_combined", rep["createTime"])
+    return {"job_id": job_id, "job_created": created, "reports_downloaded": new}

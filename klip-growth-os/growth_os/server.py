@@ -21,7 +21,7 @@ from datetime import date
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from growth_os import ai, analytics, api, autopilot, brands, brief, db, discovery, prep, reports, scheduler, thumbs, vault
+from growth_os import ai, analytics, api, autopilot, brands, brief, concepts, insights, db, discovery, prep, reports, scheduler, thumbs, vault
 from growth_os.connectors import podcast, youtube
 from growth_os.db import DATA_DIR, new_id, set_setting, utcnow
 from growth_os.http import BudgetExceeded, HttpError
@@ -141,6 +141,13 @@ class Handler(BaseHTTPRequestHandler):
                 if not f.exists():
                     return self._send(404, {"error": "no such preview"})
                 return self._send(200, f.read_bytes(), "image/jpeg")
+            m = re.fullmatch(rf"/concept/{TENANT}/([A-Za-z0-9_-]{{1,64}})/([0-9TZ]{{8,16}}-[1-5]-[a-z_]+\.jpg)", path)
+            if m:
+                brands.get_brand(c, m.group(1))
+                f = DATA_DIR / "concepts" / m.group(1) / m.group(2) / m.group(3)
+                if not f.exists():
+                    return self._send(404, {"error": "no such concept"})
+                return self._send(200, f.read_bytes(), "image/jpeg")
             if path == "/api/app":
                 return self._send(200, api.app_info(c))
             if path == "/api/jobs":
@@ -213,6 +220,7 @@ class Handler(BaseHTTPRequestHandler):
             "discovery": lambda: discovery.page(c, t),
             "brief": lambda: brief.latest(c, t),
             "autopilot": lambda: autopilot.page(c, t),
+            "insights": lambda: insights.page(c, t),
             "cohorts": lambda: prep.cohorts(c, t, q.get("format") or None),
             "settings": lambda: api.settings(c, t),
             "tiles": lambda: tiles(c, t),
@@ -233,6 +241,9 @@ class Handler(BaseHTTPRequestHandler):
         m = re.fullmatch(r"video/([A-Za-z0-9_-]{1,64})", rest)
         if m:
             return self._send(200, api.video_detail(c, t, m.group(1)))
+        m = re.fullmatch(r"concepts/([A-Za-z0-9_-]{1,64})", rest)
+        if m:
+            return self._send(200, {"latest": concepts.latest(c, t, m.group(1))})
         m = re.fullmatch(r"thumbs/([A-Za-z0-9_-]{1,64})", rest)
         if m:
             try:
@@ -296,6 +307,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(400, {"error": "autopilot", "message": str(e)[:400]})
         if rest == "brief":
             return self._send(200, brief.generate(c, t, force=bool(body.get("force"))))
+        m = re.fullmatch(r"concepts/([A-Za-z0-9_-]{1,64})", rest)
+        if m:
+            try:
+                return self._send(200, {"latest": concepts.generate(c, t, m.group(1))})
+            except LookupError as e:
+                raise brands.BrandError("not_found", str(e))
+            except ValueError as e:
+                return self._send(400, {"error": "bad_request", "message": str(e)})
         m = re.fullmatch(r"recommendations/(rec_[a-f0-9]+)/(prepare|dry-run)", rest)
         if m or rest in ("discovery/distribution", "discovery/ai-sample", "discovery/plan", "discovery/competitors"):
             try:

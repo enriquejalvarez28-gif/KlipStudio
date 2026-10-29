@@ -1,6 +1,6 @@
 """Scheduler job handlers. Each takes (conn, tenant_id|None, progress)."""
 
-from growth_os import analytics, autopilot, reports, trends, vault
+from growth_os import analytics, autopilot, concepts, reports, trends, vault
 from growth_os.connectors import youtube_sync
 
 
@@ -41,7 +41,11 @@ def packaging_check(conn, tenant_id, progress):
 
 
 def autopilot_daily(conn, tenant_id, progress):
-    return {t: autopilot.daily_run(conn, t) for t in _tenants(conn, tenant_id, include_demo=False)}
+    out = {}
+    for t in _tenants(conn, tenant_id, include_demo=False):
+        out[t] = autopilot.daily_run(conn, t)
+        out[t]["thumbnail_concepts_for"] = concepts.for_new_episodes(conn, t)  # proposals only
+    return out
 
 
 def _report(kind):

@@ -112,7 +112,7 @@ const NAV = [
   ["Overview", [["home", "Home", "⌂"], ["brief", "Growth brief", "✦"], ["analytics", "Analytics overview", "◔"]]],
   ["Content", [["episodes", "Episode intelligence", "▦"], ["youtube", "YouTube", "▶"], ["instagram", "Instagram", "◎"], ["podcasts", "Podcasts", "♪"]]],
   ["Labs", [["thumbnails", "Thumbnail lab", "▣"], ["titles", "Title lab", "T"], ["seo", "SEO & discoverability", "⌕"]]],
-  ["Growth", [["autopilot", "Autopilot", "⟲"], ["monetization", "Monetization", "$"], ["discovery", "Discovery", "⌖"], ["trends", "Trend radar", "↗"], ["recommendations", "Recommendations", "✦"], ["calendar", "Content calendar", "▤"]]],
+  ["Growth", [["insights", "Insights", "◆"], ["autopilot", "Autopilot", "⟲"], ["monetization", "Monetization", "$"], ["discovery", "Discovery", "⌖"], ["trends", "Trend radar", "↗"], ["recommendations", "Recommendations", "✦"], ["calendar", "Content calendar", "▤"]]],
   ["Operate", [["reports", "Reports", "⎙"], ["jobs", "Jobs & integrations", "⟳"], ["accounts", "Manage accounts", "⚿"], ["settings", "Settings", "⚙"]]],
 ];
 function renderNav(active) {
@@ -375,6 +375,7 @@ PAGES.episode = async (id) => {
     card("SEO & discoverability", null, el("div", { class: "checks" }, d.seo.map(checkRow)))));
 
   wrap.append(thumbStudio(v));
+  if (v.format === "long_form") wrap.append(conceptsCard(v));
   wrap.append(el("div", { class: "grid g2 sec" }, aiTitlesCard(v, d.ai_titles), aiThumbCard(v, d.ai_thumbnail)));
 
   const hist = d.history;
@@ -418,6 +419,26 @@ function aiTitlesCard(v, cached) {
     (o.titles || []).map((t) => el("div", { class: "alt" }, el("div", { class: "s" }, (t.strategy || "").replaceAll("_", " ")), el("div", { class: "tt2" }, t.title, el("span", { class: "faint", style: "font-weight:400;font-size:12px" }, `  ${t.title.length} chars`)), el("div", { class: "muted", style: "font-size:13px" }, t.why))),
     o.keep_reason ? el("p", { class: "muted", style: "font-size:13px" }, el("b", {}, o.keep_current ? "Keep current? Yes. " : "Keep current? Consider a change. "), o.keep_reason) : null));
   return card("Alternative titles", x.btn, x.body, x.meta);
+}
+function conceptsCard(v) {
+  const box = el("div", {}, el("p", { class: "faint" }, "Loading…"));
+  const show = (d) => {
+    box.replaceChildren();
+    if (!d) { box.append(el("p", { class: "empty" }, "No concepts yet for this episode.")); return; }
+    if (d.transcript_note) box.append(el("div", { class: "note", style: "font-size:12.5px" }, d.transcript_note));
+    box.append(el("div", { class: "grid g3", style: "gap:10px" }, d.concepts.map((c) => {
+      const pick = d.picks.includes(c.file);
+      const m = c.moment_detail;
+      return el("div", { class: "card", style: "padding:8px" },
+        el("a", { href: c.url, target: "_blank", rel: "noopener" }, el("img", { src: c.url, alt: c.label, style: "width:100%;border-radius:6px" })),
+        el("div", { class: "row", style: "gap:6px;margin-top:6px;flex-wrap:wrap" }, el("span", { class: "tag" }, c.label), pick ? el("span", { class: "st ok" }, "Test & Compare pick") : null),
+        el("div", { style: "font-size:13px;margin-top:4px" }, c.angle || ""),
+        m ? el("div", { class: "faint", style: "font-size:12px;margin-top:4px" }, `${dur(m.t)} · ${m.type}${m.quote ? ` · “${m.quote}”` : ""}`) : null);
+    })), el("p", { class: "faint", style: "font-size:12px" }, d.note));
+  };
+  api(T(`concepts/${v.asset_id}`)).then((r) => show(r.latest)).catch(() => show(null));
+  const btn = el("button", { class: "btn sm", onclick: async (e) => { e.target.disabled = true; e.target.textContent = "Reading the episode…"; try { show((await api(T(`concepts/${v.asset_id}`), {})).latest); } catch (x) { toast(x.message, true); } e.target.disabled = false; e.target.textContent = "Generate 5 concepts"; } }, "Generate 5 concepts");
+  return card("Thumbnail concepts (5 distinct, 3 picks for Test & Compare)", btn, box);
 }
 function thumbStudio(v) {
   const box = el("section", { class: "card sec" }, el("div", { class: "card-h" }, el("h2", {}, "Thumbnail studio"), el("div", { class: "r faint", style: "font-size:12px" }, "RYJ style · local previews only")), el("p", { class: "empty" }, "Loading…"));
@@ -694,6 +715,33 @@ PAGES.autopilot = async () => {
     ["verified", "partial"].includes(r.status) ? el("button", { class: "btn sm ghost", onclick: async () => { if (!(await ask("Undo this change?", [el("p", {}, "Restores the original title, description, tags and thumbnail on YouTube.")], "Undo"))) return; try { await api(T(`autopilot/${r.id}/undo`), {}); toast("Restored"); } catch (e) { toast(e.message, true); } route(true); } }, "Undo")
       : r.status === "failed" ? el("button", { class: "btn sm ghost", onclick: async () => { try { await api(T(`autopilot/${r.id}/retry`), {}); } catch (e) { toast(e.message, true); } route(true); } }, "Retry") : null)))));
   wrap.append(el("div", { class: "faint sec", style: "font-size:12px" }, d.rules.join(" · ")));
+  return wrap;
+};
+
+PAGES.insights = async () => {
+  const d = await api(T("insights"));
+  const w = d.weekly;
+  const wrap = el("div", {}, ph("Thumbnail & subscriber growth", "Insights", "What's attracting new viewers and subscribers, which thumbnails work, and what to test next. Small samples are labelled; comparisons are observational."));
+  const tbl = (head, rows) => el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, head.map((h, i) => el("th", { class: i ? "r" : "" }, h)))), el("tbody", {}, rows.map((r) => el("tr", {}, r.map((c, i) => el("td", { class: i ? "r" : "" }, c ?? "—")))))));
+  const hv = w.styles.host_vs_guest;
+  wrap.append(el("div", { class: "grid g2 sec" },
+    card("Hosts on the thumbnail vs guest-only", null, tbl(["", "Videos", "% viewed", "Avg view", "Subs/1k views", "CTR"],
+      [["A host (Jamar / Enrique)", hv.host_inclusive], ["Guest only", hv.guest_only]].map(([l, g]) => [l, g.n, g.median_pct_viewed, g.median_avg_view_s != null ? dur(g.median_avg_view_s) : null, g.median_subs_per_1k, g.median_ctr])),
+      el("p", { style: "font-size:13px" }, hv.verdict), el("div", { class: "foot" }, hv.method)),
+    card("Experiments to run next", null, el("ol", { style: "margin:0;padding-left:20px;line-height:1.7" }, w.experiments.map((x) => el("li", {}, x))))));
+  wrap.append(card("Episodes worth retesting", null, w.retest.length ? el("div", { class: "list" }, w.retest.map((r) => el("div", { class: "li" }, el("div", { class: "body" }, el("a", { class: "t", href: `#/episode/${r.asset_id}` }, r.title), el("div", { class: "d" }, r.why))))) : el("p", { class: "empty" }, "None right now.")));
+  wrap.append(el("div", { class: "grid g2 sec" },
+    card("Topics attracting new viewers", null, tbl(["Topic", "Videos", "Discovery share", "Sample"], w.topics_new_viewers.map((r) => [r.topic, r.videos, r.discovery_share != null ? `${r.discovery_share}%` : null, r.sample]))),
+    card("Topics generating subscribers", null, tbl(["Topic", "Videos", "Subs/1k views", "Sample"], w.topics_subscribers.map((r) => [r.topic, r.videos, r.subs_per_1k, r.sample])))));
+  wrap.append(card("Hook opportunities: first 30 seconds", el("span", { class: "faint", style: "font-size:12px" }, `typical: ${w.first30_median ?? "—"}% still watching at 0:30`),
+    w.hooks.length ? tbl(["Episode", "At 0:30"], w.hooks.map((r) => [r.title, `${r.first30}%`])) : el("p", { class: "empty" }, "No episode is clearly below typical.")));
+  wrap.append(card("First 7 days, every episode (equal age windows)", el("span", { class: "faint", style: "font-size:12px" }, `${w.age_matched.sample} · median ${nf(w.age_matched.median_d7_views)} views`),
+    tbl(["Episode", "Published", "Views (7 d)", "Watch hrs (7 d)", "vs median"], w.age_matched.rows.map((r) => [r.title, r.published_at, nf(r.d7_views), nf(r.d7_hours), r.vs_median != null ? `${r.vs_median}×` : null]))));
+  wrap.append(card("Per episode", null, tbl(["Episode", "CTR", "% viewed", "At 0:30", "Subs/1k", "From Shorts", "From end screens", "Discovery"],
+    d.videos.map((r) => [r.title, r.ctr != null ? `${r.ctr}%` : null, r.pct_viewed, r.first30 != null ? `${r.first30}%` : null, r.subs_per_1k, nf(r.from_shorts), nf(r.from_end_screens), r.discovery_share != null ? `${r.discovery_share}%` : null])),
+    el("div", { class: "foot" }, Object.values(w.not_in_api).join(" "))));
+  wrap.append(card("CTR by traffic source", null, w.ctr_by_source.rows.length ? tbl(["Source", "Impressions", "CTR"], w.ctr_by_source.rows.map((r) => [r.source, nf(r.impressions), r.ctr != null ? `${r.ctr}%` : null])) : el("p", { class: "empty" }, w.ctr_by_source.note)));
+  wrap.append(el("div", { class: "faint sec", style: "font-size:12px" }, w.notes.join(" ")));
   return wrap;
 };
 

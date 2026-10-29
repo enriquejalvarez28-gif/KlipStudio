@@ -986,3 +986,57 @@ class TestTitleMatchesThumbnail(TestAutopilot):
         youtube_sync.record_history(c, self.T, "youtube", "vW", "thumbnail", "newhash", "thumbnail bytes")
         reasons = [x["reason"] for x in ap.candidates(c, self.T)]
         self.assertEqual(reasons, ["thumb_changed"])
+
+
+class TestConceptsAndInsights(TestThumbnailStrategy):
+    def test_five_distinct_concepts_verbatim_quotes_three_picks(self):
+        from growth_os import cast, concepts
+        c, _ = fresh()
+        self._video(c)
+        tdir = db.DATA_DIR / "transcripts" / "ryj-media"
+        tdir.mkdir(parents=True, exist_ok=True)
+        srt = "".join(f"{i}\n00:{i // 60:02d}:{i % 60:02d},000 --> 00:{i // 60:02d}:{i % 60:02d},900\n{line}\n\n"
+                      for i, line in ((5, "Welcome to the show"), (130, "Honestly nobody talks about how many kids quit by thirteen?"),
+                                      (400, "The biggest mistake parents make is pushing year round"),
+                                      (700, "I lost my scholarship and it changed my life")))
+        (tdir / "vT.srt").write_text(srt)
+
+        def runner(prompt, model):
+            if "thumbnail-worthy moments" in prompt:
+                return {"result": json.dumps({"moments": [
+                    {"i": 0, "type": "surprising", "why": "w", "quote": "nobody talks about how many kids quit"},
+                    {"i": 1, "type": "controversial", "why": "w", "quote": "parents are the real problem"},  # not verbatim
+                    {"i": 2, "type": "emotional", "why": "w", "quote": "I lost my scholarship"}]})}
+            return {"result": json.dumps({"concepts": [
+                {"layout": "editorial", "moment": 2, "headline": "LOST IT *ALL*", "angle": "a", "why": "w"},
+                {"layout": "guest", "moment": 0, "headline": "WHY KIDS *QUIT*", "angle": "b", "why": "w"},
+                {"layout": "guest", "moment": 1, "headline": "DUPLICATE", "angle": "dup", "why": "w"},
+                {"layout": "trio", "moment": 1, "headline": "NOT FEASIBLE", "angle": "x", "why": "w"},
+                {"layout": "documentary", "moment": 1, "headline": "YEAR-ROUND *TRAP*", "angle": "c", "why": "w"}]})}
+        on = {"enabled": True, "cli_found": True, "daily_cap": 99, "used_today": 0}
+        with mock.patch.object(ai, "status", return_value=on), mock.patch.object(cast, "available", return_value=(False, "")):
+            d = concepts.generate(c, "ryj-media", "vT", runner=runner)
+        layouts = [x["layout"] for x in d["concepts"]]
+        self.assertEqual(layouts, ["editorial", "guest", "documentary"])  # one per feasible layout, no trio without hosts
+        self.assertEqual(len(set(d["picks"])), 3)
+        quotes = [m["quote"] for m in d["moments"]]
+        self.assertIn("nobody talks about how many kids quit", quotes)
+        self.assertNotIn("parents are the real problem", quotes)  # paraphrase dropped, never shown as a quote
+        for x in d["concepts"]:
+            self.assertTrue((db.DATA_DIR / "concepts" / "ryj-media" / "vT" / x["file"]).exists())
+        self.assertEqual(d["transcript"], "file")
+        self.assertIn("not changed", d["note"])
+
+    def test_insights_and_weekly_report_sections(self):
+        from growth_os import insights
+        c, _ = fresh()
+        seed.seed_demo(c)
+        w = insights.weekly(c, "demo-synthetic")
+        for k in ("retest", "styles", "topics_new_viewers", "topics_subscribers", "hooks", "experiments", "age_matched"):
+            self.assertIn(k, w)
+        self.assertIn("small sample", insights._sample(2))
+        self.assertEqual(insights.first30([{"x": 0.0, "v": 1.0}, {"x": 0.1, "v": 0.5}], 600), 75.0)
+        html = reports.render(reports.build_data(c, "demo-synthetic", date.today() - timedelta(days=7), date.today()), "weekly")
+        for h in ("Episodes worth retesting", "Thumbnail styles", "Topics attracting new viewers",
+                  "Topics generating subscribers", "Hook opportunities", "Experiments to run next"):
+            self.assertIn(h, html)

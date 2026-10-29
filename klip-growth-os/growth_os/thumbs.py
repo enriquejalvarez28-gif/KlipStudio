@@ -518,3 +518,70 @@ def previews(conn, tenant_id, asset_id, headlines, fmt="guest", credential=""):
     return {"variants": made, "sheet": f"/preview/{tenant_id}/{asset_id}/{sheet}",
             "source": "Built from this video's own published thumbnail photo and logo; faces unchanged. Local preview only.",
             "approval": "Not uploaded. Changing the live thumbnail needs your approval and is done in YouTube Studio."}
+
+
+# ── Concept layouts (spec: five distinct concepts per new episode) ──────
+
+def _draw_headline(d, lines, box, gold, start=170, max_lines=3, stroke=0):
+    x0, y0, max_w, max_h = box
+    f, lh, lines = _layout(d, lines, max_w, max_h, max_lines=max_lines, start=start)
+    y = y0 + max(0, (max_h - lh * len(lines)) // 2)
+    for line in lines:
+        x = x0
+        for w, g in line:
+            d.text((x, y), w, font=f, fill=gold if g else (255, 255, 255),
+                   stroke_width=stroke, stroke_fill=(0, 0, 0))
+            x += d.textlength(w + " ", font=f)
+        y += lh
+    return y
+
+
+def render_documentary(frame_path, headline, *, orig_path=None, kicker="", gold=None, out_path=None):
+    """Sports-documentary look: one real full-bleed frame, cinematic grade from shadows, headline low-left."""
+    from PIL import ImageFilter
+    img = Image.open(frame_path).convert("RGB")
+    gold = gold or brand_gold(Image.open(orig_path) if orig_path else img)
+    canvas = _cover(img, W, H, 0.5)
+    shade = Image.new("L", (W, H), 0)
+    sd = ImageDraw.Draw(shade)
+    for y in range(H):  # dark bottom third for the words, light vignette at the top
+        t = max(0.0, (y / H - 0.38) / 0.62)
+        sd.line([(0, y), (W, y)], fill=int(235 * t ** 1.3))
+    canvas = Image.composite(Image.new("RGB", (W, H), (5, 5, 5)), canvas, shade)
+    vig = Image.new("L", (W, H), 0)
+    ImageDraw.Draw(vig).rectangle([0, 0, W, H], outline=180, width=90)
+    canvas = Image.composite(Image.new("RGB", (W, H), (0, 0, 0)), canvas, vig.filter(ImageFilter.GaussianBlur(70)))
+    d = ImageDraw.Draw(canvas)
+    logo = _logo_from_original(Image.open(orig_path)) if orig_path else None
+    if logo:
+        canvas.paste(logo, (30, 20))
+    if kicker:
+        kf = _font(30)
+        d.text((60, H - 268), kicker.upper(), font=kf, fill=gold)
+    d.rectangle([60, H - 222, 200, H - 214], fill=gold)
+    _draw_headline(d, parse_headline(headline, max_lines=2), (60, H - 205, W - 140, 170), gold, start=130, max_lines=2, stroke=2)
+    if out_path:
+        canvas.save(out_path, "JPEG", quality=92)
+    return canvas
+
+
+def render_editorial(portrait_path, headline, *, orig_path=None, byline="", focus=0.5, gold=None, out_path=None):
+    """Editorial look: clean off-black page, big quote-style headline left, framed real portrait right."""
+    por = Image.open(portrait_path).convert("RGB")
+    gold = gold or brand_gold(Image.open(orig_path) if orig_path else por)
+    canvas = Image.new("RGB", (W, H), (14, 13, 11))
+    pw = int(W * 0.42)
+    canvas.paste(_cover(por, pw, H - 80, focus), (W - pw - 40, 40))
+    d = ImageDraw.Draw(canvas)
+    d.rectangle([W - pw - 40, 40, W - 40, H - 40], outline=gold, width=4)
+    logo = _logo_from_original(Image.open(orig_path)) if orig_path else None
+    if logo:
+        canvas.paste(logo, (40, 30))
+    qf = _font(150)
+    d.text((52, 150), "“", font=qf, fill=gold)
+    bottom = _draw_headline(d, parse_headline(headline), (60, 230, W - pw - 150, 330), gold, start=120)
+    if byline:
+        d.text((62, min(H - 80, bottom + 18)), byline.upper(), font=_font(30), fill=(200, 200, 200))
+    if out_path:
+        canvas.save(out_path, "JPEG", quality=92)
+    return canvas

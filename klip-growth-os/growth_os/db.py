@@ -329,6 +329,15 @@ MIGRATIONS = [
         PRIMARY KEY (tenant_id, video_id)
     );
     """,
+    # v11 (2026-10-29): per-episode thumbnail concepts (5 distinct, 3 picks for YouTube Test & Compare).
+    """
+    CREATE TABLE thumb_concepts (
+        id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, asset_id TEXT NOT NULL, created_at TEXT NOT NULL,
+        transcript_source TEXT, moments_json TEXT NOT NULL, concepts_json TEXT NOT NULL, picks_json TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'proposed'
+    );
+    CREATE INDEX thumb_concepts_by_asset ON thumb_concepts (tenant_id, asset_id, created_at);
+    """,
 ]
 
 
