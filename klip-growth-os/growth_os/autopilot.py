@@ -139,7 +139,7 @@ def candidates(conn, tenant_id):
 def _proposal(conn, tenant_id, c, runner=None):
     v = c["v"]
     repackage = c["reason"] in ("low_ctr", "long_title")
-    want_thumb = repackage and v["format"] == "long_form"
+    want_thumb = False  # owner rule (2026-10-29): keep the current thumbnails; Autopilot never drafts or changes them
     pack = prep.asset_pack(conn, tenant_id, v["asset_id"], diagnosis="packaging" if repackage else "", runner=runner,
                            thumbnails_wanted=want_thumb, title_max=LONG_TITLE)
     old_tags = json.loads(_latest(conn, tenant_id, v["asset_id"], "tags") or "[]")
@@ -326,7 +326,7 @@ def apply(conn, tenant_id, cid, *, transport=None, actor="owner"):
             call("PUT", f"{youtube.DATA_API}/videos", params={"part": "snippet"},
                  json_body={"id": vid, "snippet": new}, quota_units=50, log_name="youtube.videos.update")
         thumb_err = None
-        if ch.get("thumbnail") and prop.get("format") == "long_form":
+        if False and ch.get("thumbnail"):  # thumbnails are off by owner rule; older drafts can't change them either
             p = DATA_DIR / "previews" / tenant_id / vid / ch["thumbnail"]
             try:
                 call("POST", UPLOAD_URL, params={"videoId": vid, "uploadType": "media"}, data=p.read_bytes(),
@@ -415,6 +415,6 @@ def page(conn, tenant_id):
                       f"At most {cap(conn, tenant_id)} new changes a day and one change per video every {COOLDOWN_DAYS} days.",
                       f"New titles stay under {LONG_TITLE} characters so they aren't cut off.",
                       "Descriptions keep your existing text underneath the new first lines.",
-                      "Custom thumbnails only on long-form; Shorts thumbnails are picked in the YouTube app.",
+                      "Thumbnails are never changed (owner rule): only titles, descriptions and tags.",
                       "Every change saves the original first; Undo restores it.",
                       "If someone else changes a video after us, it is logged and left alone."]}

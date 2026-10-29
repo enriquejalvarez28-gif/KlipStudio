@@ -594,7 +594,7 @@ class TestThumbnailStrategy(unittest.TestCase):
         self.assertEqual((ex[0]["id"], ex[0]["result"]["winner"]), (e["id"], "A"))
         self.assertIn("confounded", ex[0]["result"]["caveat"])
         st = api.thumb_studio(c, "ryj-media", "vT")
-        self.assertEqual((st["recommended"], st["current_format"]), ("viral", "guest"))
+        self.assertEqual((st["recommended"], st["current_format"]), ("guest", "guest"))
         self.assertGreaterEqual(len(st["previews"]), 1)  # two renders in the same second share a stamp
 
 
@@ -939,3 +939,22 @@ class TestViralThumbnail(unittest.TestCase):
         self.assertTrue(any(p[0] > 180 and p[1] < 80 for p in px))       # sharp host (red) is in
         self.assertFalse(any(p[2] > 180 and p[0] < 80 and p[1] < 80 for p in px))  # blurry wide-shot host left out
         self.assertEqual(out.size, (1280, 720))
+
+
+class TestThumbnailsFrozen(TestAutopilot):
+    def test_autopilot_never_touches_thumbnails(self):
+        g = WriteGoogle()
+        c, ap = self._setup(g)
+        c.execute("UPDATE assets SET title=? WHERE asset_id='vW'", ("A Very Long Episode Title About Youth Sports Development And Parents | Coach Ray",))
+        [cand] = [x for x in ap.candidates(c, self.T)]
+        prop, chosen = ap._proposal(c, self.T, cand)
+        self.assertIsNone(prop["thumbnail"])
+        self.assertIsNone(chosen["thumbnail"])
+        # even an older draft that still carries a thumbnail can't change it
+        cid = "chg_" + "a" * 16
+        prop["thumbnail"] = {"file": "x.jpg"}
+        c.execute("INSERT INTO channel_changes (id, tenant_id, asset_id, reason, proposal_json, chosen_json, status, decided_at, created_at) "
+                  "VALUES (?,?,?,?,?,?,'approved',?,?)", (cid, self.T, "vW", "low_ctr", json.dumps(prop),
+                                                        json.dumps(dict(chosen, thumbnail="x.jpg", description=True)), utcnow(), utcnow()))
+        ap.apply(c, self.T, cid, transport=g)
+        self.assertEqual(g.thumb_posts, 0)

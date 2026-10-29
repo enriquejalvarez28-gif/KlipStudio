@@ -122,9 +122,6 @@ def recommend_format(conn, tenant_id, asset_id):
     if not v:
         raise LookupError("video not found for this brand")
     base, why = suggest_format(v["title"])
-    if v["format"] == "long_form":  # owner rules (2026-10-28): this episode's own people, viral style
-        base, why = "viral", ("Viral RYJ style: the guest big and in front with whichever host is sharp in this episode's "
-                              "frames, cut out with a white outline, 2-4 huge words")
     current = tags(conn, tenant_id).get(asset_id)
     perf = [r for r in format_performance(conn, tenant_id)["rows"] if r["video_format"] == v["format"]]
     evidence = None
