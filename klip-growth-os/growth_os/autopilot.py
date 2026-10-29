@@ -181,7 +181,9 @@ def daily_run(conn, tenant_id, *, transport=None, runner=None, limit=None):
         made.append(cid)
     m, ws = mode(conn, tenant_id), write_status(conn, tenant_id)
     if m != "approve" and ws["has_write"]:
-        for cid in made:
+        waiting = [r[0] for r in conn.execute("SELECT id FROM channel_changes WHERE tenant_id=? AND status='proposed' "
+                                              "ORDER BY created_at", (tenant_id,))]
+        for cid in waiting:  # includes drafts made before auto mode / write access was switched on
             prop = json.loads(conn.execute("SELECT proposal_json FROM channel_changes WHERE id=?", (cid,)).fetchone()[0])
             if m == "auto_all" or prop["fills_missing_only"]:
                 try:
