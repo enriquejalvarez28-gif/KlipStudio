@@ -898,7 +898,7 @@ class TestDeepDiveAndTitles(TestAutopilot):
                    ("curiosity", "What Parents Get Wrong in Youth Sports"), ("hybrid", "Youth Sports: Parents' Biggest Mistake"))]
         with mock.patch.object(ai, "status", return_value=on):
             prop, chosen = ap._proposal(c, self.T, cand, runner=lambda p, m: {"result": json.dumps({"titles": titles})})
-        self.assertEqual(chosen["title"], "What Parents Get Wrong in Youth Sports")  # first option under 60 chars
+        self.assertEqual(chosen["title"], "Youth Sports: Parents' Biggest Mistake")  # hook-style option first, under 60 chars
         self.assertTrue(all(len(x) <= 60 for x in [chosen["title"]]))
         ap.set_cap(c, self.T, 5)
         self.assertEqual(ap.cap(c, self.T), 5)

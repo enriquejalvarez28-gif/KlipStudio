@@ -142,6 +142,8 @@ def asset_pack(conn, tenant_id, asset_id, *, diagnosis="", runner=None, thumbnai
             payload["max_chars"] = title_max
         out, meta = ai.ask(conn, tenant_id, f"prep_titles:{asset_id}", payload, ai.TITLE_INSTRUCTIONS, runner=runner)
         pack["titles"] = [dict(x, source=f"AI draft ({meta['model']})") for x in out.get("titles", [])][:3]
+        pack["keep_current"] = bool(out.get("keep_current")) and len(v["title"] or "") <= (title_max or 100)
+        pack["keep_reason"] = out.get("keep_reason")
     except (ai.AIUnavailable, ValueError, KeyError) as e:
         pack["titles"] = draft_titles(v["title"], keyword, guest)
         pack["notes"].append(f"AI titles unavailable ({str(e)[:80]}); rule-based drafts shown.")

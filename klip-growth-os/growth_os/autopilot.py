@@ -115,6 +115,7 @@ def candidates(conn, tenant_id):
         vpd, ctr, imp = pm.get("views_per_day") or {}, pm.get("ctr") or {}, pm.get("impressions") or {}
         winner = (vpd.get("percentile") or 0) >= 75
         missing = [k for k, bad in (("description", len(desc.strip()) < 40), ("tags", not tags)) if bad]
+        shorten = len(v["title"] or "") > LONG_TITLE and not winner
         low_ctr = (v["format"] == "long_form" and not winner and (v["age_days"] or 0) >= 14
                    and (imp.get("value") or 0) >= MIN_IMPRESSIONS and ctr.get("value") is not None
                    and ((ctr.get("percentile") is not None and ctr["percentile"] <= 25)
@@ -124,10 +125,10 @@ def candidates(conn, tenant_id):
                         "evidence": [f"CTR {ctr['value']:.2f}% vs {ctr.get('peer_median'):.2f}% for similar videos, on "
                                      f"{int(imp.get('value') or 0):,} impressions"]})
         elif len(v["title"] or "") > LONG_TITLE and not winner:
-            out.append({"v": v, "reason": "long_title", "score": 2.5, "missing": missing,
+            out.append({"v": v, "reason": "long_title", "score": 2.5, "missing": missing, "shorten": True,
                         "evidence": [f"Title is {len(v['title'])} characters; phones and search cut it off around {LONG_TITLE}"]})
         elif missing:
-            out.append({"v": v, "reason": "missing", "score": 2, "missing": missing,
+            out.append({"v": v, "reason": "missing", "score": 2, "missing": missing, "shorten": shorten,
                         "evidence": [f"Missing: {', '.join(missing)}"]})
         elif (v["age_days"] or 99) <= 3:
             out.append({"v": v, "reason": "new_upload", "score": 1, "missing": [],
@@ -152,9 +153,15 @@ def _proposal(conn, tenant_id, c, runner=None):
             "thumbnail": ({"file": th[0]["file"], "url": th[0]["url"], "headline": th[0]["headline"], "options": th}
                           if th else None),
             "keyword": pack["keyword"], "notes": pack["notes"], "format": v["format"],
+            "keep_current": pack.get("keep_current"), "keep_reason": pack.get("keep_reason"),
             "fills_missing_only": c["reason"] in ("missing", "new_upload")}
-    fits = [t["title"] for t in pack.get("titles", []) if len(t.get("title") or "") <= LONG_TITLE]
-    chosen = {"title": (fits[0] if repackage and fits else None),
+    # Prefer hook-style titles (question/curiosity) over keyword-first ones: clicks come from the hook.
+    order = {"hybrid_search_plus_curiosity": 0, "hybrid": 0, "curiosity": 1, "search_driven": 2}
+    fits = [t["title"] for t in sorted(pack.get("titles", []), key=lambda t: order.get(t.get("strategy"), 3))
+            if len(t.get("title") or "") <= LONG_TITLE]
+    too_long = len(v["title"] or "") > LONG_TITLE
+    want_title = (repackage or (too_long and c.get("shorten"))) and not (pack.get("keep_current") and not too_long)
+    chosen = {"title": (fits[0] if want_title and fits else None),
               "description": True, "tags": bool(prop["added_tags"]),
               "thumbnail": th[0]["file"] if th else None}
     return prop, chosen
@@ -206,7 +213,9 @@ def redraft(conn, tenant_id, cid, runner=None):
     v = next((x for x in analytics.videos(conn, tenant_id) if x["asset_id"] == r["asset_id"]), None)
     if not v:
         raise LookupError("video not found")
-    prop, chosen = _proposal(conn, tenant_id, {"v": v, "reason": r["reason"]}, runner=runner)
+    winner = (analytics.peer_stats(analytics.videos(conn, tenant_id), v)["metrics"].get("views_per_day") or {}).get("percentile") or 0
+    prop, chosen = _proposal(conn, tenant_id, {"v": v, "reason": r["reason"],
+                                               "shorten": len(v["title"] or "") > LONG_TITLE and winner < 75}, runner=runner)
     conn.execute("UPDATE channel_changes SET proposal_json=?, chosen_json=?, status='proposed' WHERE id=?",
                  (json.dumps(prop), json.dumps(chosen), cid))
     return {"id": cid, "status": "proposed"}
