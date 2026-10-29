@@ -27,7 +27,7 @@ from growth_os import analytics
 from growth_os.db import DATA_DIR, new_id, utcnow
 
 MIN_IMPRESSIONS = 100  # below this a video's CTR is noise (e.g. 0 clicks on 12 impressions)
-FORMATS = {"guest": "Guest-focused", "host_guest": "Host + guest", "host_led": "Host-led"}
+FORMATS = {"guest": "Guest-focused", "host_guest": "Host + guest", "host_led": "Host-led", "trio": "Host + co-host + guest"}
 W, H = 1280, 720
 ASSETS = Path(__file__).resolve().parent / "assets"
 BRAND_DIR = DATA_DIR / "brand"
@@ -121,6 +121,8 @@ def recommend_format(conn, tenant_id, asset_id):
     if not v:
         raise LookupError("video not found for this brand")
     base, why = suggest_format(v["title"])
+    if v["format"] == "long_form":  # owner rule (2026-10-28): episodes show host, co-host and guest from that episode
+        base, why = "trio", "RYJ episode standard: both hosts and the guest, cut from this episode's own frames"
     current = tags(conn, tenant_id).get(asset_id)
     perf = [r for r in format_performance(conn, tenant_id)["rows"] if r["video_format"] == v["format"]]
     evidence = None
@@ -329,16 +331,49 @@ def parse_headline(text, max_lines=3):
     return lines[:max_lines]
 
 
-def render(orig_path, headline, *, fmt="guest", credential="", host_paths=(), gold=None, out_path=None):
+def fit_format(fmt, cast):
+    """Degrade to a layout this episode's own frames can fill (never borrow another episode's photo)."""
+    has = set(cast or {})
+    hosts = has & {"jamar", "enrique"}
+    if fmt == "trio" and not ({"guest"} <= has and len(hosts) == 2):
+        fmt = "host_guest"
+    if fmt == "host_led" and len(hosts) < 2:
+        fmt = "host_guest" if hosts else "guest"
+    if fmt == "host_guest" and not hosts:
+        fmt = "guest"
+    return fmt
+
+
+def render(orig_path, headline, *, fmt="guest", credential="", host_paths=(), gold=None, out_path=None, cast=None):
     """Render one 1280×720 RYJ-style preview from authentic imagery."""
     orig = Image.open(orig_path)
     gold = gold or brand_gold(orig)
     canvas = Image.new("RGB", (W, H), (8, 8, 8))
     portrait = _portrait_from_original(orig)
-    right_x = min(int(W * 0.50), W - portrait.width) if fmt == "guest" or not host_paths else int(W * 0.48)
+    if cast is not None:
+        fmt = fit_format(fmt, cast)
+    multi = fmt != "guest" and (cast is not None or host_paths)
+    right_x = int(W * 0.44) if fmt == "trio" else (int(W * 0.48) if multi else min(int(W * 0.50), W - portrait.width))
     pw, ph = W - right_x, H
-    if fmt == "guest" or not host_paths:
+    if not multi:
         canvas.paste(portrait, (W - portrait.width, 0))
+    elif cast is not None:
+        def im(role):
+            path, focus = cast[role]
+            return Image.open(path).convert("RGB"), focus
+        host = next((r for r in ("enrique", "jamar") if r in cast), None)
+        if fmt == "trio":
+            people, widths = [im("jamar"), im("guest"), im("enrique")], [int(pw * 0.3), int(pw * 0.4)]
+            widths.append(pw - sum(widths))
+        elif fmt == "host_led":
+            people, widths = [im("jamar"), im("enrique")], [pw // 2, pw - pw // 2]
+        else:  # host_guest: the episode's guest frame if found, else the current thumbnail's guest
+            g = im("guest") if "guest" in cast else (_portrait_from_original(orig), 0.5)
+            people, widths = [g, im(host)], [int(pw * 0.55), pw - int(pw * 0.55)]
+        x = right_x
+        for (img, fx), w in zip(people, widths):
+            canvas.paste(_cover(img, w, ph, fx), (x, 0))
+            x += w
     else:
         # Split the right panel: guest keeps the larger share; hosts come from real host photos only.
         hints = host_focus()
@@ -353,7 +388,7 @@ def render(orig_path, headline, *, fmt="guest", credential="", host_paths=(), go
     # Fade the photo into the black panel (same treatment as the originals).
     fade = Image.new("L", (W, H), 0)
     fd = ImageDraw.Draw(fade)
-    fw = 220 if fmt == "guest" or not host_paths else 60  # narrow fade when several faces share the panel
+    fw = 60 if multi else 220  # narrow fade when several faces share the panel
     for i in range(fw):
         fd.line([(right_x + i, 0), (right_x + i, H)], fill=int(255 * (1 - i / fw) ** 1.6))
     fd.rectangle([0, 0, right_x, H], fill=255)
@@ -429,9 +464,17 @@ def previews(conn, tenant_id, asset_id, headlines, fmt="guest", credential=""):
         raise ValueError("no cached thumbnail for this video yet (it is downloaded on the next sync)")
     if fmt not in FORMATS:
         raise ValueError("unknown format")
-    hosts = host_photos()
-    if fmt != "guest" and not hosts:
-        raise ValueError("host formats need real host photos: put them in data/brand/hosts/ (e.g. enrique.jpg, jamar.jpg)")
+    from growth_os import cast as cast_mod
+    cast = cast_mod.load(tenant_id, asset_id)
+    if fmt != "guest" and not cast:
+        try:  # first time for this episode: find the hosts and guest in its own frames
+            ok, why = cast_mod.available()
+            if ok:
+                cast_mod.build(conn, tenant_id, asset_id)
+                cast = cast_mod.load(tenant_id, asset_id)
+        except Exception:
+            cast = {}
+    fmt = fit_format(fmt, cast)
     out_dir = DATA_DIR / "previews" / tenant_id / asset_id
     out_dir.mkdir(parents=True, exist_ok=True)
     stamp = utcnow().replace(":", "").replace("-", "")[:15]
@@ -439,8 +482,7 @@ def previews(conn, tenant_id, asset_id, headlines, fmt="guest", credential=""):
     made, labels = [], []
     for i, h in enumerate([h for h in headlines if h and h.strip()][:2]):
         name = f"{stamp}-{fmt}-{'AB'[i]}.jpg"
-        img = render(src, h, fmt=fmt, credential=credential, host_paths=hosts if fmt != "guest" else (),
-                     out_path=out_dir / name)
+        img = render(src, h, fmt=fmt, credential=credential, cast=cast, out_path=out_dir / name)
         made.append({"file": name, "headline": h, "format": fmt, "url": f"/preview/{tenant_id}/{asset_id}/{name}"})
         labels.append(f"{'AB'[i]}: {FORMATS[fmt]}")
     sheet = f"{stamp}-{fmt}-sheet.jpg"

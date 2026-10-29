@@ -1,2 +1,3 @@
 cryptography>=42
 pillow>=10
+opencv-python-headless>=4.9  # optional: per-episode host/guest thumbnails (auto-installed in the background)

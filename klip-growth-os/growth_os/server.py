@@ -571,6 +571,32 @@ def _watch(srv, sched, port, with_scheduler, db_path, every=20):
             return _relaunch(srv, sched, port, with_scheduler, db_path)
 
 
+OPTIONAL_DEPS = {"cv2": "opencv-python-headless>=4.9"}  # face finding for per-episode thumbnails (free, local)
+
+
+def ensure_optional_deps():
+    """Install free optional packages once, in the background; the app works without them."""
+    import importlib
+    import subprocess
+    import sys
+    for mod, spec in OPTIONAL_DEPS.items():
+        try:
+            importlib.import_module(mod)
+            continue
+        except ImportError:
+            pass
+        try:
+            r = subprocess.run([sys.executable, "-m", "pip", "install", "--quiet", "--disable-pip-version-check", spec],
+                               capture_output=True, text=True, timeout=900,
+                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            msg = "installed" if r.returncode == 0 else f"failed: {(r.stderr or r.stdout)[-300:]}"
+        except Exception as e:
+            msg = f"failed: {e}"
+        (DATA_DIR / "logs").mkdir(parents=True, exist_ok=True)
+        with open(DATA_DIR / "logs" / "deps.log", "a", encoding="utf-8") as f:
+            f.write(f"{db.utcnow()} {spec}: {msg}\n")
+
+
 def serve(port=8765, db_path=None, open_browser=False, with_scheduler=True, watch=True):
     url = f"http://127.0.0.1:{port}/"
     import sys
@@ -593,6 +619,7 @@ def serve(port=8765, db_path=None, open_browser=False, with_scheduler=True, watc
     seed.ensure_ryj(conn)
     scheduler.ensure_defaults(conn)
     conn.close()
+    threading.Thread(target=ensure_optional_deps, daemon=True).start()
     srv = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     srv.daemon_threads = True
     srv.db_path = db_path

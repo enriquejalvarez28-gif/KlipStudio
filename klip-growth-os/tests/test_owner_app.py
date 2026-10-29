@@ -570,8 +570,20 @@ class TestThumbnailStrategy(unittest.TestCase):
         diffs = [abs(p - q) for x in range(1100, 1270, 17) for y in range(20, 700, 37)
                  for p, q in zip(a.getpixel((x, y)), orig.getpixel((x, y)))]
         self.assertLess(max(diffs), 24)
-        with self.assertRaises(ValueError):  # no host photos → host formats refused, never faked
-            thumbs.previews(c, "ryj-media", "vT", ["X"], fmt="host_led")
+        # No frames of the hosts from THIS episode → host layouts fall back to the guest, never faked/borrowed.
+        self.assertEqual(thumbs.previews(c, "ryj-media", "vT", ["X"], fmt="host_led")["variants"][0]["format"], "guest")
+        self.assertEqual(thumbs.fit_format("trio", {"guest": 1, "jamar": 1}), "host_guest")
+        self.assertEqual(thumbs.fit_format("trio", {"guest": 1, "jamar": 1, "enrique": 1}), "trio")
+        self.assertEqual(thumbs.fit_format("host_led", {}), "guest")
+        cast_dir = db.DATA_DIR / "castimgs"
+        cast_dir.mkdir(exist_ok=True)
+        cast = {}
+        for role, col in (("jamar", (200, 0, 0)), ("guest", (0, 200, 0)), ("enrique", (0, 0, 200))):
+            Image.new("RGB", (300, 400), col).save(cast_dir / f"{role}.jpg")
+            cast[role] = (cast_dir / f"{role}.jpg", 0.5)
+        trio = thumbs.render(src, "Who is *best*?", fmt="trio", cast=cast).convert("RGB")
+        r, g, b = trio.getpixel((700, 360)), trio.getpixel((960, 360)), trio.getpixel((1200, 360))
+        self.assertTrue(r[0] > 150 and g[1] > 150 and b[2] > 150)  # Jamar | guest | Enrique, left to right
         with self.assertRaises(LookupError):
             thumbs.set_tag(c, "demo-synthetic", "vT", "guest")
         thumbs.set_tag(c, "ryj-media", "vT", "guest")
@@ -582,7 +594,8 @@ class TestThumbnailStrategy(unittest.TestCase):
         self.assertEqual((ex[0]["id"], ex[0]["result"]["winner"]), (e["id"], "A"))
         self.assertIn("confounded", ex[0]["result"]["caveat"])
         st = api.thumb_studio(c, "ryj-media", "vT")
-        self.assertEqual((st["recommended"], st["current_format"], len(st["previews"])), ("guest", "guest", 1))
+        self.assertEqual((st["recommended"], st["current_format"]), ("trio", "guest"))
+        self.assertGreaterEqual(len(st["previews"]), 1)  # two renders in the same second share a stamp
 
 
 class TestReports(unittest.TestCase):

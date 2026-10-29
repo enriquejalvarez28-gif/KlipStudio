@@ -151,7 +151,7 @@ def asset_pack(conn, tenant_id, asset_id, *, diagnosis="", runner=None, thumbnai
     if thumbnails_wanted:
         try:
             rf = thumbs.recommend_format(conn, tenant_id, asset_id)
-            fmt = rf["recommended"] if (rf["recommended"] == "guest" or rf["hosts_available"]) else "guest"
+            fmt = rf["recommended"]  # previews() degrades to what this episode's own frames can fill
             pack["thumbnails"] = thumbs.previews(conn, tenant_id, asset_id, thumbs.default_headlines(v["title"]), fmt=fmt)
             pack["thumbnails"]["format_why"] = rf["why"]
         except (ValueError, LookupError) as e:
