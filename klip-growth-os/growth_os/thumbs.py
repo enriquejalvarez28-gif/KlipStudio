@@ -393,10 +393,19 @@ def default_headlines(title):
     """Two faithful starting headlines from the title (owner edits before rendering)."""
     t = re.sub(r"[^\w\s?'.,!-]", "", (title or "").split("|")[0]).strip()
     words = t.split()
-    a = " ".join(words[:6])
+    dangling = {"at", "to", "from", "the", "a", "an", "of", "and", "for", "in", "on", "with", "his", "her", "my", "your", "is", "are"}
+
+    def trim(ws):
+        ws = list(ws)
+        while len(ws) > 2 and ws[-1].lower().strip("?!.,") in dangling:
+            ws.pop()
+        while len(ws) > 2 and ws[0].lower() in ("and", "but", "so", "or"):
+            ws.pop(0)
+        return ws
+    a = " ".join(trim(words[:6]))
     q = next((s.strip() for s in re.split(r"(?<=[?!.])\s", t) if s.strip().endswith("?")), None)
-    b = " ".join((q or t).split()[:5])
-    return [a, b if b.upper() != a.upper() else " ".join(words[-5:])]
+    b = " ".join(trim((q or t).split()[:5]))
+    return [a, b if b.upper() != a.upper() else " ".join(trim(words[-5:]))]
 
 
 def previews(conn, tenant_id, asset_id, headlines, fmt="guest", credential=""):
