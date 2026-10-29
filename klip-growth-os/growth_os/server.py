@@ -21,7 +21,7 @@ from datetime import date
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from growth_os import ai, analytics, api, brands, brief, db, discovery, prep, reports, scheduler, thumbs, vault
+from growth_os import ai, analytics, api, autopilot, brands, brief, db, discovery, prep, reports, scheduler, thumbs, vault
 from growth_os.connectors import podcast, youtube
 from growth_os.db import DATA_DIR, new_id, set_setting, utcnow
 from growth_os.http import BudgetExceeded, HttpError
@@ -212,6 +212,7 @@ class Handler(BaseHTTPRequestHandler):
             "audience": lambda: analytics.audience(c, t),
             "discovery": lambda: discovery.page(c, t),
             "brief": lambda: brief.latest(c, t),
+            "autopilot": lambda: autopilot.page(c, t),
             "cohorts": lambda: prep.cohorts(c, t, q.get("format") or None),
             "settings": lambda: api.settings(c, t),
             "tiles": lambda: tiles(c, t),
@@ -257,6 +258,38 @@ class Handler(BaseHTTPRequestHandler):
         return self._send(404, {"error": "not found"})
 
     def tenant_post(self, c, t, rest, body):
+        m = re.fullmatch(r"autopilot/(?:(run|mode|approve-all)|(chg_[a-f0-9]+)/(approve|skip|undo|retry))", rest)
+        if m:
+            try:
+                if m.group(1) == "run":
+                    return self._send(200, autopilot.daily_run(c, t))
+                if m.group(1) == "mode":
+                    return self._send(200, autopilot.set_mode(c, t, str(body.get("mode", ""))))
+                if m.group(1) == "approve-all":
+                    res = []
+                    for r in autopilot.page(c, t)["pending"]:
+                        try:
+                            if r["status"] == "proposed":
+                                autopilot.decide(c, t, r["id"], "approve")
+                            res.append(autopilot.apply(c, t, r["id"]))
+                        except Exception as e:  # keep going; each result is reported
+                            res.append({"id": r["id"], "status": "failed", "error": str(e)[:200]})
+                    return self._send(200, {"results": res})
+                cid, act = m.group(2), m.group(3)
+                if act == "skip":
+                    return self._send(200, autopilot.decide(c, t, cid, "skip"))
+                if act == "undo":
+                    return self._send(200, autopilot.rollback(c, t, cid))
+                if act == "approve":
+                    autopilot.decide(c, t, cid, "approve", chosen=body.get("chosen") or None)
+                if act == "retry":
+                    c.execute("UPDATE channel_changes SET status='approved', error='' WHERE id=? AND tenant_id=? "
+                              "AND status='failed'", (cid, t))
+                return self._send(200, autopilot.apply(c, t, cid))
+            except LookupError as e:
+                raise brands.BrandError("not_found", str(e))
+            except (ValueError, autopilot.AutopilotError, brands.BrandError) as e:
+                return self._send(400, {"error": "autopilot", "message": str(e)[:400]})
         if rest == "brief":
             return self._send(200, brief.generate(c, t, force=bool(body.get("force"))))
         m = re.fullmatch(r"recommendations/(rec_[a-f0-9]+)/(prepare|dry-run)", rest)
@@ -299,7 +332,7 @@ class Handler(BaseHTTPRequestHandler):
                                             "YouTube isn't set up yet: save your Google OAuth desktop client as "
                                             f"{DATA_DIR / 'youtube_client.json'} (see README → Connect YouTube)."})
                 redirect = f"http://127.0.0.1:{self.server.server_address[1]}/oauth/callback"
-                return self._send(200, {"auth_url": youtube.begin_auth(c, t, redirect, client)})
+                return self._send(200, {"auth_url": youtube.begin_auth(c, t, redirect, client, write=bool(body.get("write")))})
             if p == "spotify":
                 return self._send(200, {"row": podcast.discover_spotify(c, t, body.get("show", ""), name=body.get("name", ""))})
             if p == "apple_podcasts":

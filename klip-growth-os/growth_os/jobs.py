@@ -1,6 +1,6 @@
 """Scheduler job handlers. Each takes (conn, tenant_id|None, progress)."""
 
-from growth_os import analytics, reports, trends, vault
+from growth_os import analytics, autopilot, reports, trends, vault
 from growth_os.connectors import youtube_sync
 
 
@@ -40,6 +40,10 @@ def packaging_check(conn, tenant_id, progress):
     return {t: {"new_recommendations": analytics.packaging_check(conn, t)} for t in _tenants(conn, tenant_id)}
 
 
+def autopilot_daily(conn, tenant_id, progress):
+    return {t: autopilot.daily_run(conn, t) for t in _tenants(conn, tenant_id, include_demo=False)}
+
+
 def _report(kind):
     def run(conn, tenant_id, progress):
         return {t: reports.generate(conn, t, kind) for t in _tenants(conn, tenant_id)}
@@ -51,6 +55,7 @@ REGISTRY = {
     "trend_research": trend_research,
     "daily_review": daily_review,
     "packaging_check": packaging_check,
+    "autopilot_daily": autopilot_daily,
     "weekly_report": _report("weekly"),
     "monthly_report": _report("monthly"),
 }

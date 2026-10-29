@@ -28,6 +28,7 @@ DEFAULTS = [
     ("trend_research", "trend_research", {"daily_at": "06:30"}, "Research trends and opportunities"),
     ("daily_review", "daily_review", {"daily_at": "07:00"}, "Daily performance review"),
     ("packaging_check", "packaging_check", {"daily_at": "07:15"}, "Thumbnail and title opportunity check"),
+    ("autopilot_daily", "autopilot_daily", {"daily_at": "07:30"}, "YouTube autopilot: draft (and, if enabled, apply) packaging changes"),
     ("weekly_report", "weekly_report", {"weekly": "MON", "at": "08:00"}, "Weekly Monday report"),
     ("monthly_report", "monthly_report", {"monthly_day": 1, "at": "08:30"}, "Monthly executive report"),
 ]

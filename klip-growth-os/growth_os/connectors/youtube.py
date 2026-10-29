@@ -29,6 +29,8 @@ READ_SCOPES = " ".join([
     "https://www.googleapis.com/auth/yt-analytics.readonly",
 ])
 
+WRITE_SCOPE = "https://www.googleapis.com/auth/youtube.force-ssl"  # titles, descriptions, tags, thumbnails
+
 SHORTS_MAX_SECONDS = 180  # heuristic only: the API has no Shorts flag
 SAMPLE_VIDEOS = 5
 
@@ -45,7 +47,7 @@ def _b64(b: bytes) -> str:
 
 # ── OAuth (installed-app loopback + PKCE) ─────────────────────────────
 
-def begin_auth(conn, tenant_id: str, redirect_uri: str, client: dict) -> str:
+def begin_auth(conn, tenant_id: str, redirect_uri: str, client: dict, write: bool = False) -> str:
     brands.get_brand(conn, tenant_id)
     state = secrets.token_urlsafe(24)
     verifier = secrets.token_urlsafe(64)
@@ -57,7 +59,7 @@ def begin_auth(conn, tenant_id: str, redirect_uri: str, client: dict) -> str:
         "client_id": client["client_id"],
         "redirect_uri": redirect_uri,
         "response_type": "code",
-        "scope": READ_SCOPES,
+        "scope": READ_SCOPES + (" " + WRITE_SCOPE if write else ""),
         "access_type": "offline",
         # select_account: the owner must pick the Google identity / brand
         # channel deliberately rather than inheriting a signed-in default.
@@ -103,6 +105,8 @@ def finish_auth(conn, *, state: str, code: str, client: dict, http: Client | Non
             handle=sn.get("customUrl", ""), avatar_url=sn.get("thumbnails", {}).get("default", {}).get("url", ""),
             connected_identity=identity, scopes=granted, credential_id=cred_id, actor="oauth",
         ))
+        conn.execute("UPDATE platform_accounts SET access_level=? WHERE id=?",
+                     ("WRITE_METADATA" if WRITE_SCOPE in granted.split() else "READ_ANALYTICS", rows[-1]))
         if missing:
             brands.mark(conn, tenant_id, rows[-1], brands.DISCONNECTED, actor="oauth",
                         error="consent screen did not grant: " + " ".join(sorted(missing)))

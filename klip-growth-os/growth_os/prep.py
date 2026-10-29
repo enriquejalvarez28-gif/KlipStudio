@@ -118,17 +118,10 @@ def draft_titles(title, keyword, guest):
                             ("hybrid", hybrid, "keeps the current hook and adds the search phrase"))]
 
 
-def prepare_rec(conn, tenant_id, rec_id, runner=None):
-    """Build the asset pack for a card: 3 titles, 2 thumbnail previews, SEO draft. Nothing is published."""
+def asset_pack(conn, tenant_id, asset_id, *, diagnosis="", runner=None, thumbnails_wanted=True):
+    """3 titles, 2 thumbnail previews (long-form), SEO draft (first lines, tags, chapters) for one video. Local only."""
     from growth_os import api  # local import: api imports analytics
-    r = conn.execute("SELECT * FROM recommendations WHERE id=? AND tenant_id=?", (rec_id, tenant_id)).fetchone()
-    if not r:
-        raise LookupError("recommendation not found")
-    if not r["asset_id"]:
-        raise ValueError("this card isn't about a single video, so there is nothing to prepare")
-    if r["kind"] in NO_REPACKAGE:
-        raise ValueError("this card says keep the current title and thumbnail, so there is nothing to repackage")
-    d = api.video_detail(conn, tenant_id, r["asset_id"])
+    d = api.video_detail(conn, tenant_id, asset_id)
     v = d["video"]
     kws = [k for k, _ in analytics.topic_keywords(conn, tenant_id)]
     keyword, kw_basis = _keyword(d, kws)
@@ -137,21 +130,22 @@ def prepare_rec(conn, tenant_id, rec_id, runner=None):
     try:
         payload = {"title": v["title"], "format": v["format"], "duration_min": round((v["duration_s"] or 0) / 60),
                    "search_terms": [s["term"] for s in d["search_terms"][:8]], "topic_keywords": kws[:10],
-                   "strategies": PREP_STRATEGIES, "diagnosis": r["diagnosis"]}
-        out, meta = ai.ask(conn, tenant_id, f"prep_titles:{r['asset_id']}", payload, ai.TITLE_INSTRUCTIONS, runner=runner)
+                   "strategies": PREP_STRATEGIES, "diagnosis": diagnosis}
+        out, meta = ai.ask(conn, tenant_id, f"prep_titles:{asset_id}", payload, ai.TITLE_INSTRUCTIONS, runner=runner)
         pack["titles"] = [dict(x, source=f"AI draft ({meta['model']})") for x in out.get("titles", [])][:3]
     except (ai.AIUnavailable, ValueError, KeyError) as e:
         pack["titles"] = draft_titles(v["title"], keyword, guest)
         pack["notes"].append(f"AI titles unavailable ({str(e)[:80]}); rule-based drafts shown.")
-    try:
-        rf = thumbs.recommend_format(conn, tenant_id, r["asset_id"])
-        fmt = rf["recommended"] if (rf["recommended"] == "guest" or rf["hosts_available"]) else "guest"
-        pack["thumbnails"] = thumbs.previews(conn, tenant_id, r["asset_id"], thumbs.default_headlines(v["title"]), fmt=fmt)
-        pack["thumbnails"]["format_why"] = rf["why"]
-    except (ValueError, LookupError) as e:
-        pack["thumbnails"] = None
-        pack["notes"].append(f"Thumbnail previews: {e}")
-    segs = load_transcript(tenant_id, r["asset_id"]) or []
+    pack["thumbnails"] = None
+    if thumbnails_wanted:
+        try:
+            rf = thumbs.recommend_format(conn, tenant_id, asset_id)
+            fmt = rf["recommended"] if (rf["recommended"] == "guest" or rf["hosts_available"]) else "guest"
+            pack["thumbnails"] = thumbs.previews(conn, tenant_id, asset_id, thumbs.default_headlines(v["title"]), fmt=fmt)
+            pack["thumbnails"]["format_why"] = rf["why"]
+        except (ValueError, LookupError) as e:
+            pack["notes"].append(f"Thumbnail previews: {e}")
+    segs = load_transcript(tenant_id, asset_id) or []
     chs = chapters(segs, v["duration_s"])
     brand = conn.execute("SELECT display_name FROM tenants WHERE tenant_id=?", (tenant_id,)).fetchone()
     show = brand[0] if brand else ""
@@ -159,14 +153,34 @@ def prepare_rec(conn, tenant_id, rec_id, runner=None):
     lead = base + ("" if not base or base[-1] in ".?!" else ".")
     if guest:
         lead += f" {guest} joins {show} to talk {keyword or 'sports'}." if show else f" With {guest}."
+    tags, seen = [], set()
+    for t in [s["term"] for s in d["search_terms"][:6]] + ([guest] if guest else []) + ([show] if show else []) + kws[:6]:
+        k = (t or "").strip()
+        if k and k.lower() not in seen and len(k) <= 60:
+            seen.add(k.lower())
+            tags.append(k)
     pack["seo"] = {
         "first_lines": lead.strip(),
+        "tags": tags[:12],
         "keyword_in_title": bool(keyword and keyword.lower() in (v["title"] or "").lower()),
         "chapters": [f"{_mmss(c['t'])} {c['label']}" for c in chs],
         "chapters_note": None if chs else ("Chapters need the transcript: download the .srt from YouTube Studio → Subtitles "
-                                           f"and save it as data/transcripts/{r['asset_id']}.srt" if (v["duration_s"] or 0) >= 180
+                                           f"and save it as data/transcripts/{asset_id}.srt" if (v["duration_s"] or 0) >= 180
                                            else "Shorts don't use chapters."),
         "rules": "Draft only. The first 2 lines show in search; keep the guest's real credentials, no invented claims."}
+    return pack
+
+
+def prepare_rec(conn, tenant_id, rec_id, runner=None):
+    """Build the asset pack for a card: 3 titles, 2 thumbnail previews, SEO draft. Nothing is published."""
+    r = conn.execute("SELECT * FROM recommendations WHERE id=? AND tenant_id=?", (rec_id, tenant_id)).fetchone()
+    if not r:
+        raise LookupError("recommendation not found")
+    if not r["asset_id"]:
+        raise ValueError("this card isn't about a single video, so there is nothing to prepare")
+    if r["kind"] in NO_REPACKAGE:
+        raise ValueError("this card says keep the current title and thumbnail, so there is nothing to repackage")
+    pack = asset_pack(conn, tenant_id, r["asset_id"], diagnosis=r["diagnosis"], runner=runner)
     alts = json.loads(r["alternatives_json"] or "[]")
     alts = alts if isinstance(alts, dict) else {"items": alts}
     alts["prepared"] = pack

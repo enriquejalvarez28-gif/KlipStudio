@@ -81,8 +81,8 @@ class Client:
             raise HttpError(status, raw[:300].decode(errors="replace") if isinstance(raw, bytes) else str(raw)[:300])
         return raw
 
-    def request(self, method, url, *, params=None, headers=None, form=None, json_body=None,
-                quota_units=1, cache=False, log_name=None):
+    def request(self, method, url, *, params=None, headers=None, form=None, json_body=None, data=None,
+                content_type=None, quota_units=1, cache=False, log_name=None):
         if params:
             url += ("&" if "?" in url else "?") + urllib.parse.urlencode(params)
         # Log the endpoint, never the query (it can carry ids we don't need in logs).
@@ -100,6 +100,9 @@ class Client:
         elif json_body is not None:
             body = json.dumps(json_body).encode()
             headers["Content-Type"] = "application/json"
+        elif data is not None:  # raw upload (e.g. thumbnail bytes)
+            body = data
+            headers["Content-Type"] = content_type or "application/octet-stream"
         for attempt in range(MAX_RETRIES + 1):
             t0 = time.monotonic()
             status, raw = self.transport(method, url, headers, body)

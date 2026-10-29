@@ -310,6 +310,17 @@ MIGRATIONS = [
         source TEXT NOT NULL, created_at TEXT NOT NULL
     );
     """,
+    # v9 (2026-10-28): autopilot change packages (proposed → approved → applied/verified, with rollback data).
+    """
+    CREATE TABLE channel_changes (
+        id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, asset_id TEXT NOT NULL, reason TEXT NOT NULL,
+        evidence_json TEXT DEFAULT '[]', proposal_json TEXT NOT NULL, chosen_json TEXT DEFAULT '{}',
+        before_json TEXT DEFAULT '{}', status TEXT NOT NULL DEFAULT 'proposed', auto INTEGER NOT NULL DEFAULT 0,
+        error TEXT DEFAULT '', created_at TEXT NOT NULL, decided_at TEXT, applied_at TEXT, verified_at TEXT,
+        rolled_back_at TEXT
+    );
+    CREATE INDEX channel_changes_by_status ON channel_changes (tenant_id, status, created_at);
+    """,
 ]
 
 

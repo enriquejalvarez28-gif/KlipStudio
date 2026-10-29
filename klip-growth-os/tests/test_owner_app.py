@@ -18,7 +18,7 @@ import tests  # noqa: F401  (sets GROWTH_OS_DATA before growth_os imports)
 from growth_os import ai, analytics, api, brands, db, reports, scheduler, seed, thumbs, trends
 from growth_os.connectors import youtube, youtube_reporting, youtube_sync
 from growth_os.db import utcnow
-from tests.test_brand_manager import CLIENT, RYJ_CH, FakeGoogle
+from tests.test_brand_manager import CLIENT, RYJ_CH, FakeGoogle, id_token
 
 
 def fresh(path=None):
@@ -750,3 +750,101 @@ class TestGrowthBrief(unittest.TestCase):
         words = {r["word"] for r in brief.title_words(vids)["long_form"]}
         self.assertIn("coach", words)
         self.assertNotIn("weekly", words)
+
+
+class WriteGoogle(FakeGoogle):
+    """Token grants write scope; /videos snippet is stateful so writes and read-back can be checked."""
+
+    def __init__(self, channel=RYJ_CH):
+        super().__init__([(RYJ_CH, "Respect Your Journey")])
+        self.owner_channel = channel
+        self.snip = {"title": "Old Title", "description": "Original description with links", "tags": ["old"],
+                     "categoryId": "17", "channelId": channel, "publishedAt": "2026-09-01T00:00:00Z",
+                     "thumbnails": {"high": {"url": "https://i.ytimg.com/vi/vW/hqdefault.jpg"}}}
+        self.puts, self.thumb_posts = [], 0
+
+    def __call__(self, method, url, headers, body):
+        q = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(url).query))
+        if url.startswith(youtube.TOKEN_URL):
+            return 200, json.dumps({"access_token": "at", "refresh_token": "rt", "expires_in": 3600,
+                                    "scope": youtube.READ_SCOPES + " " + youtube.WRITE_SCOPE,
+                                    "id_token": id_token("owner@ryj.example")}).encode()
+        if "/videos" in url and q.get("part") == "snippet":
+            if method == "PUT":
+                self.puts.append(json.loads(body))
+                self.snip.update(json.loads(body)["snippet"])
+                return 200, body
+            return 200, json.dumps({"items": [{"id": "vW", "snippet": self.snip}]}).encode()
+        if "thumbnails/set" in url:
+            self.thumb_posts += 1
+            return 200, b"{}"
+        if "ytimg.com" in url:
+            return 200, b"\xff\xd8jpeg"
+        return super().__call__(method, url, headers, body)
+
+
+class TestAutopilot(unittest.TestCase):
+    T = "ryj-media"
+
+    def _setup(self, g):
+        from growth_os import autopilot
+        c, _ = fresh()
+        url = youtube.begin_auth(c, self.T, "http://127.0.0.1/cb", CLIENT, write=True)
+        q = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(url).query))
+        self.assertIn(youtube.WRITE_SCOPE, q["scope"])
+        [row] = youtube.finish_auth(c, state=q["state"], code="x", client=CLIENT, transport=g)[1]
+        brands.verify_identity(c, self.T, row, confirmed_platform_account_id=RYJ_CH, owner="owner")
+        brands.assign(c, self.T, row, owner="owner")
+        c.execute("INSERT INTO assets VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                  (self.T, "youtube", RYJ_CH, "vW", "Old Title | Coach Ray", "2026-09-01T00:00:00Z", 3000, "long_form", "", None, "2026-10-01"))
+        youtube_sync.record_history(c, self.T, "youtube", "vW", "description", "", "test")
+        youtube_sync.record_history(c, self.T, "youtube", "vW", "tags", "[]", "test")
+        p = mock.patch.object(autopilot.vault, "load_client", return_value=CLIENT)
+        p.start()
+        self.addCleanup(p.stop)
+        off = mock.patch.object(ai, "status", return_value={"enabled": True, "cli_found": False, "daily_cap": 9,
+                                                             "used_today": 0, "reason": "no CLI in tests"})
+        off.start()
+        self.addCleanup(off.stop)
+        return c, autopilot
+
+    def test_draft_approve_apply_verify_undo(self):
+        g = WriteGoogle()
+        c, ap = self._setup(g)
+        self.assertTrue(ap.write_status(c, self.T)["has_write"])
+        r = ap.daily_run(c, self.T, transport=g)
+        self.assertEqual((r["proposed"], r["auto_applied"]), (1, 0))  # approve mode: nothing written
+        self.assertEqual(g.puts, [])
+        [chg] = ap.page(c, self.T)["pending"]
+        self.assertEqual(chg["reason"], "missing")
+        self.assertIsNone(chg["chosen"]["title"])  # missing-info packages keep the title
+        ap.decide(c, self.T, chg["id"], "approve")
+        out = ap.apply(c, self.T, chg["id"], transport=g)
+        self.assertEqual(out["status"], "verified")
+        sent = g.puts[-1]["snippet"]
+        self.assertEqual(sent["title"], "Old Title")
+        self.assertEqual(sent["categoryId"], "17")  # untouched fields preserved
+        self.assertTrue(sent["description"].endswith("Original description with links"))
+        self.assertIn("old", sent["tags"])
+        self.assertNotIn("channelId", sent)  # read-only fields never sent
+        ap.rollback(c, self.T, chg["id"], transport=g)
+        self.assertEqual(g.snip["description"], "Original description with links")
+        self.assertEqual(g.snip["tags"], ["old"])
+        self.assertEqual(ap.daily_run(c, self.T, transport=g)["proposed"], 0)  # cooldown
+
+    def test_auto_missing_mode_and_refusals(self):
+        g = WriteGoogle(channel="UC_SOMEONE_ELSE")
+        c, ap = self._setup(g)
+        ap.set_mode(c, self.T, "auto_missing")
+        r = ap.daily_run(c, self.T, transport=g)
+        self.assertEqual(r["auto_applied"], 0)
+        self.assertIn("different channel", r["errors"][0])  # video must belong to the bound channel
+        self.assertEqual(g.puts, [])
+        c.execute("UPDATE platform_accounts SET access_level='READ_ANALYTICS' WHERE tenant_id=?", (self.T,))
+        self.assertFalse(ap.write_status(c, self.T)["has_write"])
+        cid = c.execute("SELECT id FROM channel_changes WHERE tenant_id=?", (self.T,)).fetchone()[0]
+        c.execute("UPDATE channel_changes SET status='approved' WHERE id=?", (cid,))
+        with self.assertRaises(brands.BrandError):  # preflight: read-only scope can't write
+            ap.apply(c, self.T, cid, transport=g)
+        seed.seed_demo(c)
+        self.assertIn("skipped", ap.daily_run(c, "demo-synthetic"))

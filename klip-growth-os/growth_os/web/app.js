@@ -112,7 +112,7 @@ const NAV = [
   ["Overview", [["home", "Home", "⌂"], ["brief", "Growth brief", "✦"], ["analytics", "Analytics overview", "◔"]]],
   ["Content", [["episodes", "Episode intelligence", "▦"], ["youtube", "YouTube", "▶"], ["instagram", "Instagram", "◎"], ["podcasts", "Podcasts", "♪"]]],
   ["Labs", [["thumbnails", "Thumbnail lab", "▣"], ["titles", "Title lab", "T"], ["seo", "SEO & discoverability", "⌕"]]],
-  ["Growth", [["monetization", "Monetization", "$"], ["discovery", "Discovery", "⌖"], ["trends", "Trend radar", "↗"], ["recommendations", "Recommendations", "✦"], ["calendar", "Content calendar", "▤"]]],
+  ["Growth", [["autopilot", "Autopilot", "⟲"], ["monetization", "Monetization", "$"], ["discovery", "Discovery", "⌖"], ["trends", "Trend radar", "↗"], ["recommendations", "Recommendations", "✦"], ["calendar", "Content calendar", "▤"]]],
   ["Operate", [["reports", "Reports", "⎙"], ["jobs", "Jobs & integrations", "⟳"], ["accounts", "Manage accounts", "⚿"], ["settings", "Settings", "⚙"]]],
 ];
 function renderNav(active) {
@@ -645,6 +645,49 @@ PAGES.brief = async () => {
   return wrap;
 };
 
+PAGES.autopilot = async () => {
+  const d = await api(T("autopilot"));
+  const w = d.write;
+  const wrap = el("div", {}, ph("Operator", "YouTube Autopilot", "Every morning at 7:30 it reads the analytics and drafts new titles, descriptions, tags and thumbnails for the videos that need them. Approved changes go live on YouTube, get checked, and can be undone.",
+    el("button", { class: "btn", onclick: async (e) => { e.target.disabled = true; try { const r = await api(T("autopilot/run"), {}); toast(`${r.proposed} new draft(s)${r.auto_applied ? `, ${r.auto_applied} applied` : ""}${r.errors.length ? ` · ${r.errors[0]}` : ""}`, !!r.errors.length); route(true); } catch (x) { toast(x.message, true); e.target.disabled = false; } } }, "Run now")));
+  wrap.append(el("div", { class: "grid g2 sec" },
+    card("Write access", null, w.has_write ? el("p", { style: "margin:0" }, el("span", { class: "st ok" }, "ON"), ` Can change ${w.channel} (authorized by ${w.authorized_by || "owner"}).`)
+      : el("div", {}, el("p", { style: "margin:0 0 8px" }, el("span", { class: "st warn" }, "READ-ONLY"), " ", w.note || ""), el("a", { class: "btn sm gold", href: "#/accounts" }, "Open Manage accounts → Grant write access"))),
+    card("Mode", null, el("div", { class: "list" }, Object.entries(d.modes).map(([k, txt]) => el("label", { class: "li", style: "cursor:pointer;align-items:flex-start;gap:8px" },
+      el("input", { type: "radio", name: "apmode", checked: d.mode === k, style: "margin-top:4px", onchange: async () => { try { await api(T("autopilot/mode"), { mode: k }); toast("Mode saved"); } catch (e) { toast(e.message, true); } route(true); } }),
+      el("div", { class: "body" }, el("div", { class: "t" }, { approve: "Approve each change (recommended)", auto_missing: "Auto-fill missing only", auto_all: "Fully automatic" }[k]), el("div", { class: "d" }, txt))))))));
+  if (!d.hosts_available.length) wrap.append(el("div", { class: "note sec", style: "font-size:13px" }, "No host photos yet, so thumbnails use the guest's photo from the video. Add clear photos of each host to data/brand/hosts/ (e.g. enrique.jpg, jamar.jpg) to unlock host and host + guest thumbnails."));
+  const sel = {};
+  const pend = d.pending.map((r) => {
+    const p = r.proposal, ch = r.chosen; sel[r.id] = { ...ch };
+    const titleOpts = [el("label", { style: "display:block" }, el("input", { type: "radio", name: `t_${r.id}`, checked: !ch.title, onchange: () => { sel[r.id].title = null; } }), " Keep: ", el("b", {}, p.current_title))]
+      .concat((p.titles || []).map((t) => el("label", { style: "display:block" }, el("input", { type: "radio", name: `t_${r.id}`, checked: ch.title === t.title, onchange: () => { sel[r.id].title = t.title; } }), " ", t.title, el("span", { class: "faint", style: "font-size:11.5px" }, ` · ${(t.strategy || "").replaceAll("_", " ")}`))));
+    const chk = (k, label) => el("label", { style: "display:block;margin-top:6px" }, el("input", { type: "checkbox", checked: !!ch[k], onchange: (e) => { sel[r.id][k] = e.target.checked ? (k === "thumbnail" ? p.thumbnail.file : true) : (k === "thumbnail" ? null : false); } }), " ", label);
+    return el("section", { class: "card rec" },
+      el("div", { class: "card-h" }, el("div", {}, el("span", { class: `st ${r.reason === "low_ctr" ? "warn" : "na"}` }, { low_ctr: "Low clicks", missing: "Missing info", new_upload: "New upload" }[r.reason] || r.reason),
+        el("h2", { style: "font-size:15px;margin-top:4px" }, r.video_title)), el("div", { class: "r" }, el("a", { class: "btn sm ghost", href: `#/episode/${r.asset_id}` }, "Episode"))),
+      el("div", { class: "faint", style: "font-size:12.5px" }, r.evidence.join(" · ")),
+      el("div", { class: "sub" }, el("b", {}, "Title"), titleOpts),
+      p.thumbnail ? el("div", { class: "sub" }, el("b", {}, "Thumbnail: current → new"), el("div", { class: "row", style: "gap:8px;flex-wrap:wrap;margin-top:4px" },
+        el("img", { src: r.current_thumb, alt: "current", style: "width:240px;border-radius:6px" }), el("img", { src: p.thumbnail.url, alt: "new", style: "width:240px;border-radius:6px" })), chk("thumbnail", "Use the new thumbnail")) : null,
+      el("div", { class: "sub" }, chk("description", "Add to the top of the description (your current text stays below):"), el("pre", { style: "white-space:pre-wrap;font-size:12px;margin:4px 0 0" }, p.description_lines)),
+      p.added_tags.length ? el("div", { class: "sub" }, chk("tags", "Add tags: "), p.added_tags.map((t) => el("span", { class: "tag", style: "margin:2px 4px 2px 0" }, t))) : null,
+      el("div", { class: "row", style: "margin-top:10px;gap:6px" },
+        el("button", { class: "btn sm gold", onclick: async (e) => { e.target.disabled = true; try { const x = await api(T(`autopilot/${r.id}/approve`), { chosen: sel[r.id] }); toast(x.status === "verified" ? "Live on YouTube and verified" : `${x.status}: ${x.error || ""}`, x.status !== "verified"); } catch (x) { toast(x.message, true); } route(true); } }, w.has_write ? "Approve & apply" : "Approve (applies once write access is on)"),
+        el("button", { class: "btn sm ghost", onclick: async () => { await api(T(`autopilot/${r.id}/skip`), {}); route(true); } }, "Skip")));
+  });
+  wrap.append(el("div", { class: "card-h sec" }, el("h2", {}, `Waiting for you (${d.pending.length})`), d.pending.length && w.has_write ? el("div", { class: "r" }, el("button", { class: "btn sm gold", onclick: async (e) => { if (!(await ask("Approve all?", [el("p", {}, `Applies the selected changes for ${d.pending.length} video(s) to YouTube now. Each one can be undone.`)], "Approve all"))) return; e.target.disabled = true; const x = await api(T("autopilot/approve-all"), {}); toast(`${x.results.filter((y) => y.status === "verified").length} verified, ${x.results.filter((y) => y.status !== "verified").length} need attention`); route(true); } }, "Approve all")) : null));
+  wrap.append(pend.length ? el("div", { class: "grid", style: "gap:12px" }, pend) : emptyState({ title: "Nothing waiting.", body: "The 7:30 run drafts up to 3 changes a day for videos with low clicks, missing descriptions or tags, and new uploads." }));
+  const lab = { verified: ["Live", "ok"], partial: ["Partly live", "warn"], failed: ["Failed", "bad"], rolled_back: ["Undone", "na"], skipped: ["Skipped", "na"], overridden: ["Changed by someone else", "na"], approved: ["Approved", "ok"] };
+  if (d.done.length) wrap.append(card("History", null, el("div", { class: "list" }, d.done.map((r) => el("div", { class: "li" },
+    el("span", { class: `st ${(lab[r.status] || ["", "na"])[1]}` }, (lab[r.status] || [r.status])[0]),
+    el("div", { class: "body" }, el("div", { class: "t" }, r.video_title), el("div", { class: "d" }, `${r.chosen.title ? `Title → “${r.chosen.title}” · ` : ""}${r.applied_at ? ago(r.applied_at) : ago(r.created_at)}${r.auto ? " · automatic" : ""}${r.error ? ` · ${r.error}` : ""}`)),
+    ["verified", "partial"].includes(r.status) ? el("button", { class: "btn sm ghost", onclick: async () => { if (!(await ask("Undo this change?", [el("p", {}, "Restores the original title, description, tags and thumbnail on YouTube.")], "Undo"))) return; try { await api(T(`autopilot/${r.id}/undo`), {}); toast("Restored"); } catch (e) { toast(e.message, true); } route(true); } }, "Undo")
+      : r.status === "failed" ? el("button", { class: "btn sm ghost", onclick: async () => { try { await api(T(`autopilot/${r.id}/retry`), {}); } catch (e) { toast(e.message, true); } route(true); } }, "Retry") : null)))));
+  wrap.append(el("div", { class: "faint sec", style: "font-size:12px" }, d.rules.join(" · ")));
+  return wrap;
+};
+
 PAGES.discovery = async () => {
   const d = await api(T("discovery"));
   const wrap = el("div", {}, ph("Discovery", "Discovery & planning", "Where the show is listed, what people search, whether AI assistants mention it, what comparable channels publish, and a pre-recording episode planner. Public data only; nothing is invented.",
@@ -1088,6 +1131,8 @@ function acctBlock(a) {
     } }, "Verify identity"));
     acts.push(el("button", { class: "btn sm danger", onclick: () => act("reject") }, "Not this account"));
   }
+  if (["ASSIGNED", "ACTIVE", "SYNCING", "SYNC_FAILED"].includes(st) && a.platform === "youtube" && a.access_level !== "WRITE_METADATA")
+    acts.push(el("button", { class: "btn sm", onclick: async () => { if (await ask("Grant write access?", [el("p", {}, "Lets the Autopilot change titles, descriptions, tags and thumbnails on this channel, only as you approve (or as the Autopilot mode you choose allows)."), el("p", {}, "Sign in with the Google account that owns the channel. Afterwards, verify the ID and assign it again (a safety step whenever access changes).")], "Continue to Google")) connect({ platform: "youtube", write: true }); } }, "Grant write access"));
   if (st === "NEEDS_REAUTH" && a.platform === "youtube") acts.unshift(el("button", { class: "btn gold sm", onclick: () => connect({ platform: "youtube" }) }, "Reconnect YouTube"));
   if (st === "OWNER_VERIFIED") acts.push(el("button", { class: "btn gold sm", onclick: () => act("assign") }, "Assign to brand"));
   if (["ASSIGNED", "ACTIVE", "SYNC_FAILED", "PERMISSION_LIMITED"].includes(st) && a.platform === "youtube") acts.push(el("button", { class: "btn sm", onclick: () => act("test") }, "Test connection"));
@@ -1109,7 +1154,7 @@ function acctBlock(a) {
 }
 async function connect(t) {
   try {
-    if (t.platform === "youtube") { const r = await api(T("connect/youtube"), {}); location.href = r.auth_url; return; }
+    if (t.platform === "youtube") { const r = await api(T("connect/youtube"), { write: !!t.write }); location.href = r.auth_url; return; }
     if (t.platform === "instagram") { location.hash = "#/instagram"; return; }
     const input = el("input", { class: "input", placeholder: t.platform === "spotify" ? "https://open.spotify.com/show/…" : "Apple Podcasts show ID (numbers)" });
     if (!(await ask(`Find ${t.platform === "spotify" ? "Spotify" : "Apple Podcasts"} show`, [el("p", {}, "A public match only identifies the show. It doesn't prove ownership or give analytics access."), input], "Find show"))) return;
