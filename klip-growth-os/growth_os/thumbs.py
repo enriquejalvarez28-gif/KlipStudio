@@ -351,6 +351,15 @@ def fit_format(fmt, cast):
     return fmt
 
 
+def _lineup(cast, orig, headline, gold, out_path):
+    from growth_os import lineup
+    crops = {r: Path(p) for r, (p, _) in cast.items()}
+    meta = json.loads((next(iter(crops.values())).parent / "cast.json").read_text())["cast"]
+    tenant = next(iter(crops.values())).parent.parent.name
+    frames = {r: DATA_DIR / "frames" / tenant / m["from"] for r, m in meta.items() if m.get("from")}
+    return lineup.render(crops, headline, gold=gold, out_path=out_path, backdrop_src=orig, frames=frames)
+
+
 def render(orig_path, headline, *, fmt="guest", credential="", host_paths=(), gold=None, out_path=None, cast=None):
     """Render one 1280×720 RYJ-style preview from authentic imagery."""
     orig = Image.open(orig_path)
@@ -359,6 +368,11 @@ def render(orig_path, headline, *, fmt="guest", credential="", host_paths=(), go
     portrait = _portrait_from_original(orig)
     if cast is not None:
         fmt = fit_format(fmt, cast)
+    if fmt == "trio" and cast is not None:  # organised lineup (cut-outs, even spacing); boxes only as a fallback
+        try:
+            return _lineup(cast, orig, headline, gold, out_path)
+        except Exception:
+            pass
     multi = fmt != "guest" and (cast is not None or host_paths)
     right_x = int(W * 0.44) if fmt == "trio" else (int(W * 0.48) if multi else min(int(W * 0.50), W - portrait.width))
     pw, ph = W - right_x, H
