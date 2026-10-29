@@ -153,7 +153,8 @@ def video_table(conn, tenant_id):
         views = m.get("views") or 0
         out.append({"asset_id": v["asset_id"], "title": v["title"], "age_days": v["age_days"], "views": views,
                     "ctr": m.get("videoThumbnailImpressionsClickRate") if (m.get("videoThumbnailImpressions") or 0) >= thumbs.MIN_IMPRESSIONS else None,
-                    "impressions": m.get("videoThumbnailImpressions"), "pct_viewed": m.get("averageViewPercentage"),
+                    "impressions": m.get("videoThumbnailImpressions"),
+                    "pct_viewed": round(m["averageViewPercentage"], 1) if m.get("averageViewPercentage") is not None else None,
                     "avg_view_s": m.get("averageViewDuration"), "first30": first30(curves.get(v["asset_id"]), v["duration_s"]),
                     "subs_per_1k": round(1000 * (m.get("subscribersGained") or 0) / views, 2) if views else None,
                     "from_shorts": int(t.get("SHORTS", 0)), "from_end_screens": int(t.get("END_SCREEN", 0)),
