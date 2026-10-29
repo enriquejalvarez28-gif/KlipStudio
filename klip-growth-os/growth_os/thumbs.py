@@ -256,7 +256,8 @@ def _logo_from_original(orig):
     box = o.crop((30, 20, 190, 170))
     lum = [sum(p) / 3 for p in box.resize((40, 38)).getdata()]
     # A logo region has some bright pixels on a dark field; plain black → no logo.
-    return box if sum(1 for x in lum if x > 150) > 25 else None
+    bright = sum(1 for x in lum if x > 150)
+    return box if 25 < bright < 520 else None  # a big bright block is old headline text, not the logo
 
 
 def _wrap(draw, words, font, max_w):

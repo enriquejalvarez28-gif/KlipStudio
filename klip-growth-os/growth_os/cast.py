@@ -210,7 +210,7 @@ def build(conn, tenant_id, asset_id, *, fetch=None, faces=None):
     cast = {}
     for role, (w, path, f, score, short) in found.items():
         img = cv2.imread(path)
-        focus = _crop(img, f, out_dir / f"{role}.jpg", below=1.8 if short else 2.4)
+        focus = _crop(img, f, out_dir / f"{role}.jpg", below=1.25 if short else 2.4)  # Shorts burn captions just under the chin
         cast[role] = {"file": f"{role}.jpg", "focus": focus, "face_px": int(w), "match": score,
                       "from": path.rsplit("/", 1)[-1].rsplit("\\", 1)[-1]}
     meta = {"asset_id": asset_id, "built_at": utcnow(), "cast": cast, "shorts_used": used_shorts}
