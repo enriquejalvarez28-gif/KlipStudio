@@ -116,7 +116,8 @@ def _frames(tenant_id, vid, fetch):
     out = []
     for n in (1, 2, 3):
         p = d / f"{vid}_{n}.jpg"
-        for url in FRAME_URLS if not p.exists() else ():
+        stale = not p.exists() or p.stat().st_size < 8000  # missing or a grey placeholder
+        for url in FRAME_URLS if stale else ():
             try:
                 data = fetch(url.format(vid=vid, n=n))
             except Exception:
@@ -124,7 +125,7 @@ def _frames(tenant_id, vid, fetch):
             if data and len(data) > 8000:  # YouTube's grey placeholder is tiny
                 p.write_bytes(data)
                 break
-        if p.exists():
+        if p.exists() and p.stat().st_size >= 8000:
             out.append(p)
     return out
 
