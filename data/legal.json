@@ -1,55 +1,81 @@
 {
   "legal": {
-    "_note": "DRAFT — written from what this website actually does. Have it reviewed before launch; KLIP is responsible for the final wording.",
-    "effective": "2026-10-15",
+    "_note": "Updated 2026-10-27 to match the Klip Studio Terms of Use and Privacy Policy published on SimplyBook.me. Have counsel review; KLIP is responsible for the final wording.",
+    "effective": "2026-11-01",
     "privacy": {
       "title": "Privacy Policy | KLIP",
-      "description": "How KLIP collects, uses and protects information from visitors to theklipstudio.com.",
-      "heading": ["Privacy Policy"],
-      "intro": "This policy covers theklipstudio.com and explains what we collect, why, and what you can ask us to do about it. KLIP is operated by Klip Studio LLC and Klip Media LLC, 2145 Davie Blvd, Suite 204, Fort Lauderdale, FL 33312.",
+      "description": "How KLIP collects, uses and protects information from website visitors, clients and everyone who visits the studio.",
+      "heading": [
+        "Privacy Policy"
+      ],
+      "intro": "This policy covers theklipstudio.com, our booking pages and our studio, and explains what we collect, why, and what you can ask us to do about it. KLIP is operated by Klip Studio LLC and Klip Media LLC, 2145 Davie Blvd, Suite 204, Fort Lauderdale, FL 33312.",
       "sections": [
         {
           "title": "What we collect",
           "body": [
-            "Information you give us. When you book a room or a session, request a consultation, or submit the Visibility Check form, you provide details such as your name, email address, phone number, business name and the website address you asked us to analyze.",
-            "Information collected automatically. Like most websites, our hosting records standard technical data such as IP address, browser type, pages visited and the time of the visit.",
-            "We do not ask for, and you should not send us, payment card numbers by email or through this website's forms."
+            "Information you give us. When you book a room or session, request a consultation, or submit the Visibility Check form, you provide details such as your name, email address, phone number, business name, billing details and the website address you asked us to analyze.",
+            "Studio visit records. Everyone who enters the studio registers by scanning the QR code on the sign at the entrance with their phone (or is registered by the person who booked), which records name, phone, email, date and time of entry, and acceptance of our terms. Our door system logs when access codes are issued and used. Security cameras in studio rooms, entrances and common areas record video only, with no audio, and never in restrooms.",
+            "Session media and messages. The audio, video and photos you record at the studio, the emails and texts we exchange, and your text-message opt-in or opt-out records.",
+            "Information collected automatically. Our hosting and booking pages record standard technical data such as IP address, browser type, pages visited and the time of the visit, and may use cookies and pixels.",
+            "We do not ask for, and you should not send us, payment card numbers by email or through this website's forms. Card payments are handled by our payment processor, not stored by us."
           ]
         },
         {
           "title": "How we use it",
           "body": [
-            "To schedule and deliver what you booked, to answer your enquiry, to send the confirmations and reminders attached to a booking, and to improve the website.",
-            "The Visibility Check analyzes the public web address you enter and returns a score based on what is publicly available at that address. If you ask for the results by email, we use your address to send them and to follow up about KLIP services.",
-            "We do not sell your personal information."
+            "To schedule and deliver what you booked, process payments, send confirmations, door codes and reminders, deliver your files, answer your enquiries and improve the website and our services.",
+            "To register and verify everyone who enters the studio, protect people, equipment and property, investigate damage, theft or policy violations, and support charges and payment disputes.",
+            "The Visibility Check analyzes the public web address you enter and returns a score based on what is publicly available there. If you ask for the results by email, we use your address to send them and to follow up about KLIP services.",
+            "To send marketing messages, only if you opted in, and to meet legal, tax and accounting obligations. We do not sell your personal information."
           ]
         },
         {
           "title": "Services we use",
           "body": [
-            "Bookings for studio rooms, photography and tours are handled by SimplyBook.me, which processes your booking details and any deposit under its own terms and privacy policy.",
-            "Consultation calls are scheduled through Calendly, under its own terms and privacy policy.",
-            "The site is hosted on Cloudflare Pages. If analytics are enabled, Google Analytics may set cookies to measure how the site is used.",
-            "Each of these companies handles the data it receives under its own policy. We recommend reading them if that matters to you."
+            "SimplyBook.me handles studio, photography and tour bookings and acts as our supplier under its Privacy Policy and our Data Processing Agreement. Stripe processes payments. Calendly schedules consultation calls.",
+            "GoHighLevel is our customer database and sends email and text messages, with Twilio carrying texts. Make.com moves information between these systems. RemoteLock issues door codes and logs entries. A Synology NAS and Dropbox store and deliver session files for a limited time.",
+            "This website is hosted on Cloudflare Pages. Google and Meta provide calendar, analytics, advertising and lead-form tools. Each company handles the data it receives under its own policy."
+          ]
+        },
+        {
+          "title": "Text messages",
+          "body": [
+            "Transactional texts, such as confirmations, door codes, reminders and file delivery, are sent to clients as part of their booking. Marketing texts are sent only to people who opt in, and consent is not a condition of purchase. Message frequency varies, and message and data rates may apply.",
+            "Reply STOP to opt out at any time, or HELP for help, or email info@theklipstudio.com.",
+            "No mobile information will be shared with third parties or affiliates for marketing or promotional purposes. Text-messaging opt-in data and consent are not shared with any third party, except the providers that deliver our messages."
+          ]
+        },
+        {
+          "title": "Security cameras",
+          "body": [
+            "Security cameras operate in studio rooms, entrances and common areas for safety and asset protection. They record video only, with no audio, and there are none in restrooms. Notices are posted at the entrance, and entering the premises means you consent to this recording.",
+            "Footage is used only for security, check-in verification, incident and damage investigation and payment disputes. It is not used in marketing."
           ]
         },
         {
           "title": "Cookies",
           "body": [
-            "This site sets no advertising cookies of its own. Embedded booking and scheduling tools, and analytics if enabled, may set their own cookies when you use them. Your browser settings control whether you accept them."
+            "This site sets no advertising cookies of its own. Our booking pages, embedded booking and scheduling tools, and analytics and advertising pixels from Google and Meta may set their own cookies when you use them. Your browser settings control whether you accept them, and your Google and Meta account settings control ad preferences."
           ]
         },
         {
           "title": "How long we keep it",
           "body": [
-            "Booking and client records are kept for as long as we need them to run the business and meet tax and legal obligations. Enquiries that do not become work are kept for a reasonable period and then deleted."
+            "Security camera footage: about 30 days, longer only for an open incident or dispute. Session recordings: about 14 days after the session, so download and back them up before then. Visitor check-in and door access logs: 2 years.",
+            "Booking and client records: as long as we need them to run the business, or until you ask us to delete them, unless needed for legal or accounting reasons. Text-message consent and opt-out records: as long as carrier and legal rules require. Accounting and payment records: up to 7 years. Enquiries that do not become work are kept for a reasonable period and then deleted."
+          ]
+        },
+        {
+          "title": "Keeping it secure",
+          "body": [
+            "We use reasonable safeguards, including access controls and reputable providers, to protect your information. No system is completely secure. If a breach affects your personal information, we will notify you as required by Florida law."
           ]
         },
         {
           "title": "Your choices",
           "body": [
-            "You can ask us what we hold about you, ask us to correct it, or ask us to delete it. Email info@theklipstudio.com or call 954-541-3708 and tell us what you want done.",
-            "You can unsubscribe from marketing email at any time using the link in the message."
+            "You can ask us what we hold about you, ask us to correct it, or ask us to delete it. Email info@theklipstudio.com or call 954-541-3708 and tell us what you want done. We may keep records the law requires, or that we need for security, a pending dispute or accounting.",
+            "You can unsubscribe from marketing email at any time using the link in the message, and from texts by replying STOP."
           ]
         },
         {
@@ -62,7 +88,7 @@
         {
           "title": "Children",
           "body": [
-            "This website is intended for business customers and is not directed at children under 13. We do not knowingly collect information from them."
+            "This website is intended for business customers and is not directed at children under 13. We do not knowingly collect information from them online. Minors may visit the studio only with a parent or guardian, who registers on their behalf."
           ]
         },
         {
@@ -76,8 +102,10 @@
     "terms": {
       "title": "Terms of Service | KLIP",
       "description": "The terms that apply to using theklipstudio.com and to booking KLIP Studio and Klip Media services.",
-      "heading": ["Terms of Service"],
-      "intro": "These terms apply to this website and to work booked through it. Services are provided by Klip Studio LLC and Klip Media LLC, 2145 Davie Blvd, Suite 204, Fort Lauderdale, FL 33312.",
+      "heading": [
+        "Terms of Service"
+      ],
+      "intro": "These terms apply to this website and to everything booked through it: studio rooms, photography, production and Klip Media marketing services. Services are provided by Klip Studio LLC and Klip Media LLC, 2145 Davie Blvd, Suite 204, Fort Lauderdale, FL 33312. By booking, paying or entering the studio, you agree to these terms, our Privacy Policy and our cancellation policy, for yourself and every guest you bring.",
       "sections": [
         {
           "title": "Using this website",
@@ -86,32 +114,102 @@
           ]
         },
         {
-          "title": "Bookings",
+          "title": "Eligibility and minors",
           "body": [
-            "Studio rooms, photography sessions and tours are booked through SimplyBook.me, and that booking is subject to the rate, deposit and cancellation terms shown at the time of booking.",
-            "A booking is confirmed when you receive the confirmation from the booking system, not when a request is submitted.",
-            "Please arrive and finish within the hours you booked. Time beyond that may be charged at the posted rate if the room is available."
+            "Bookings must be made by an adult 18 years or older.",
+            "Minors may enter the studio only with a parent or legal guardian who stays with them the entire visit and accepts these terms on their behalf. KLIP is not a childcare facility, and children may never be left unattended."
+          ]
+        },
+        {
+          "title": "Booking, payment and card authorization",
+          "body": [
+            "Studio rooms, photography sessions and tours are booked through SimplyBook.me. A booking is confirmed when it is paid in full and you receive the confirmation from the booking system, not when a request is submitted.",
+            "A valid credit or debit card must remain on file for every booking, including bookings paid by Zelle or another method. By booking, you authorize KLIP to charge the card on file for overtime, damage, missing items, cleaning fees and the other charges described in these terms, after notice is sent to you.",
+            "KLIP may require a refundable security deposit or pre-authorization hold for first-time clients, large groups, events or high-risk productions. Holds are released within 7 business days after the session if no charges apply.",
+            "Bookings are personal to the person who made them and may not be resold, transferred or sublet without written approval. Prices and promotions may change; your price is locked once your booking is paid."
+          ]
+        },
+        {
+          "title": "Session time and overtime",
+          "body": [
+            "Sessions start and end at the booked times, and session time includes setup, recording, breakdown and cleanup. Early entry is not permitted; your door code works only during your booked window. Late arrival does not extend the session or reduce the price.",
+            "The room must be empty, clean and reset by your end time. After a 5-minute grace period, overtime is charged at $49 per 30 minutes or part of 30 minutes to the card on file. If your overtime delays the next booking, you are also responsible for any refund or credit we must give that client."
+          ]
+        },
+        {
+          "title": "Guest check-in, occupancy and access",
+          "body": [
+            "Every person who enters the studio, including the person who booked, must register on every visit before entering any room by scanning the QR code on the sign at the studio entrance with their phone. Guests may register themselves, or the person who booked may register them. Registration includes full name, phone number and email, and acceptance of these terms.",
+            "The person who booked must tell every guest to check in and keep the group within the room's maximum occupancy: Klip Room 6, Kapture 3, Kreator 4, Kanvas 8, unless posted otherwise.",
+            "Unregistered people may be refused entry or asked to leave, and KLIP may end a session without refund if unregistered or excess guests are present. The person who booked is responsible for the conduct of, and any damage caused by, every guest, whether or not that guest registered.",
+            "Door codes are for your booked session only. Do not share codes, prop doors open, or let in anyone who is not part of your group. Stay in the room you booked; other rooms, the control area, storage and staff areas are off-limits."
+          ]
+        },
+        {
+          "title": "What is not allowed",
+          "body": [
+            "Nudity or sexual, pornographic or adult content; illegal activity; weapons of any kind, including replicas, without written approval; illegal drugs; alcohol unless approved in writing for a private event; smoking or vaping inside or outside the premises; recording anyone without their consent; copyright or trademark infringement; harassment or threatening behavior.",
+            "Fog or haze machines, open flames, candles, confetti, glitter, paint, powder, pyrotechnics, drones or water effects without written approval. Animals, except service animals and pets booked for a pet photography session. Food or drinks near equipment; only closed water bottles are allowed in recording areas.",
+            "Any violation may end the session immediately without refund, and the fees below will be charged."
+          ]
+        },
+        {
+          "title": "In the studio and using equipment",
+          "body": [
+            "All rooms share the facility and other clients are recording, so keep noise at a reasonable level, follow posted instructions and staff directions, and close and secure every door.",
+            "Use equipment only as shown in the in-room guides, emailed instructions or by KLIP staff. Do not move, unplug, re-cable, re-angle, unmount or change settings on cameras, lenses, lights, switchers, microphones, teleprompters, iPads or controllers beyond normal use. Do not connect your own equipment to studio equipment without approval.",
+            "Computers, servers, network equipment, the control area and all backend systems are off-limits. Stop using anything that malfunctions and report it right away; do not attempt repairs. Studio equipment may not leave the premises."
+          ]
+        },
+        {
+          "title": "Inspection and damage reporting",
+          "body": [
+            "Check the room when you arrive and report any existing damage, mess or malfunction to info@theklipstudio.com or 954-541-3708 within the first 10 minutes, with a photo if possible. If nothing is reported, the room is considered received clean and in working order.",
+            "Report any damage or accident during your session immediately. Damage that is hidden or not reported carries an extra $100 non-reporting fee.",
+            "KLIP inspects rooms after each session and may use security footage, QR check-in records and photos to identify the cause of damage. We will notify you of any charge, with supporting evidence, within 7 days of your session."
+          ]
+        },
+        {
+          "title": "White cyc wall, cleaning and personal property",
+          "body": [
+            "Shoes come off before stepping onto the cyc wall; socks or bare feet only. Do not scuff, mark, tape or walk along its curved base or sides, and do not attach tape, nails, hooks, adhesives or props to walls, floors or sets without approval.",
+            "Return the room exactly as you found it: props and furniture back in place, trash removed, surfaces wiped, bathrooms clean. Cleaning fees below are charged when this is not done.",
+            "KLIP is not responsible for lost, stolen or damaged personal property. Items left behind are held for 14 days, then donated or discarded."
+          ]
+        },
+        {
+          "title": "Security cameras",
+          "body": [
+            "For safety, security and asset protection, KLIP uses security cameras in studio rooms, entrances and common areas. The cameras record video only; they do not record audio. There are no cameras in restrooms. Notices are posted at the entrance, and by entering the premises you and your guests consent to being recorded.",
+            "Footage is used for safety, to verify check-ins, to investigate damage, theft or policy violations, and to support charges and payment disputes. It may be shared with law enforcement or insurers, is never used in marketing, and is normally kept for 30 days unless needed for an open incident or dispute."
+          ]
+        },
+        {
+          "title": "Damage and fee schedule",
+          "body": [
+            "You are responsible for damage, loss or theft of KLIP property caused by you or your guests during your booking, ordinary wear excepted. You will be charged the greater of the minimum below or the actual repair or replacement cost: the current retail price of the same or an equivalent item, plus sales tax, shipping and labor.",
+            "Cameras and production: cinema camera body (Sony FX30 or equivalent) $2,200 · video/audio switcher (RØDECaster Video or equivalent) $1,300 · camera lens $700 · camera cage, mount or monitor accessory $250.",
+            "Displays and controls: 65-inch TV display $900 · iPad, tablet or Stream Deck controller $600 · teleprompter $400 · monitor $400.",
+            "Lighting and audio: lighting panel or fixture $400 · microphone (each) $350 · light stand, C-stand, mic arm or tripod $150 · headphones (each) $150.",
+            "Sets and small items: white cyc wall repair or repaint $500 · wall, floor or set repair at actual cost, $250 minimum · backdrop roll or fabric $150 · cable, adapter, battery or memory card (each) $50 · furniture, props or decor at actual replacement cost.",
+            "Fees: cleaning Tier 1, trash left, props not reset or food and drink residue, $75 · cleaning Tier 2, spills, stains, bathroom misuse, glitter, confetti or scuffs, $250 · cleaning Tier 3, cyc repaint, specialty or biohazard cleaning, $500 minimum · smoking or vaping on premises $500 · unregistered or excess guests $100 per person · equipment inspection or diagnostic $75 · overtime $49 per 30 minutes.",
+            "Loss of use: if damage takes a room or equipment out of service, you also pay the room's hourly rate for any booked sessions that must be cancelled or moved, for up to 7 days."
           ]
         },
         {
           "title": "Cancellations and changes",
           "body": [
-            "Cancellation and rescheduling terms are the ones shown in the booking system when you book. If something goes wrong on our side and we cannot provide the room or crew you booked, we will reschedule or refund."
-          ]
-        },
-        {
-          "title": "In the studio",
-          "body": [
-            "Treat the equipment and the space with care. You are responsible for damage caused by you or your guests beyond normal use.",
-            "Do not bring anything unlawful into the studio, and follow the building's rules on access, noise and parking."
+            "48 or more hours' notice: full refund. 24 to 48 hours: 50% refund. Under 24 hours or no-show: no refund. One free reschedule is allowed with 24 or more hours' notice, subject to availability, and must be used within 60 days.",
+            "Once editing has started on an edit-included package, the editing portion is non-refundable. Bundles, packages and promotional sessions are non-refundable, non-transferable and expire 90 days after purchase unless stated otherwise. Sessions ended for breaking these terms are not refunded.",
+            "If KLIP cancels because of equipment failure, an emergency, or a hurricane or severe-weather closure, you choose a full refund or a free reschedule, and that is your only remedy. Refunds go back to the original payment method within 5 to 10 business days."
           ]
         },
         {
           "title": "Your content and ours",
           "body": [
-            "You keep the rights to your own brand, footage and material. You confirm you have the right to use any music, logos or third-party material you bring to a session.",
-            "Deliverables are yours for the use agreed in writing. Drafts and project files remain ours unless we agree otherwise.",
-            "Work remains a draft until an authorized KLIP representative approves it for release."
+            "You keep the rights to your own brand, footage and material, and you are responsible for it, including releases from anyone who appears in it and licenses for any music, logos or third-party material you bring to a session.",
+            "Deliverables are yours for the use agreed in writing. Drafts and project files remain ours unless we agree otherwise, and work remains a draft until an authorized KLIP representative approves it for release.",
+            "KLIP may photograph or film the studio space for its own marketing but will not publish identifiable images of you or your guests without your permission. We review recordings stored on our systems only to deliver files, provide services you purchased, or investigate a policy violation."
           ]
         },
         {
@@ -122,22 +220,39 @@
           ]
         },
         {
-          "title": "Payment",
+          "title": "Recordings, files and technical issues",
           "body": [
-            "Fees, deposits and schedules are the ones quoted or shown at booking. Work may pause on overdue accounts."
+            "KLIP does not guarantee uninterrupted operation, Wi-Fi or flawless recording, so monitor your recordings during your session. We are not liable for missed, corrupted or incomplete recordings caused by technical issues, power or internet outages, or equipment failure. If a studio-side failure prevents your session from recording, our only obligation is a rebooking of equal length or a refund of the session fee, at our choice.",
+            "Recordings are kept for about 14 days after your session and may then be permanently deleted without notice. You are responsible for downloading and backing up your files."
           ]
         },
         {
-          "title": "Limits",
+          "title": "Messages we send",
           "body": [
-            "This website is provided as it is. To the extent the law allows, KLIP is not liable for indirect or consequential loss, and our liability for any claim relating to a booking is limited to the amount paid for it.",
-            "Nothing here limits anything that cannot be limited by law."
+            "By booking, you consent to transactional texts and emails about your booking: confirmations, door codes, reminders, file delivery and charges. These are required to access the studio. Marketing messages are separate, optional and sent only if you opt in; reply STOP to any text to opt out."
           ]
         },
         {
-          "title": "Governing law and contact",
+          "title": "Risk, responsibility and limits",
           "body": [
-            "These terms are governed by the laws of the State of Florida. Questions go to info@theklipstudio.com or 954-541-3708."
+            "Studio activities involve lighting, cables, stands, raised sets and the cyc wall, and you and your guests use the facility and equipment at your own risk. To the fullest extent Florida law allows, you release Klip Studio LLC, Klip Media LLC, their owners, staff and contractors from claims for injury, illness or property loss arising from your use of the studio, except where caused by our gross negligence or willful misconduct.",
+            "You agree to defend, indemnify and hold harmless Klip Studio LLC, Klip Media LLC, their owners, staff and contractors from any claims, damages, losses or costs, including reasonable attorney's fees, arising from your session, your guests, your content, or your breach of these terms or any law.",
+            "This website is provided as it is. KLIP is not liable for indirect, incidental or consequential loss, including lost profits, lost content or lost business, and our total liability for any claim relating to a booking or service is limited to the amount paid for it. Nothing here limits anything that cannot be limited by law."
+          ]
+        },
+        {
+          "title": "Payment and disputes",
+          "body": [
+            "Fees, deposits and schedules are the ones quoted or shown at booking, and work may pause on overdue accounts.",
+            "Contact info@theklipstudio.com first about any charge; we respond within 3 business days. Your acceptance of these terms, booking records, check-in records and security footage may be submitted as evidence in any payment dispute. If a valid charge is reversed through a chargeback, you remain responsible for it plus a $50 dispute fee and reasonable collection costs."
+          ]
+        },
+        {
+          "title": "Governing law, changes and contact",
+          "body": [
+            "These terms are governed by the laws of the State of Florida. Any dispute will be handled exclusively in the state courts of Broward County, Florida, or in small claims court where eligible, and the prevailing party may recover reasonable attorney's fees and costs.",
+            "KLIP may update these terms; the version in effect when you book applies to that booking. If any part is unenforceable, the rest still applies, and our not enforcing a provision does not waive it. KLIP is not liable for delays or cancellations caused by events outside its control, such as hurricanes, severe weather, power outages or government orders.",
+            "SimplyBook.me acts as our booking supplier and processes personal data under its Privacy Policy and our Data Processing Agreement. Questions go to info@theklipstudio.com or 954-541-3708."
           ]
         }
       ]
