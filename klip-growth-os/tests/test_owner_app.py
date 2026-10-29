@@ -1063,6 +1063,23 @@ class TestFillMissing(TestAutopilot):
         self.assertIn("youth sports", sent["tags"])
         self.assertEqual(g.thumb_posts, 0)                   # thumbnails never touched
 
+    def test_search_terms_never_become_tags_and_cleanup_removes_them(self):
+        g = WriteGoogle()
+        c, ap = self._setup(g)
+        g.snip.update(description="", tags=[])
+        self._run(c, ap, g)
+        r = c.execute("SELECT id, proposal_json FROM channel_changes WHERE reason='missing'").fetchone()
+        prop = json.loads(r[1]); prop["added_tags"] = ["mom kills kids"] + prop["added_tags"]
+        c.execute("UPDATE channel_changes SET proposal_json=? WHERE id=?", (json.dumps(prop), r[0]))
+        g.snip["tags"] = ["mom kills kids", "youth sports", "added by jamar"]
+        runner = lambda prompt, model: {"result": json.dumps(self.SEO)}
+        with mock.patch.object(ai, "status", return_value=self.ON):
+            out = ap.clean_batch_tags(c, self.T, since="2000", transport=g, runner=runner)
+        self.assertEqual(out["cleaned"], 1)
+        self.assertNotIn("mom kills kids", g.snip["tags"])
+        self.assertIn("added by jamar", g.snip["tags"])      # tags someone else added stay
+        self.assertEqual(g.thumb_posts, 0)
+
     def test_live_values_added_since_sync_are_left_alone(self):
         g = WriteGoogle()
         c, ap = self._setup(g)  # history says empty, but YouTube already has a real description and tags now

@@ -508,3 +508,55 @@ def fill_missing(conn, tenant_id, *, actor="owner", transport=None, runner=None,
             done["failed"].append(f"{v['title'][:40]}: {str(e)[:160]}")
     progress(100, "done")
     return done
+
+
+def clean_batch_tags(conn, tenant_id, *, since, actor="owner", transport=None, runner=None, progress=lambda p, m: None):
+    """Replace tags we added in a fill-missing batch with the clean (relevance-checked) set. Logged as 'tag_cleanup'."""
+    rows = conn.execute("""SELECT * FROM channel_changes WHERE tenant_id=? AND reason='missing' AND created_at>=?
+                           AND status IN ('verified','failed') ORDER BY created_at""", (tenant_id, since)).fetchall()
+    a, http, call = _session(conn, tenant_id, transport)
+    brands.preflight_public_action(conn, tenant_id=tenant_id, platform="youtube", platform_account_id=a["platform_account_id"],
+                                   required_permission="WRITE_METADATA",
+                                   approval={"approved_by": actor, "approval_timestamp": utcnow(), "tenant_id": tenant_id,
+                                             "platform_account_id": a["platform_account_id"]})
+    out = {"cleaned": 0, "unchanged": 0, "failed": [], "removed": {}}
+    for i, r in enumerate(rows):
+        progress(int(100 * i / max(len(rows), 1)), f"cleaning tags {i + 1}/{len(rows)}")
+        vid, prop = r["asset_id"], json.loads(r["proposal_json"])
+        before_batch = json.loads(r["before_json"] or "{}").get("tags", [])
+        try:
+            pack = prep.asset_pack(conn, tenant_id, vid, runner=runner, skip_titles=True, thumbnails_wanted=False)
+            if pack.get("seo_source") != "ai":
+                out["failed"].append(f"{vid}: AI tags unavailable, left as is")
+                continue
+            sn = _snippet(call, vid)
+            if sn.get("channelId") != a["platform_account_id"]:
+                raise AutopilotError("video belongs to a different channel; refusing")
+            before = {k: sn[k] for k in SNIPPET_KEYS if k in sn}
+            live = list(before.get("tags", []))
+            ours = {t.lower() for t in prop.get("added_tags", [])}
+            keep = [t for t in live if t.lower() not in ours or t in before_batch]  # tags someone else added stay
+            tags = list(dict.fromkeys(keep + pack["seo"]["tags"]))
+            while len(",".join(tags)) > 480:
+                tags.pop()
+            if sorted(t.lower() for t in tags) == sorted(t.lower() for t in live):
+                out["unchanged"] += 1
+                continue
+            cid = new_id("chg")
+            conn.execute("""INSERT INTO channel_changes (id, tenant_id, asset_id, reason, evidence_json, proposal_json, chosen_json,
+                            before_json, status, auto, created_at, decided_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+                         (cid, tenant_id, vid, "tag_cleanup",
+                          json.dumps([f"Removed unrelated search-term tags added on {since[:10]}"]),
+                          json.dumps({"title": before.get("title"), "tags": tags, "added_tags": tags, "description_lines": ""}),
+                          json.dumps({"tags": True}), json.dumps(before), "approved", 0, utcnow(), utcnow()))
+            new = dict(before, tags=tags)
+            call("PUT", f"{youtube.DATA_API}/videos", params={"part": "snippet"}, json_body={"id": vid, "snippet": new},
+                 quota_units=50, log_name="youtube.videos.update")
+            now = utcnow()
+            conn.execute("UPDATE channel_changes SET status='verified', applied_at=?, verified_at=? WHERE id=?", (now, now, cid))
+            out["removed"][before.get("title", vid)[:50]] = [t for t in live if t not in tags]
+            out["cleaned"] += 1
+            audit(conn, tenant_id, actor, "autopilot.tag_cleanup", {"change": cid, "asset": vid})
+        except (HttpError, AutopilotError, youtube.ConnectorError, ValueError, KeyError) as e:
+            out["failed"].append(f"{vid}: {str(e)[:120]}")
+    return out

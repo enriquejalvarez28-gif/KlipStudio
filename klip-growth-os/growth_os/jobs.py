@@ -48,6 +48,12 @@ def autopilot_daily(conn, tenant_id, progress):
     return out
 
 
+def clean_tags(conn, tenant_id, progress):
+    return {t: autopilot.clean_batch_tags(conn, t, since="2026-10-29T14:00", actor="owner (fix of approved batch 2026-10-29)",
+                                          progress=progress)
+            for t in ([tenant_id] if tenant_id else ["ryj-media"])}
+
+
 def fill_missing(conn, tenant_id, progress):
     return {t: autopilot.fill_missing(conn, t, actor="owner (approved in chat 2026-10-29)", progress=progress)
             for t in _tenants(conn, tenant_id, include_demo=False)}
@@ -66,6 +72,7 @@ REGISTRY = {
     "packaging_check": packaging_check,
     "autopilot_daily": autopilot_daily,
     "fill_missing": fill_missing,
+    "clean_tags": clean_tags,
     "weekly_report": _report("weekly"),
     "monthly_report": _report("monthly"),
 }

@@ -204,9 +204,14 @@ def asset_pack(conn, tenant_id, asset_id, *, diagnosis="", runner=None, thumbnai
     except (ai.AIUnavailable, ValueError, KeyError) as e:
         pack["notes"].append(f"AI description/tags unavailable ({str(e)[:80]}); rule-based draft.")
     tags, seen = [], set()
-    for t in [s["term"] for s in d["search_terms"][:6]] + list(ai_seo.get("tags") or [])[:10] \
+    raw_terms = {str(x["term"]).strip().lower() for x in d["search_terms"]}
+    title_words = set(re.findall(r"[a-z0-9]{3,}", f"{v['title'] or ''} {guest or ''}".lower()))
+    # Raw search terms are NOT used as tags: they include unrelated searches (the AI sees them and keeps only relevant ones).
+    for t in list(ai_seo.get("tags") or [])[:10] \
             + ([guest] if guest else []) + ([show] if show else []) + relevant_kws[:4]:
         k = (t or "").strip()
+        if k.lower() in raw_terms and not (set(re.findall(r"[a-z0-9]{3,}", k.lower())) & title_words):
+            continue  # an echoed search term that has nothing to do with this video
         if k and k.lower() not in seen and len(k) <= 60:
             seen.add(k.lower())
             tags.append(k)
