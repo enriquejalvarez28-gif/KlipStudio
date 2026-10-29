@@ -12,11 +12,11 @@
     },
     "items": [
       {
-        "image": "img/klip-podcast-room-clean-wide.jpg",
-        "show": "Always Algo",
-        "title": "La Verdad Sobre el Crédito",
-        "time": "1:24",
-        "video": "",
+        "image": "img/pod-itg-kymani-marley.jpg",
+        "show": "I Talk Grey Podcast",
+        "title": "Ky-Mani Marley talks about building generational wealth",
+        "time": "",
+        "video": "https://youtu.be/BARC4K8ct5c",
         "kind": "episode",
         "preview": "",
         "previewMp4": ""
