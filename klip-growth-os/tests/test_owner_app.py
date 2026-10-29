@@ -1043,22 +1043,39 @@ class TestConceptsAndInsights(TestThumbnailStrategy):
 
 
 class TestFillMissing(TestAutopilot):
+    SEO = {"first_lines": "Coach Ray explains why kids quit sports and what parents can change.", "tags": ["youth sports", "coach ray"]}
+    ON = {"enabled": True, "cli_found": True, "daily_cap": 99, "used_today": 0}
+
+    def _run(self, c, ap, g):
+        runner = lambda prompt, model: {"result": json.dumps(self.SEO)}
+        with mock.patch.object(ai, "status", return_value=self.ON):
+            return ap.fill_missing(c, self.T, transport=g, runner=runner)
+
     def test_fills_only_what_is_missing_and_never_titles(self):
         g = WriteGoogle()
         c, ap = self._setup(g)
         g.snip.update(description="", tags=[])
-        r = ap.fill_missing(c, self.T, transport=g)
+        r = self._run(c, ap, g)
         self.assertEqual((r["descriptions"], r["tags"], r["verified"], r["failed"]), (1, 1, 1, []))
         sent = g.puts[-1]["snippet"]
         self.assertEqual(sent["title"], "Old Title")          # title untouched
-        self.assertTrue(sent["description"] and sent["tags"])
+        self.assertTrue(sent["description"].startswith("Coach Ray explains"))
+        self.assertIn("youth sports", sent["tags"])
         self.assertEqual(g.thumb_posts, 0)                   # thumbnails never touched
 
-    def test_live_description_added_since_sync_is_left_alone(self):
+    def test_live_values_added_since_sync_are_left_alone(self):
         g = WriteGoogle()
-        c, ap = self._setup(g)  # history says empty, but YouTube already has a real description now
+        c, ap = self._setup(g)  # history says empty, but YouTube already has a real description and tags now
         g.snip["description"] = "A full description someone added in Studio after our last sync, with links."
-        r = ap.fill_missing(c, self.T, transport=g)
+        r = self._run(c, ap, g)
         self.assertEqual(g.snip["description"], "A full description someone added in Studio after our last sync, with links.")
-        self.assertEqual(r["descriptions"], 0)
-        self.assertEqual(r["skipped_live"], 1)
+        self.assertEqual(g.snip["tags"], ["old"])
+        self.assertEqual((r["descriptions"], r["tags"], r["skipped_live"]), (0, 0, 1))
+
+    def test_stops_instead_of_publishing_thin_text_when_ai_is_off(self):
+        g = WriteGoogle()
+        c, ap = self._setup(g)  # _setup switches AI off
+        g.snip.update(description="", tags=[])
+        r = ap.fill_missing(c, self.T, transport=g)
+        self.assertEqual(g.puts, [])
+        self.assertIn("stopped", r["failed"][0])

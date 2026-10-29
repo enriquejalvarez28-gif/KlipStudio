@@ -333,7 +333,9 @@ def apply(conn, tenant_id, cid, *, transport=None, actor="owner"):
                 pass  # someone added a description since our last sync: leave it alone
             elif first and first not in old:
                 new["description"] = (prop["description_lines"] + ("\n\n" + old if old.strip() else ""))[:4900]
-        if ch.get("tags"):  # merge with the LIVE tags (they may have changed since the last sync)
+        if ch.get("tags") and ch.get("only_if_empty") and before.get("tags"):
+            pass  # tags were added since our last sync: leave them alone
+        elif ch.get("tags"):  # merge with the LIVE tags (they may have changed since the last sync)
             tags = list(dict.fromkeys(list(before.get("tags", [])) + prop["tags"]))
             while len(",".join(tags)) > 480:
                 tags.pop()
@@ -351,8 +353,19 @@ def apply(conn, tenant_id, cid, *, transport=None, actor="owner"):
                 changed.append("thumbnail")
             except (HttpError, OSError) as e:
                 thumb_err = _thumb_error(e)
-        after = _snippet(call, vid)  # read-back
-        mismatch = [k for k in ("title", "description", "tags") if k in changed and after.get(k) != new.get(k)]
+        def norm(k, x):  # YouTube trims/normalises: compare the meaning, not the bytes
+            if k == "tags":
+                return sorted({str(t).strip().lower() for t in (x or [])})
+            return " ".join(str(x or "").split())
+        mismatch = []
+        for wait in (0, 3, 8):  # YouTube can take a few seconds to show the update
+            if wait:
+                import time
+                time.sleep(wait)
+            after = _snippet(call, vid)  # read-back
+            mismatch = [k for k in ("title", "description", "tags") if k in changed and norm(k, after.get(k)) != norm(k, new.get(k))]
+            if not mismatch:
+                break
         status = "failed" if mismatch else ("partial" if thumb_err else "verified")
         err = (f"read-back mismatch on {', '.join(mismatch)}" if mismatch else "") + (thumb_err or "")
         now = utcnow()
@@ -467,6 +480,9 @@ def fill_missing(conn, tenant_id, *, actor="owner", transport=None, runner=None,
                          (r["id"],))
         try:
             pack = prep.asset_pack(conn, tenant_id, a, runner=runner, thumbnails_wanted=False, skip_titles=True)
+            if pack.get("seo_source") != "ai":  # never publish thin rule-based text in this batch
+                done["failed"].append(f"{v['title'][:40]}: AI draft unavailable ({'; '.join(pack['notes'])[:120]}) — stopped")
+                break
             old_tags = json.loads(_latest(conn, tenant_id, a, "tags") or "[]")
             lines = pack["seo"]["first_lines"] + ("\n\n" + "\n".join(pack["seo"]["chapters"]) if pack["seo"]["chapters"] else "")
             prop = {"current_title": v["title"], "titles": [], "description_lines": lines,

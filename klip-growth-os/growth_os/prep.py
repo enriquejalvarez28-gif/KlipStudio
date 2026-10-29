@@ -201,8 +201,8 @@ def asset_pack(conn, tenant_id, asset_id, *, diagnosis="", runner=None, thumbnai
         ai_seo, _ = ai.ask(conn, tenant_id, f"prep_seo:{asset_id}", seo_payload, SEO_INSTRUCTIONS, runner=runner)
         if ai_seo.get("first_lines"):
             lead = str(ai_seo["first_lines"]).strip()[:400]
-    except (ai.AIUnavailable, ValueError, KeyError):
-        pass
+    except (ai.AIUnavailable, ValueError, KeyError) as e:
+        pack["notes"].append(f"AI description/tags unavailable ({str(e)[:80]}); rule-based draft.")
     tags, seen = [], set()
     for t in [s["term"] for s in d["search_terms"][:6]] + list(ai_seo.get("tags") or [])[:10] \
             + ([guest] if guest else []) + ([show] if show else []) + relevant_kws[:4]:
@@ -210,6 +210,7 @@ def asset_pack(conn, tenant_id, asset_id, *, diagnosis="", runner=None, thumbnai
         if k and k.lower() not in seen and len(k) <= 60:
             seen.add(k.lower())
             tags.append(k)
+    pack["seo_source"] = "ai" if ai_seo.get("first_lines") and ai_seo.get("tags") else "rules"
     pack["seo"] = {
         "first_lines": lead.strip(),
         "tags": tags[:12],
