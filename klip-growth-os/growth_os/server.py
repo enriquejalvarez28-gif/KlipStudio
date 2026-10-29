@@ -297,8 +297,10 @@ class Handler(BaseHTTPRequestHandler):
         if rest == "brief":
             return self._send(200, brief.generate(c, t, force=bool(body.get("force"))))
         m = re.fullmatch(r"recommendations/(rec_[a-f0-9]+)/(prepare|dry-run)", rest)
-        if m or rest in ("discovery/distribution", "discovery/ai-sample", "discovery/plan"):
+        if m or rest in ("discovery/distribution", "discovery/ai-sample", "discovery/plan", "discovery/competitors"):
             try:
+                if rest == "discovery/competitors":
+                    return self._send(200, discovery.research_competitors(c, t))
                 if rest == "discovery/distribution":
                     return self._send(200, discovery.check_distribution(c, t, term=(body.get("term") or None)))
                 if rest == "discovery/ai-sample":
