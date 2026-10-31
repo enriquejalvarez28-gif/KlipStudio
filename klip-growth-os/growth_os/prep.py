@@ -172,8 +172,10 @@ def asset_pack(conn, tenant_id, asset_id, *, diagnosis="", runner=None, thumbnai
             rf = thumbs.recommend_format(conn, tenant_id, asset_id)
             fmt = rf["recommended"]  # previews() degrades to what this episode's own frames can fill
             from growth_os import cast as cast_mod
-            if {"jamar", "enrique", "guest"} <= set(cast_mod.load(tenant_id, asset_id)):
-                fmt = "trio"  # both hosts and the guest were found in this episode: organised 3-person lineup
+            if cast_mod.load(tenant_id, asset_id):
+                fmt = "trio"  # lineup of whoever was found in this episode (hosts + guest when possible)
+            if not credential and guest:  # always name the guest
+                credential = guest
             pack["thumbnails"] = thumbs.previews(conn, tenant_id, asset_id, heads, fmt=fmt, credential=credential[:48])
             pack["thumbnails"]["format_why"] = rf["why"]
         except (ValueError, LookupError) as e:

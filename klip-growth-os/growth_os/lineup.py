@@ -15,7 +15,7 @@ from growth_os import thumbs
 
 W, H = 1280, 720
 ORDER = ("jamar", "guest", "enrique")
-CENTERS = {3: (318, 640, 962), 2: (450, 830)}
+CENTERS = {3: (318, 640, 962), 2: (450, 830), 1: (640,)}
 FACE_W = {"side": 172, "middle": 186}
 EYE_Y = 205                     # eyes on one line
 BAND_TOP = 470                  # headline band
@@ -195,15 +195,15 @@ def _render(cast_crops, headline, *, gold=None, out_path=None, backdrop_src=None
     frames = frames or {}
     gold = gold or thumbs.brand_gold()
     roles = [r for r in ORDER if r in cast_crops]
-    if "guest" not in roles or len(roles) < 2:
-        raise ValueError("lineup needs the guest and at least one host from this episode")
+    if not roles:
+        raise ValueError("no people found in this episode's frames")
     people = {}
     for r in roles:
         p = _person(t, cast_crops[r], frames.get(r))
         if p:
             people[r] = p
     roles = [r for r in roles if r in people]
-    if "guest" not in roles or len(roles) < 2:
+    if not roles:
         raise ValueError("couldn't cut out enough people from this episode's frames")
     centers = CENTERS[len(roles)]
     canvas = _backdrop(gold, backdrop_src).convert("RGBA")
@@ -211,7 +211,7 @@ def _render(cast_crops, headline, *, gold=None, out_path=None, backdrop_src=None
     # Sides first, the guest last so the guest is in front.
     for r in sorted(roles, key=lambda r: r == "guest"):
         im, (fcx, fey, fw) = people[r]
-        tw = FACE_W["middle" if r == "guest" else "side"]
+        tw = {1: 235, 2: 195}.get(len(roles)) or FACE_W["middle" if r == "guest" else "side"]
         s = min(2.2, tw / fw)
         im = _match(im.resize((max(1, int(im.width * s)), max(1, int(im.height * s))), Image.LANCZOS), target_l)
         cx = centers[roles.index(r)]
@@ -237,13 +237,13 @@ def _render(cast_crops, headline, *, gold=None, out_path=None, backdrop_src=None
         canvas.paste(lg, (30, 24), m.filter(ImageFilter.GaussianBlur(1)))
     top = BAND_TOP
     if name_tag:  # guest name (+ credential) in a gold pill, like the RYJ originals
-        nf = thumbs._font(30)
+        nf = thumbs._font(36)
         txt = name_tag.upper()
         tw = d.textlength(txt, font=nf)
         x0 = (W - tw) / 2 - 18
-        d.rounded_rectangle([x0, BAND_TOP - 22, x0 + tw + 36, BAND_TOP + 24], radius=8, fill=gold)
-        d.text((x0 + 18, BAND_TOP - 19), txt, font=nf, fill=(14, 14, 14))
-        top = BAND_TOP + 30
+        d.rounded_rectangle([x0, BAND_TOP - 26, x0 + tw + 36, BAND_TOP + 28], radius=8, fill=gold)
+        d.text((x0 + 18, BAND_TOP - 22), txt, font=nf, fill=(14, 14, 14))
+        top = BAND_TOP + 36
     lines = _balanced(d, thumbs.parse_headline(headline))
     f, lh, lines = thumbs._layout(d, lines, W - 120, H - top - 30, max_lines=2, start=130 if not name_tag else 116)
     y = top + max(0, (H - top - 22 - lh * len(lines)) // 2)

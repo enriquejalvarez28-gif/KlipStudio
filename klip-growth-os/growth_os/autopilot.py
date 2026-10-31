@@ -589,8 +589,14 @@ def repackage_all(conn, tenant_id, *, runner=None, progress=lambda p, m: None):
         a = v["asset_id"]
         progress(int(100 * i / max(len(todo), 1)), f"{i + 1}/{len(todo)} {v['title'][:40]}")
         try:
-            if not cast_mod.load(tenant_id, a) and cast_mod.available()[0]:
-                cast_mod.build(conn, tenant_id, a)
+            try:  # best shot of each person from the real 1080p video (sharp, facing the camera)
+                from growth_os import hqframes
+                hqframes.build_hq(conn, tenant_id, a, progress=lambda m: progress(int(100 * i / max(len(todo), 1)),
+                                                                                  f"{i + 1}/{len(todo)} {m}"))
+            except Exception as e:
+                out["errors"].append(f"{v['title'][:30]}: HQ frames unavailable ({str(e)[:80]}); used YouTube frames")
+                if not cast_mod.load(tenant_id, a) and cast_mod.available()[0]:
+                    cast_mod.build(conn, tenant_id, a)
             ok, ctr_p, vpd_p = _title_working(vids, v)
             reason = "low_ctr" if not ok else "repackage"
             c = {"v": v, "reason": "low_ctr", "shorten": len(v["title"] or "") > LONG_TITLE, "missing": []}

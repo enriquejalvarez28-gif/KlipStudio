@@ -368,7 +368,7 @@ def render(orig_path, headline, *, fmt="guest", credential="", host_paths=(), go
     portrait = _portrait_from_original(orig)
     if cast is not None:
         fmt = fit_format(fmt, cast)
-    if fmt == "trio" and cast is not None:  # organised lineup (cut-outs, even spacing); boxes only as a fallback
+    if cast and fmt in ("trio", "host_guest", "host_led", "guest"):  # one clean lineup style for every episode
         try:
             return _lineup(cast, orig, headline, gold, out_path, credential)
         except Exception as e:  # keep going with the boxed layout, but say why
