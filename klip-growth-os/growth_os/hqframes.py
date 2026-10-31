@@ -10,7 +10,7 @@ import math
 
 from growth_os.db import DATA_DIR, utcnow
 
-SAMPLES = 40
+SAMPLES = 72
 MIN_FACE = 110          # px in a 1080p frame; smaller = wide shot, not thumbnail quality
 FORMAT = "bv*[vcodec^=avc1][height<=1080]/bv*[height<=1080]/best[height<=1080]"
 
@@ -51,19 +51,32 @@ def sample_frames(tenant_id, video_id, n=SAMPLES, progress=lambda m: None):
 
 
 def face_quality(cv2, img, f):
-    """0..1 parts: size, sharpness, frontal (looking at camera / not turned away)."""
+    """size 0..1, sharpness 0..1, yaw (0 = facing the camera; + = facing image-right)."""
     x, y, w, h = (float(v) for v in f[:4])
     size = min(w, 320) / 320
     crop = img[max(0, int(y)):int(y + h), max(0, int(x)):int(x + w)]
     if crop.size == 0:
-        return 0, 0, 0
+        return 0, 0, 9.0
     g = cv2.cvtColor(cv2.resize(crop, (160, int(160 * h / max(w, 1)))), cv2.COLOR_BGR2GRAY)
     sharp = min(1.0, math.log1p(cv2.Laplacian(g, cv2.CV_64F).var()) / math.log1p(900))
     rex, rey, lex, ley, nx, ny = (float(f[k]) for k in (4, 5, 6, 7, 8, 9))
     eye_d = max(abs(lex - rex), 1.0)
     yaw = (nx - (rex + lex) / 2) / eye_d          # 0 = facing the camera
-    frontal = max(0.0, 1 - abs(yaw) / 0.38)
-    return size, sharp, frontal
+    return size, sharp, yaw
+
+
+SLOT_SIDE = {"jamar": 1, "enrique": -1, "guest": 0}  # lineup slot: Jamar left (should face right), Enrique right (face left)
+
+
+def facing_score(role, yaw):
+    """1 = facing the camera; facing toward the middle of the lineup is fine; facing away from it = 0 (rejected)."""
+    if abs(yaw) <= 0.15:
+        return 1.0
+    side = SLOT_SIDE.get(role, 0)
+    if side == 0:  # the guest sits in the middle: should look at the camera
+        return max(0.0, 1 - (abs(yaw) - 0.15) / 0.35)
+    toward = yaw * side > 0
+    return max(0.45, 1 - (abs(yaw) - 0.15) / 1.5) if toward else 0.0
 
 
 def build_hq(conn, tenant_id, asset_id, *, faces=None, progress=lambda m: None):
@@ -79,13 +92,16 @@ def build_hq(conn, tenant_id, asset_id, *, faces=None, progress=lambda m: None):
         for f in fx.detect(img):
             if f[2] < MIN_FACE:
                 continue
-            size, sharp, frontal = face_quality(cv2, img, f)
-            if frontal < 0.45 or sharp < 0.35:
-                continue  # turned away or blurry: never a thumbnail photo
+            size, sharp, yaw = face_quality(cv2, img, f)
+            if sharp < 0.35:
+                continue  # blurry: never a thumbnail photo
             e = fx.embed(img, f)
             role, score = fx.who(e)
             if role == "unsure":
                 continue
+            frontal = facing_score(role, yaw)
+            if frontal < 0.4:
+                continue  # looking away from the others
             ex = fx.expression(img, f)
             rank = (size ** 0.5) * sharp * (frontal ** 1.5) * (0.7 + 0.6 * ex["energy"]) * float(f[14])
             c = (role, rank, str(p), f, round(score, 2), e, ex)
