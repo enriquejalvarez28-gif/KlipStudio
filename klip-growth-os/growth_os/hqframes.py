@@ -22,7 +22,7 @@ def stream_url(video_id):
     return info["url"], float(info.get("duration") or 0)
 
 
-def sample_frames(tenant_id, video_id, n=SAMPLES, progress=lambda m: None, workers=4):
+def sample_frames(tenant_id, video_id, n=SAMPLES, progress=lambda m: None, workers=6):
     """Save ~n frames spread over the episode (5%–95%); resumable cache on disk. Returns [(path, seconds)]."""
     import threading
     import cv2
@@ -41,26 +41,23 @@ def sample_frames(tenant_id, video_id, n=SAMPLES, progress=lambda m: None, worke
     lock, count = threading.Lock(), [len(times) - len(todo)]
 
     def work(chunk):
-        cap = cv2.VideoCapture(url)
-        for t in chunk:
-            img = None
-            for attempt in range(2):  # on Windows a reader can stop after a seek: reopen and retry
-                cap.set(cv2.CAP_PROP_POS_MSEC, t * 1000)
-                ok, img = cap.read()
-                if ok and img is not None:
-                    break
-                cap.release()
-                cap = cv2.VideoCapture(url)
-                img = None
-            if img is not None:
+        for t in chunk:  # a fresh reader per frame: on Windows a reader returns nothing after its first seek
+            cap = cv2.VideoCapture(url)
+            cap.set(cv2.CAP_PROP_POS_MSEC, t * 1000)
+            ok, img = cap.read()
+            cap.release()
+            if ok and img is not None:
                 cv2.imwrite(str(d / f"{t:05d}.jpg"), img, [cv2.IMWRITE_JPEG_QUALITY, 95])
             with lock:
-                count[0] += 1
-                progress(f"frame {count[0]}/{len(times)}")
-        cap.release()
+                count[0] += 1  # progress is reported from the main thread (the DB connection lives there)
+
     ths = [threading.Thread(target=work, args=(todo[k::workers],)) for k in range(workers)]
     for th in ths:
         th.start()
+    import time
+    while any(th.is_alive() for th in ths):
+        time.sleep(2)
+        progress(f"frame {count[0]}/{len(times)}")
     for th in ths:
         th.join()
     got = len(list(d.glob("*.jpg")))
