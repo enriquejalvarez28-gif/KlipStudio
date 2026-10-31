@@ -138,7 +138,7 @@ def _person(t, crop_path, frame_path=None):
     a = cv2.GaussianBlur((a * ramp).clip(0, 1), (0, 0), 0.7)
     rgb = Image.fromarray(cv2.cvtColor(reg, cv2.COLOR_BGR2RGB))
     rgb.putalpha(Image.fromarray((a * 255).astype(np.uint8)))
-    return rgb, (cx - x0, eye_y - y0, w)
+    return rgb, (cx - x0, eye_y - y0, h / 1.22)  # face HEIGHT (stable when the head turns), in width units
 
 
 def _match(im, target_l):
