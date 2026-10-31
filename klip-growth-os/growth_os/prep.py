@@ -16,7 +16,10 @@ HEADLINE_INSTRUCTIONS = (
     "thought (never cut mid-phrase), punchy, true to the title (no invented claims or numbers), different from the "
     "title wording. Mark exactly one gold word per headline with *asterisks*. Examples: 'TOO YOUNG TO *LIFT?*', "
     "'SOCCER'S *BIGGEST* MISTAKE'. "
-    'Shape: {"headlines":["",""]}'
+    "Also give guest_name (the guest's real name exactly as written in INPUT.title or INPUT.description; '' if none) and "
+    "guest_credential (2-4 words describing who they are, using only words found in INPUT.title or INPUT.description, "
+    "e.g. 'FORMER USMNT FORWARD'; '' if not stated). Never invent a name or credential. "
+    'Shape: {"headlines":["",""],"guest_name":"","guest_credential":""}'
 )
 SEO_INSTRUCTIONS = (
     "Write YouTube description opening lines and tags for the video in INPUT (a sports interview podcast). "
@@ -132,6 +135,12 @@ def draft_titles(title, keyword, guest):
                             ("hybrid", hybrid, "keeps the current hook and adds the search phrase"))]
 
 
+def _latest_desc(conn, tenant_id, asset_id):
+    r = conn.execute("SELECT value FROM asset_history WHERE tenant_id=? AND asset_id=? AND field='description' "
+                     "ORDER BY observed_at DESC LIMIT 1", (tenant_id, asset_id)).fetchone()
+    return r[0] if r else ""
+
+
 def asset_pack(conn, tenant_id, asset_id, *, diagnosis="", runner=None, thumbnails_wanted=True, title_max=None,
                skip_titles=False):
     """3 titles, 2 thumbnail previews (long-form), SEO draft (first lines, tags, chapters) for one video. Local only."""
@@ -145,9 +154,15 @@ def asset_pack(conn, tenant_id, asset_id, *, diagnosis="", runner=None, thumbnai
     pack["thumbnails"] = None
     if thumbnails_wanted:
         heads = thumbs.default_headlines(v["title"])
+        credential = ""
         try:
-            out, _ = ai.ask(conn, tenant_id, f"thumb_headlines:{asset_id}", {"title": v["title"], "guest": guest,
+            desc = (_latest_desc(conn, tenant_id, asset_id) or "")[:700]
+            out, _ = ai.ask(conn, tenant_id, f"thumb_headlines:{asset_id}", {"title": v["title"], "guest": guest, "description": desc,
                             "search_terms": [x["term"] for x in d["search_terms"][:5]]}, HEADLINE_INSTRUCTIONS, runner=runner)
+            name, cred = str(out.get("guest_name") or "").strip(), str(out.get("guest_credential") or "").strip()
+            src_text = f"{v['title']} {desc}".lower()
+            if name and name.lower() in src_text:  # only a name that is really in the title/description
+                credential = name + (f" · {cred}" if cred and all(w.lower().strip(",.") in src_text for w in cred.split()) else "")
             hs = [str(h).strip() for h in out.get("headlines", []) if str(h).strip()]
             if len(hs) >= 2 and all(len(h.replace("*", "").split()) <= 5 for h in hs[:2]):
                 heads = hs[:2]
@@ -159,7 +174,7 @@ def asset_pack(conn, tenant_id, asset_id, *, diagnosis="", runner=None, thumbnai
             from growth_os import cast as cast_mod
             if {"jamar", "enrique", "guest"} <= set(cast_mod.load(tenant_id, asset_id)):
                 fmt = "trio"  # both hosts and the guest were found in this episode: organised 3-person lineup
-            pack["thumbnails"] = thumbs.previews(conn, tenant_id, asset_id, heads, fmt=fmt)
+            pack["thumbnails"] = thumbs.previews(conn, tenant_id, asset_id, heads, fmt=fmt, credential=credential[:48])
             pack["thumbnails"]["format_why"] = rf["why"]
         except (ValueError, LookupError) as e:
             pack["notes"].append(f"Thumbnail previews: {e}")

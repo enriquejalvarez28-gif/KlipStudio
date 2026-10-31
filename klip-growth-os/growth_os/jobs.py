@@ -54,6 +54,14 @@ def clean_tags(conn, tenant_id, progress):
             for t in ([tenant_id] if tenant_id else ["ryj-media"])}
 
 
+def apply_approved(conn, tenant_id, progress):
+    return {t: autopilot.apply_approved(conn, t, progress=progress) for t in _tenants(conn, tenant_id, include_demo=False)}
+
+
+def repackage_all(conn, tenant_id, progress):
+    return {t: autopilot.repackage_all(conn, t, progress=progress) for t in _tenants(conn, tenant_id, include_demo=False)}
+
+
 def fill_missing(conn, tenant_id, progress):
     return {t: autopilot.fill_missing(conn, t, actor="owner (approved in chat 2026-10-29)", progress=progress)
             for t in _tenants(conn, tenant_id, include_demo=False)}
@@ -73,6 +81,8 @@ REGISTRY = {
     "autopilot_daily": autopilot_daily,
     "fill_missing": fill_missing,
     "clean_tags": clean_tags,
+    "repackage_all": repackage_all,
+    "apply_approved": apply_approved,
     "weekly_report": _report("weekly"),
     "monthly_report": _report("monthly"),
 }

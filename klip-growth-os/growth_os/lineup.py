@@ -188,7 +188,7 @@ def render(cast_crops, headline, **kw):
         return _render(cast_crops, headline, **kw)
 
 
-def _render(cast_crops, headline, *, gold=None, out_path=None, backdrop_src=None, logo=None, frames=None):
+def _render(cast_crops, headline, *, gold=None, out_path=None, backdrop_src=None, logo=None, frames=None, name_tag=""):
     """cast_crops: {role: crop_path} for this episode (cast.load); frames: {role: full frame path}.
     Needs the guest and at least one host."""
     t = _tools()
@@ -235,9 +235,18 @@ def _render(cast_crops, headline, *, gold=None, out_path=None, backdrop_src=None
         m = Image.new("L", lg.size, 0)
         ImageDraw.Draw(m).ellipse([3, 3, 129, 129], fill=255)
         canvas.paste(lg, (30, 24), m.filter(ImageFilter.GaussianBlur(1)))
+    top = BAND_TOP
+    if name_tag:  # guest name (+ credential) in a gold pill, like the RYJ originals
+        nf = thumbs._font(30)
+        txt = name_tag.upper()
+        tw = d.textlength(txt, font=nf)
+        x0 = (W - tw) / 2 - 18
+        d.rounded_rectangle([x0, BAND_TOP - 22, x0 + tw + 36, BAND_TOP + 24], radius=8, fill=gold)
+        d.text((x0 + 18, BAND_TOP - 19), txt, font=nf, fill=(14, 14, 14))
+        top = BAND_TOP + 30
     lines = _balanced(d, thumbs.parse_headline(headline))
-    f, lh, lines = thumbs._layout(d, lines, W - 120, H - BAND_TOP - 40, max_lines=2, start=130)
-    y = BAND_TOP + max(0, (H - BAND_TOP - 30 - lh * len(lines)) // 2)
+    f, lh, lines = thumbs._layout(d, lines, W - 120, H - top - 30, max_lines=2, start=130 if not name_tag else 116)
+    y = top + max(0, (H - top - 22 - lh * len(lines)) // 2)
     for line in lines:
         width = d.textlength(" ".join(w for w, _ in line), font=f)
         x = (W - width) / 2  # centred under the group

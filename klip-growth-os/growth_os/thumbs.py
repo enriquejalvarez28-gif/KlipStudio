@@ -351,13 +351,13 @@ def fit_format(fmt, cast):
     return fmt
 
 
-def _lineup(cast, orig, headline, gold, out_path):
+def _lineup(cast, orig, headline, gold, out_path, credential=""):
     from growth_os import lineup
     crops = {r: Path(p) for r, (p, _) in cast.items()}
     meta = json.loads((next(iter(crops.values())).parent / "cast.json").read_text())["cast"]
     tenant = next(iter(crops.values())).parent.parent.name
     frames = {r: DATA_DIR / "frames" / tenant / m["from"] for r, m in meta.items() if m.get("from")}
-    return lineup.render(crops, headline, gold=gold, out_path=out_path, backdrop_src=orig, frames=frames)
+    return lineup.render(crops, headline, gold=gold, out_path=out_path, backdrop_src=orig, frames=frames, name_tag=credential)
 
 
 def render(orig_path, headline, *, fmt="guest", credential="", host_paths=(), gold=None, out_path=None, cast=None):
@@ -370,7 +370,7 @@ def render(orig_path, headline, *, fmt="guest", credential="", host_paths=(), go
         fmt = fit_format(fmt, cast)
     if fmt == "trio" and cast is not None:  # organised lineup (cut-outs, even spacing); boxes only as a fallback
         try:
-            return _lineup(cast, orig, headline, gold, out_path)
+            return _lineup(cast, orig, headline, gold, out_path, credential)
         except Exception as e:  # keep going with the boxed layout, but say why
             import sys
             print(f"lineup thumbnail fell back to boxes: {str(e)[:200]}", file=sys.stderr, flush=True)

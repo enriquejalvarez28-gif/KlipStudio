@@ -282,16 +282,16 @@ class Handler(BaseHTTPRequestHandler):
                     return self._send(200, autopilot.set_cap(c, t, body.get("cap", 0)))
                 if m.group(1) == "mode":
                     return self._send(200, autopilot.set_mode(c, t, str(body.get("mode", ""))))
-                if m.group(1) == "approve-all":
-                    res = []
+                if m.group(1) == "approve-all":  # the owner's click is the approval; applying runs as a job
+                    n = 0
                     for r in autopilot.page(c, t)["pending"]:
-                        try:
-                            if r["status"] == "proposed":
-                                autopilot.decide(c, t, r["id"], "approve")
-                            res.append(autopilot.apply(c, t, r["id"]))
-                        except Exception as e:  # keep going; each result is reported
-                            res.append({"id": r["id"], "status": "failed", "error": str(e)[:200]})
-                    return self._send(200, {"results": res})
+                        if r["status"] == "proposed":
+                            autopilot.decide(c, t, r["id"], "approve")
+                            n += 1
+                    run_id, _ = scheduler.enqueue(c, "apply_approved", tenant_id=t, trigger="manual")
+                    tags_id, _ = scheduler.enqueue(c, "clean_tags", tenant_id=t, trigger="manual")
+                    return self._send(200, {"approved": n, "run_id": run_id, "results": [],
+                                            "note": "Applying in the background; results show under History in a few minutes."})
                 cid, act = m.group(2), m.group(3)
                 if act == "skip":
                     return self._send(200, autopilot.decide(c, t, cid, "skip"))

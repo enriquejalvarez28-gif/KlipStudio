@@ -565,3 +565,70 @@ def clean_batch_tags(conn, tenant_id, *, since, actor="owner", transport=None, r
         except (HttpError, AutopilotError, youtube.ConnectorError, ValueError, KeyError) as e:
             out["failed"].append(f"{vid}: {str(e)[:120]}")
     return out
+
+
+# ── Owner request 2026-10-31: repackage every podcast episode ─────────────
+
+def _title_working(vids, v):
+    pm = analytics.peer_stats(vids, v)["metrics"]
+    ctr_p = (pm.get("ctr") or {}).get("percentile")
+    vpd_p = (pm.get("views_per_day") or {}).get("percentile")
+    weak = (ctr_p is not None and ctr_p <= 40) or (vpd_p is not None and vpd_p <= 25)
+    return not weak, ctr_p, vpd_p
+
+
+def repackage_all(conn, tenant_id, *, runner=None, progress=lambda p, m: None):
+    """New lineup thumbnail (hosts + guest + guest name) for every public long-form episode; a new title only where
+    CTR or views/day sit in the bottom of the channel. All drafts wait for approval (Approve all)."""
+    from growth_os import cast as cast_mod
+    vids = analytics.videos(conn, tenant_id)
+    todo = [v for v in vids if v["format"] == "long_form"
+            and (_latest(conn, tenant_id, v["asset_id"], "privacy") or "public") == "public"]
+    out = {"drafted": 0, "titles_changed": 0, "titles_kept": 0, "errors": []}
+    for i, v in enumerate(todo):
+        a = v["asset_id"]
+        progress(int(100 * i / max(len(todo), 1)), f"{i + 1}/{len(todo)} {v['title'][:40]}")
+        try:
+            if not cast_mod.load(tenant_id, a) and cast_mod.available()[0]:
+                cast_mod.build(conn, tenant_id, a)
+            ok, ctr_p, vpd_p = _title_working(vids, v)
+            reason = "low_ctr" if not ok else "repackage"
+            c = {"v": v, "reason": "low_ctr", "shorten": len(v["title"] or "") > LONG_TITLE, "missing": []}
+            prop, chosen = _proposal(conn, tenant_id, c, runner=runner)  # low_ctr → thumbnail + title drafts
+            if ok and len(v["title"] or "") <= LONG_TITLE:
+                chosen["title"] = None  # the title is working: keep it
+                out["titles_kept"] += 1
+            elif chosen.get("title"):
+                out["titles_changed"] += 1
+            if not chosen.get("thumbnail"):
+                out["errors"].append(f"{v['title'][:40]}: no thumbnail could be made ({'; '.join(prop['notes'])[:100]})")
+            ev = [f"Owner: repackage every episode (2026-10-31). CTR percentile {ctr_p}, views/day percentile {vpd_p}: "
+                  + ("title is working, kept" if chosen.get("title") is None else "title is underperforming, new one drafted")]
+            for r in conn.execute("SELECT id FROM channel_changes WHERE tenant_id=? AND asset_id=? AND status IN ('proposed','approved')",
+                                  (tenant_id, a)).fetchall():
+                conn.execute("UPDATE channel_changes SET status='skipped', error='replaced by the full repackage' WHERE id=?", (r["id"],))
+            conn.execute("""INSERT INTO channel_changes (id, tenant_id, asset_id, reason, evidence_json, proposal_json, chosen_json,
+                            created_at) VALUES (?,?,?,?,?,?,?,?)""",
+                         (new_id("chg_"), tenant_id, a, reason, json.dumps(ev), json.dumps(prop), json.dumps(chosen), utcnow()))
+            out["drafted"] += 1
+        except Exception as e:
+            out["errors"].append(f"{v['title'][:40]}: {str(e)[:150]}")
+    progress(100, "done")
+    return out
+
+
+def apply_approved(conn, tenant_id, *, actor="owner", progress=lambda p, m: None, transport=None):
+    rows = [r[0] for r in conn.execute("SELECT id FROM channel_changes WHERE tenant_id=? AND status='approved' ORDER BY created_at",
+                                       (tenant_id,))]
+    out = {"verified": 0, "partial": 0, "failed": []}
+    for i, cid in enumerate(rows):
+        progress(int(100 * i / max(len(rows), 1)), f"applying {i + 1}/{len(rows)}")
+        try:
+            r = apply(conn, tenant_id, cid, transport=transport, actor=actor)
+            if r["status"] in ("verified", "partial"):
+                out[r["status"]] += 1
+            if r["status"] != "verified":
+                out["failed"].append(f"{cid}: {r.get('error')}")
+        except Exception as e:
+            out["failed"].append(f"{cid}: {str(e)[:150]}")
+    return out
