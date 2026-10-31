@@ -22,32 +22,42 @@ def stream_url(video_id):
     return info["url"], float(info.get("duration") or 0)
 
 
-def sample_frames(tenant_id, video_id, n=SAMPLES, progress=lambda m: None):
-    """Save ~n frames spread over the episode (5%–95%); cached on disk. Returns [(path, seconds)]."""
+def sample_frames(tenant_id, video_id, n=SAMPLES, progress=lambda m: None, workers=4):
+    """Save ~n frames spread over the episode (5%–95%); resumable cache on disk. Returns [(path, seconds)]."""
+    import threading
     import cv2
     d = DATA_DIR / "frames" / tenant_id / "hq" / video_id
     d.mkdir(parents=True, exist_ok=True)
-    have = sorted(d.glob("*.jpg"))
-    if len(have) >= n * 0.8:
-        return [(p, int(p.stem)) for p in have]
+    done_marker = d / "done.json"
+    if done_marker.exists():
+        return [(p, int(p.stem)) for p in sorted(d.glob("*.jpg"))]
     url, dur = stream_url(video_id)
-    cap = cv2.VideoCapture(url)
-    if not cap.isOpened():
-        raise RuntimeError("couldn't open the video stream")
     if not dur:
-        dur = cap.get(cv2.CAP_PROP_FRAME_COUNT) / max(cap.get(cv2.CAP_PROP_FPS) or 30, 1)
-    out = []
-    for i in range(n):
-        t = int(dur * (0.05 + 0.90 * i / max(n - 1, 1)))
-        cap.set(cv2.CAP_PROP_POS_MSEC, t * 1000)
-        ok, img = cap.read()
-        if ok and img is not None:
-            p = d / f"{t:05d}.jpg"
-            cv2.imwrite(str(p), img, [cv2.IMWRITE_JPEG_QUALITY, 95])
-            out.append((p, t))
-        progress(f"frame {i + 1}/{n}")
-    cap.release()
-    return out
+        c = cv2.VideoCapture(url)
+        dur = c.get(cv2.CAP_PROP_FRAME_COUNT) / max(c.get(cv2.CAP_PROP_FPS) or 30, 1)
+        c.release()
+    times = sorted({int(dur * (0.05 + 0.90 * i / max(n - 1, 1))) for i in range(n)})
+    todo = [t for t in times if not (d / f"{t:05d}.jpg").exists()]
+    lock, count = threading.Lock(), [len(times) - len(todo)]
+
+    def work(chunk):
+        cap = cv2.VideoCapture(url)
+        for t in chunk:
+            cap.set(cv2.CAP_PROP_POS_MSEC, t * 1000)
+            ok, img = cap.read()
+            if ok and img is not None:
+                cv2.imwrite(str(d / f"{t:05d}.jpg"), img, [cv2.IMWRITE_JPEG_QUALITY, 95])
+            with lock:
+                count[0] += 1
+                progress(f"frame {count[0]}/{len(times)}")
+        cap.release()
+    ths = [threading.Thread(target=work, args=(todo[k::workers],)) for k in range(workers)]
+    for th in ths:
+        th.start()
+    for th in ths:
+        th.join()
+    done_marker.write_text(json.dumps({"n": len(times), "at": utcnow()}))
+    return [(p, int(p.stem)) for p in sorted(d.glob("*.jpg"))]
 
 
 def face_quality(cv2, img, f):
