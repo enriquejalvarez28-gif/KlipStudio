@@ -29,7 +29,7 @@ def sample_frames(tenant_id, video_id, n=SAMPLES, progress=lambda m: None, worke
     d = DATA_DIR / "frames" / tenant_id / "hq" / video_id
     d.mkdir(parents=True, exist_ok=True)
     done_marker = d / "done.json"
-    if done_marker.exists():
+    if done_marker.exists() and len(list(d.glob("*.jpg"))) >= n * 0.6:
         return [(p, int(p.stem)) for p in sorted(d.glob("*.jpg"))]
     url, dur = stream_url(video_id)
     if not dur:
@@ -43,9 +43,16 @@ def sample_frames(tenant_id, video_id, n=SAMPLES, progress=lambda m: None, worke
     def work(chunk):
         cap = cv2.VideoCapture(url)
         for t in chunk:
-            cap.set(cv2.CAP_PROP_POS_MSEC, t * 1000)
-            ok, img = cap.read()
-            if ok and img is not None:
+            img = None
+            for attempt in range(2):  # on Windows a reader can stop after a seek: reopen and retry
+                cap.set(cv2.CAP_PROP_POS_MSEC, t * 1000)
+                ok, img = cap.read()
+                if ok and img is not None:
+                    break
+                cap.release()
+                cap = cv2.VideoCapture(url)
+                img = None
+            if img is not None:
                 cv2.imwrite(str(d / f"{t:05d}.jpg"), img, [cv2.IMWRITE_JPEG_QUALITY, 95])
             with lock:
                 count[0] += 1
@@ -56,8 +63,32 @@ def sample_frames(tenant_id, video_id, n=SAMPLES, progress=lambda m: None, worke
         th.start()
     for th in ths:
         th.join()
+    got = len(list(d.glob("*.jpg")))
+    if got < len(times) * 0.6:
+        raise RuntimeError(f"only {got}/{len(times)} frames could be read from the video")
     done_marker.write_text(json.dumps({"n": len(times), "at": utcnow()}))
     return [(p, int(p.stem)) for p in sorted(d.glob("*.jpg"))]
+
+
+_EYES = []
+
+
+def eyes_open(cv2, img, f):
+    """True when at least one open eye is visible (closed eyes aren't detected by the eye cascade)."""
+    if not _EYES:
+        try:
+            _EYES.append(cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_eye.xml"))
+        except Exception:
+            _EYES.append(None)
+    cc = _EYES[0]
+    if cc is None or cc.empty():
+        return True  # can't check on this install: don't block
+    x, y, w, h = (int(v) for v in f[:4])
+    top = img[max(0, y):max(0, y) + int(h * 0.6), max(0, x):x + w]
+    if top.size == 0:
+        return False
+    g = cv2.equalizeHist(cv2.cvtColor(cv2.resize(top, (200, int(200 * top.shape[0] / max(top.shape[1], 1)))), cv2.COLOR_BGR2GRAY))
+    return len(cc.detectMultiScale(g, 1.1, 5, minSize=(22, 22))) >= 1
 
 
 def face_quality(cv2, img, f):
@@ -112,6 +143,8 @@ def build_hq(conn, tenant_id, asset_id, *, faces=None, progress=lambda m: None):
             frontal = facing_score(role, yaw)
             if frontal < 0.4:
                 continue  # looking away from the others
+            if not eyes_open(cv2, img, f):
+                continue  # mid-blink
             ex = fx.expression(img, f)
             rank = (size ** 0.5) * sharp * (frontal ** 1.5) * (0.7 + 0.6 * ex["energy"]) * float(f[14])
             c = (role, rank, str(p), f, round(score, 2), e, ex)

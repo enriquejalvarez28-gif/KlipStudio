@@ -236,6 +236,8 @@ def _render(cast_crops, headline, *, gold=None, out_path=None, backdrop_src=None
         ImageDraw.Draw(m).ellipse([3, 3, 129, 129], fill=255)
         canvas.paste(lg, (30, 24), m.filter(ImageFilter.GaussianBlur(1)))
     top = BAND_TOP
+    if name_tag and "guest" not in roles:
+        name_tag = ""  # never put the guest's name over a host
     if name_tag:  # guest name (+ credential) in a gold pill, like the RYJ originals
         nf = thumbs._font(36)
         txt = name_tag.upper()
