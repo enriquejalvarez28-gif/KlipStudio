@@ -594,7 +594,7 @@ def _watch(srv, sched, port, with_scheduler, db_path, every=20):
             return _relaunch(srv, sched, port, with_scheduler, db_path)
 
 
-OPTIONAL_DEPS = {"cv2": "opencv-python-headless>=4.9", "yt_dlp": "yt-dlp", "mediapipe": "mediapipe"}  # yt-dlp: sharp 1080p frames for thumbnails  # face finding for per-episode thumbnails (free, local)
+OPTIONAL_DEPS = {"cv2": "opencv-python-headless>=4.9", "yt_dlp": "yt-dlp", "mediapipe": "mediapipe --no-deps"}  # yt-dlp: sharp 1080p frames for thumbnails  # face finding for per-episode thumbnails (free, local)
 
 
 def ensure_optional_deps():
@@ -609,7 +609,11 @@ def ensure_optional_deps():
         except ImportError:
             pass
         try:
-            r = subprocess.run([sys.executable, "-m", "pip", "install", "--quiet", "--disable-pip-version-check", spec],
+            if mod == "mediapipe":  # its deps minus opencv (already installed and loaded: replacing it fails on Windows)
+                subprocess.run([sys.executable, "-m", "pip", "install", "--quiet", "--disable-pip-version-check",
+                                "absl-py", "flatbuffers", "matplotlib", "sounddevice"], capture_output=True, text=True, timeout=900,
+                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            r = subprocess.run([sys.executable, "-m", "pip", "install", "--quiet", "--disable-pip-version-check", *spec.split()],
                                capture_output=True, text=True, timeout=900,
                                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
             msg = "installed" if r.returncode == 0 else f"failed: {(r.stderr or r.stdout)[-300:]}"
