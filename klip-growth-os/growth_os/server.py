@@ -594,7 +594,7 @@ def _watch(srv, sched, port, with_scheduler, db_path, every=20):
             return _relaunch(srv, sched, port, with_scheduler, db_path)
 
 
-OPTIONAL_DEPS = {"cv2": "opencv-python-headless>=4.9", "yt_dlp": "yt-dlp"}  # yt-dlp: sharp 1080p frames for thumbnails  # face finding for per-episode thumbnails (free, local)
+OPTIONAL_DEPS = {"cv2": "opencv-python-headless>=4.9", "yt_dlp": "yt-dlp", "mediapipe": "mediapipe"}  # yt-dlp: sharp 1080p frames for thumbnails  # face finding for per-episode thumbnails (free, local)
 
 
 def ensure_optional_deps():

@@ -11,7 +11,7 @@ import math
 from growth_os.db import DATA_DIR, utcnow
 
 SAMPLES = 72
-MIN_FACE = 110          # px in a 1080p frame; smaller = wide shot, not thumbnail quality
+MIN_FACE = 150          # px in a 1080p frame; smaller = wide shot, not thumbnail quality
 FORMAT = "bv*[vcodec^=avc1][height<=1080]/bv*[height<=1080]/best[height<=1080]"
 
 
@@ -65,6 +65,52 @@ def sample_frames(tenant_id, video_id, n=SAMPLES, progress=lambda m: None, worke
         raise RuntimeError(f"only {got}/{len(times)} frames could be read from the video")
     done_marker.write_text(json.dumps({"n": len(times), "at": utcnow()}))
     return [(p, int(p.stem)) for p in sorted(d.glob("*.jpg"))]
+
+
+GAZE_MODEL = ("face_landmarker.task",
+              "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task")
+_GAZE = []
+
+
+def _gaze_model():
+    """MediaPipe face landmarker (free, local): blink and look-down scores per eye. None if unavailable."""
+    if not _GAZE:
+        try:
+            import urllib.request
+            import mediapipe as mp
+            from mediapipe.tasks.python import BaseOptions, vision
+            from growth_os import cast as cm
+            m = cm.model_dir() / GAZE_MODEL[0]
+            if not m.exists() or m.stat().st_size < 1_000_000:
+                with urllib.request.urlopen(GAZE_MODEL[1], timeout=120) as r:
+                    m.write_bytes(r.read())
+            opt = vision.FaceLandmarkerOptions(base_options=BaseOptions(model_asset_path=str(m)),
+                                               output_face_blendshapes=True, num_faces=1)
+            _GAZE.append((mp, vision.FaceLandmarker.create_from_options(opt)))
+        except Exception:
+            _GAZE.append(None)
+    return _GAZE[0]
+
+
+def gaze(cv2, img, f):
+    """{'blink': 0..1, 'down': 0..1, 'smile': 0..1} for the face f, or None when the model isn't available."""
+    g = _gaze_model()
+    if g is None:
+        return None
+    mp, det = g
+    x, y, w, h = (float(v) for v in f[:4])
+    m = 0.6
+    crop = img[max(0, int(y - h * m)):int(y + h * (1 + m)), max(0, int(x - w * m)):int(x + w * (1 + m))]
+    if crop.size == 0:
+        return None
+    rgb = cv2.cvtColor(crop, cv2.COLOR_BGR2RGB).copy()
+    r = det.detect(mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb))
+    if not r.face_blendshapes:
+        return {"blink": 1.0, "down": 1.0, "smile": 0.0}  # no clear face: treat as unusable
+    d = {b.category_name: b.score for b in r.face_blendshapes[0]}
+    return {"blink": max(d["eyeBlinkLeft"], d["eyeBlinkRight"]),
+            "down": (d["eyeLookDownLeft"] + d["eyeLookDownRight"]) / 2,
+            "smile": (d["mouthSmileLeft"] + d["mouthSmileRight"]) / 2}
 
 
 _EYES = []
@@ -131,7 +177,7 @@ def build_hq(conn, tenant_id, asset_id, *, faces=None, progress=lambda m: None):
             if f[2] < MIN_FACE:
                 continue
             size, sharp, yaw = face_quality(cv2, img, f)
-            if sharp < 0.35:
+            if sharp < 0.45:
                 continue  # blurry: never a thumbnail photo
             e = fx.embed(img, f)
             role, score = fx.who(e)
@@ -140,10 +186,15 @@ def build_hq(conn, tenant_id, asset_id, *, faces=None, progress=lambda m: None):
             frontal = facing_score(role, yaw)
             if frontal < 0.4:
                 continue  # looking away from the others
-            if not eyes_open(cv2, img, f):
-                continue  # mid-blink
+            gz = gaze(cv2, img, f)
+            if gz is not None:
+                if gz["blink"] > 0.45 or gz["down"] > 0.5:
+                    continue  # eyes closed or looking down
+            elif not eyes_open(cv2, img, f):
+                continue  # mid-blink (fallback check)
             ex = fx.expression(img, f)
-            rank = (size ** 0.5) * sharp * (frontal ** 1.5) * (0.7 + 0.6 * ex["energy"]) * float(f[14])
+            look = 1.0 if gz is None else (1 - gz["blink"]) * (1 - gz["down"]) * (0.8 + 0.4 * gz["smile"])
+            rank = (size ** 0.5) * sharp * (frontal ** 1.5) * (0.7 + 0.6 * ex["energy"]) * float(f[14]) * look
             c = (role, rank, str(p), f, round(score, 2), e, ex)
             (unknown if role == "guest" else cands).append(c)
     # The guest = the biggest group of matching unknown faces (ignores a stray crew member or a TV in the back).

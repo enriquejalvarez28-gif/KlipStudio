@@ -112,8 +112,10 @@ def _person(t, crop_path, frame_path=None):
     # Other people touching this one: split at the midpoint between faces.
     for o in t.faces(reg):
         ocx = float(o[0]) + float(o[2]) / 2
-        if abs(ocx - fcx) > w * 0.6:
+        if float(o[2]) >= w * 0.5 and float(o[14]) >= 0.85 and abs(ocx - fcx) > w * 1.3:  # a real second person
             mid = int((ocx + fcx) / 2)
+            mid = max(mid, int(fcx + w * 0.95)) if ocx > fcx else min(mid, int(fcx - w * 0.95))  # never through the face
+            mid = min(max(mid, 0), hard.shape[1])
             if ocx > fcx:
                 hard[:, mid:] = 0
             else:
