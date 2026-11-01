@@ -790,6 +790,30 @@
         "cols": 3,
         "items": [
           {
+            "image": "img/reel-yoga-key-event.jpg",
+            "title": "Yoga Key Event",
+            "sub": "Short-Form Social",
+            "category": "reels",
+            "format": "reel",
+            "video": "video/reels/yoga-key-event.mp4",
+            "videoWebm": "",
+            "poster": "img/reel-yoga-key-event.jpg",
+            "preview": "",
+            "previewMp4": "video/reels/yoga-key-event-loop.mp4"
+          },
+          {
+            "image": "img/reel-when-is-acid-reflux-more-than-just-heartburn.jpg",
+            "title": "When Is Acid Reflux More Than Just Heartburn",
+            "sub": "Short-Form Social",
+            "category": "reels",
+            "format": "reel",
+            "video": "video/reels/when-is-acid-reflux-more-than-just-heartburn.mp4",
+            "videoWebm": "",
+            "poster": "img/reel-when-is-acid-reflux-more-than-just-heartburn.jpg",
+            "preview": "",
+            "previewMp4": "video/reels/when-is-acid-reflux-more-than-just-heartburn-loop.mp4"
+          },
+          {
             "image": "img/klip-podcast-room-clean-wide.jpg",
             "title": "Branded Podcast Series",
             "sub": "Podcast · Multicam",

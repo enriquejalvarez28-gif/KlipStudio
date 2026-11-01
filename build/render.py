@@ -549,7 +549,12 @@ def portfolio(b, D):
                   % (esc(fmt), esc(a['href']), a['attr'], vid, prev,
                      esc(i.get('category', '')),
                      pic(i.get('image', ''), i.get('title', ''),
-                         'loading="lazy" decoding="async" width="1200" height="800"'),
+                         'loading="lazy" decoding="async" '
+                         # A reel poster is 9:16. Declaring 1200x800 for it
+                         # makes the browser reserve a landscape box and then
+                         # reflow when the real picture lands.
+                         + ('width="1080" height="1920"' if fmt == 'reel'
+                            else 'width="1200" height="800"')),
                      esc(i.get('sub', '')), esc(i.get('title', ''))))
     return ('<section class="sec sec--paper"%s><div class="wrap">%s%s'
             '<div class="work-grid work-grid--all rv" id="work-grid">%s</div></div></section>'

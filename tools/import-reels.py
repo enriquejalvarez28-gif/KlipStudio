@@ -21,7 +21,7 @@ four hand-picked tiles and choosing them is an editorial decision.
 Why re-encode rather than upload what came off the phone: a reel exported
 from Instagram or a camera is tens of megabytes and often 4K. Cloudflare
 will serve it, but a visitor on a phone pays for every byte. These come out
-around 1-3 MB at 1080px, which is the same picture on a phone screen.
+around 1-3 MB at 720px, which is wider than the portrait player ever gets.
 
 Naming: the filename becomes the title, so call the file what the work is.
 "Acme Dental - launch reel.mp4" becomes "Acme Dental - Launch Reel".
@@ -47,9 +47,16 @@ OUT = os.path.join(ROOT, 'video', 'reels')
 IMG = os.path.join(ROOT, 'img')
 PAGES = os.path.join(ROOT, 'data', 'pages.json')
 
-MAX_W = 1080          # a reel is 9:16; 1080 wide is already more than a phone shows
+# A reel plays in a portrait lightbox, which is sized by height: about
+# 400px wide on a phone, under 500 on a desktop. Encoding at 1080 wide
+# produced 20 MB for a 50-second clip - heavier than the rest of the page
+# put together - to carry detail no viewer is ever shown. 720 is still
+# above what anyone gets.
+MAX_W = 720
 LOOP_SECONDS = 6      # the silent card preview
-CRF = 26              # visually clean at this size; lower means bigger files
+CRF = 28              # at 720 wide this is clean; lower means bigger files
+VP9_CRF = 36
+WARN_MB = 6           # say so if a finished reel is still heavier than this
 
 
 def have(cmd):
@@ -94,18 +101,18 @@ def encode(src, slug, w, h, dry):
         (os.path.join(OUT, slug + '.mp4'),
          ['ffmpeg', '-y', '-i', src, '-vf', scale, '-c:v', 'libx264', '-crf', str(CRF),
           '-preset', 'slow', '-profile:v', 'high', '-pix_fmt', 'yuv420p',
-          '-movflags', '+faststart', '-c:a', 'aac', '-b:a', '128k']),
+          '-movflags', '+faststart', '-c:a', 'aac', '-b:a', '96k']),
         (os.path.join(OUT, slug + '.webm'),
-         ['ffmpeg', '-y', '-i', src, '-vf', scale, '-c:v', 'libvpx-vp9', '-crf', '34',
-          '-b:v', '0', '-row-mt', '1', '-cpu-used', '2', '-c:a', 'libopus', '-b:a', '96k']),
+         ['ffmpeg', '-y', '-i', src, '-vf', scale, '-c:v', 'libvpx-vp9', '-crf', str(VP9_CRF),
+          '-b:v', '0', '-row-mt', '1', '-cpu-used', '2', '-c:a', 'libopus', '-b:a', '80k']),
         # the card preview: silent, short, and small enough to autoplay
         (os.path.join(OUT, slug + '-loop.mp4'),
          ['ffmpeg', '-y', '-i', src, '-t', str(LOOP_SECONDS), '-an',
-          '-vf', 'scale=640:-2', '-c:v', 'libx264', '-crf', '30', '-preset', 'slow',
+          '-vf', 'scale=480:-2', '-c:v', 'libx264', '-crf', '31', '-preset', 'slow',
           '-pix_fmt', 'yuv420p', '-movflags', '+faststart']),
         (os.path.join(OUT, slug + '-loop.webm'),
          ['ffmpeg', '-y', '-i', src, '-t', str(LOOP_SECONDS), '-an',
-          '-vf', 'scale=640:-2', '-c:v', 'libvpx-vp9', '-crf', '38', '-b:v', '0',
+          '-vf', 'scale=480:-2', '-c:v', 'libvpx-vp9', '-crf', '40', '-b:v', '0',
           '-row-mt', '1', '-cpu-used', '3']),
         (os.path.join(IMG, 'reel-%s.jpg' % slug),
          ['ffmpeg', '-y', '-ss', '1', '-i', src, '-frames:v', '1',
@@ -162,9 +169,12 @@ def add_to_work(slug, title, category, filt, dry):
         ('category', filt),
         ('format', 'reel'),
         ('video', rel),
-        ('videoWebm', 'video/reels/%s.webm' % slug),
+        # only referenced when the file is actually there and smaller
+        ('videoWebm', 'video/reels/%s.webm' % slug
+         if os.path.exists(os.path.join(OUT, slug + '.webm')) else ''),
         ('poster', 'img/reel-%s.jpg' % slug),
-        ('preview', 'video/reels/%s-loop.webm' % slug),
+        ('preview', 'video/reels/%s-loop.webm' % slug
+         if os.path.exists(os.path.join(OUT, slug + '-loop.webm')) else ''),
         ('previewMp4', 'video/reels/%s-loop.mp4' % slug),
     ])
     block.setdefault('items', []).insert(0, item)
@@ -221,8 +231,26 @@ def main():
             continue
         for dest, size, what in made:
             if what != 'kept':
-                print('    %-9s %-34s %6.1f MB'
-                      % (what, os.path.basename(dest), size / 1048576))
+                heavy = ('  <- heavy for a web reel'
+                         if dest.endswith(('.mp4', '.webm'))
+                         and '-loop' not in dest
+                         and size / 1048576 > WARN_MB else '')
+                print('    %-9s %-34s %6.1f MB%s'
+                      % (what, os.path.basename(dest), size / 1048576, heavy))
+        # VP9 is usually the smaller file, but not on heavy motion. Both
+        # the player and the card preview offer WebM first, so a WebM that
+        # lost to its own MP4 would be the one every browser downloads.
+        # Keep it only when it wins, for the reel and for the loop.
+        for stem in (slug, slug + '-loop'):
+            webm = os.path.join(OUT, stem + '.webm')
+            mp4 = os.path.join(OUT, stem + '.mp4')
+            if (os.path.exists(webm) and os.path.exists(mp4)
+                    and os.path.getsize(webm) >= os.path.getsize(mp4)):
+                print('    dropping %s.webm: %.2f MB against the MP4\'s %.2f'
+                      % (stem, os.path.getsize(webm) / 1048576,
+                         os.path.getsize(mp4) / 1048576))
+                if not a.dry_run:
+                    os.remove(webm)
         if add_to_work(slug, title, a.category, a.filter, a.dry_run):
             added += 1
             print('    added to the Work page as %r' % title)
