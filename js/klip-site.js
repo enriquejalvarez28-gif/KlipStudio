@@ -494,22 +494,56 @@
       if(a && !a.hasAttribute('data-track')) track('view_work', {});
     }, true);
 
-    /* lightbox — no iframe exists until a card is clicked */
+    /* lightbox — nothing is created until a card is clicked.
+
+       Two kinds of video reach it. A YouTube link becomes an iframe. A
+       file KLIP hosts itself - the client reels - becomes a <video>, so a
+       reel that was never uploaded to YouTube can still be the work on
+       show. Both are built on click and torn down on close. */
     var lb=document.getElementById('lightbox'), lbInner=document.getElementById('lb-inner');
     function ytEmbed(u){ var m=String(u).match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{6,})/); return m?'https://www.youtube.com/embed/'+m[1]+'?autoplay=1&rel=0':''; }
-    function closeLb(){ lb.classList.remove('is-open'); lb.classList.remove('lb--portrait'); var f=lbInner.querySelector('iframe'); if(f) f.remove(); document.body.style.overflow=''; }
+    function isLocal(u){ return /\.(mp4|webm|mov)(\?|$)/i.test(String(u)); }
+    function closeLb(){
+      lb.classList.remove('is-open'); lb.classList.remove('lb--portrait');
+      /* stop the file playing before it is removed, or some browsers keep
+         the audio going for a moment after the box has gone */
+      var v=lbInner.querySelector('video'); if(v){ try{ v.pause(); }catch(err){} }
+      var f=lbInner.querySelector('iframe'); if(f) f.remove();
+      if(v) v.remove();
+      document.body.style.overflow='';
+    }
     document.addEventListener('click',function(e){
       var card=e.target.closest('[data-video]'); if(!card) return;
-      var src=ytEmbed(card.dataset.video); if(!src) return;
+      var raw=card.dataset.video||'';
+      var yt=ytEmbed(raw), local=!yt && isLocal(raw);
+      if(!yt && !local) return;
       e.preventDefault();
       /* Vertical when the card says so, or when the link is a Short. A
          9:16 video inside the 16:9 box plays as a thin strip between two
          black bars, which on a phone is most of the screen wasted. */
       var vert = card.getAttribute('data-orient')==='portrait'
-                 || /\/shorts\//.test(String(card.dataset.video));
+                 || /\/shorts\//.test(raw);
       lb.classList.toggle('lb--portrait', !!vert);
-      var f=document.createElement('iframe'); f.src=src; f.allow='autoplay; encrypted-media; picture-in-picture'; f.allowFullscreen=true;
-      lbInner.appendChild(f); lb.classList.add('is-open'); document.body.style.overflow='hidden';
+      if(yt){
+        var f=document.createElement('iframe'); f.src=yt;
+        f.allow='autoplay; encrypted-media; picture-in-picture'; f.allowFullscreen=true;
+        lbInner.appendChild(f);
+      } else {
+        var v=document.createElement('video');
+        v.controls=true; v.autoplay=true; v.playsInline=true; v.preload='auto';
+        var poster=card.getAttribute('data-poster'); if(poster) v.poster=poster;
+        /* WebM first where the card offers one - it is the smaller file -
+           with the MP4 behind it for everything that will not play WebM. */
+        var webm=card.getAttribute('data-video-webm');
+        [[webm,'video/webm'],[raw,'video/mp4']].forEach(function(pair){
+          if(!pair[0]) return;
+          var sc=document.createElement('source'); sc.src=pair[0]; sc.type=pair[1];
+          v.appendChild(sc);
+        });
+        lbInner.appendChild(v);
+        try{ v.play(); }catch(err){}
+      }
+      lb.classList.add('is-open'); document.body.style.overflow='hidden';
       document.getElementById('lb-close').focus();
     });
     document.getElementById('lb-close').addEventListener('click',closeLb);

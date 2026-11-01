@@ -166,8 +166,8 @@
     "blocks": [
       {
         "type": "pagehero",
-        "image": "img/studio-main.jpg",
-        "imageAlt": "Klip Studio podcast set with lighting and crew",
+        "image": "img/klip-lobby-wide.jpg",
+        "imageAlt": "KLIP entrance and waiting area",
         "eyebrow": "Klip Studio",
         "headline": [
           "Create Here"
@@ -352,8 +352,8 @@
     "blocks": [
       {
         "type": "pagehero",
-        "image": "img/klip-white-wall-lights-wide.jpg",
-        "imageAlt": "Kanvas Room white cyclorama lit for a headshot session",
+        "image": "img/klip-photographer-shooting.jpg",
+        "imageAlt": "A KLIP photographer shooting a portrait in the studio",
         "eyebrow": "Klip Photography",
         "headline": [
           "Book A KLIP Photographer.",
@@ -370,7 +370,8 @@
             "label": "Rent The Studio",
             "booking": "photoStudioRental"
           }
-        ]
+        ],
+        "focal": "42% 38%"
       },
       {
         "type": "cards",
@@ -498,8 +499,8 @@
       },
       {
         "type": "split",
-        "image": "img/klip-photographer-shooting-wide.jpg",
-        "imageAlt": "A KLIP photographer shooting a seated portrait on the white wall",
+        "image": "img/klip-white-wall-lights-wide.jpg",
+        "imageAlt": "Kanvas Room white cyclorama lit for a session",
         "eyebrow": "Two Ways In",
         "headline": [
           "Book A Session.",
@@ -957,8 +958,8 @@
       },
       {
         "type": "split",
-        "image": "img/studio-main.jpg",
-        "imageAlt": "The Klip Studio team on set",
+        "image": "img/klip-podcast-session.jpg",
+        "imageAlt": "A session being recorded in the Klip Room",
         "eyebrow": "One Roof",
         "headline": [
           "Two Divisions.",

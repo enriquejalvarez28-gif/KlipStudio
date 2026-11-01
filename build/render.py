@@ -144,8 +144,14 @@ def head_block(b, dark=False):
 def pagehero(b, D):
     out = '<section class="pagehero" id="top">'
     if b.get('image'):
+        # A page hero is full-bleed and tall on a phone, wide on a desktop, so
+        # the same photo is cropped two very different ways. 'focal' says which
+        # part must survive both - without it the stylesheet's 60% centre can
+        # crop a wide shot down to whatever happens to sit on the right.
+        focal = (' style="object-position:%s"' % esc(b['focal'])) if b.get('focal') else ''
         out += ('<div class="bg">%s</div><div class="scrim" aria-hidden="true"></div>'
-                % pic(b['image'], b.get('imageAlt', ''), 'fetchpriority="high" width="1600" height="900"'))
+                % pic(b['image'], b.get('imageAlt', ''),
+                      'fetchpriority="high" width="1600" height="900"' + focal))
     out += '<div class="wrap rv">'
     if b.get('eyebrow'):
         out += '<p class="eyebrow on-dark fade">%s</p>' % esc(b['eyebrow'])
@@ -522,9 +528,26 @@ def portfolio(b, D):
     for i in (b.get('items') or []):
         a = act(i)
         fmt = i.get('format') or 'landscape'
-        items += ('<a class="w fade w--%s" href="%s"%s data-category="%s">%s'
+        # A piece of work with a video opens it here rather than linking
+        # away. Reels KLIP hosts itself count: a client reel that never went
+        # to YouTube is still the work, and this is where it is shown.
+        vid = ''
+        if i.get('video'):
+            vid = ' data-video="%s"' % esc(i['video'])
+            if i.get('videoWebm'):
+                vid += ' data-video-webm="%s"' % esc(i['videoWebm'])
+            if i.get('poster'):
+                vid += ' data-poster="%s"' % esc(i['poster'])
+            if fmt == 'reel':
+                vid += ' data-orient="portrait"'
+        prev = ''
+        if i.get('preview') or i.get('previewMp4'):
+            prev = (' data-preview="%s" data-preview-mp4="%s"'
+                    % (esc(i.get('preview', '')), esc(i.get('previewMp4', ''))))
+        items += ('<a class="w fade w--%s" href="%s"%s%s%s data-category="%s">%s'
                   '<span class="w-cap"><em>%s</em><h3>%s</h3></span></a>'
-                  % (esc(fmt), esc(a['href']), a['attr'], esc(i.get('category', '')),
+                  % (esc(fmt), esc(a['href']), a['attr'], vid, prev,
+                     esc(i.get('category', '')),
                      pic(i.get('image', ''), i.get('title', ''),
                          'loading="lazy" decoding="async" width="1200" height="800"'),
                      esc(i.get('sub', '')), esc(i.get('title', ''))))

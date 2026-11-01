@@ -9,3 +9,8 @@ __pycache__/
 img/drive-in/
 img/drive-2048/
 img/rooms-in/
+
+# Reel staging. Drop client reels in video/reels-in/ and run
+# tools/import-reels.py; only the web-sized output in video/reels/ is
+# committed. The originals are tens of megabytes each and nothing serves them.
+video/reels-in/

@@ -205,6 +205,27 @@ HOME_ORDER = [
 ]
 
 
+def work_video_attrs(w, esc):
+    """The attributes that make a work tile openable as a video.
+
+    A tile plays whatever it has: a YouTube link, or a reel KLIP hosts
+    itself. 'View Project' only means something when there is something to
+    see, so a tile with no video keeps its plain link and opens nothing.
+    data-orient tells the player a reel is 9:16 before it opens.
+    """
+    v = w.get('video') or ''
+    if not v:
+        return '', 'View Project'
+    out = ' data-video="%s"' % esc(v)
+    if w.get('videoWebm'):
+        out += ' data-video-webm="%s"' % esc(w['videoWebm'])
+    if w.get('poster'):
+        out += ' data-poster="%s"' % esc(w['poster'])
+    if (w.get('format') or 'landscape') == 'reel':
+        out += ' data-orient="portrait"'
+    return out, 'Watch'
+
+
 def home_main(D):
     esc, btn, pic, icon, headline, act = R.esc, R.btn, R.pic, R.icon, R.headline, R.act
     H = D['hero']
@@ -304,11 +325,12 @@ def home_main(D):
         if w.get('preview') or w.get('previewMp4'):
             prev = (' data-preview="%s" data-preview-mp4="%s"'
                     % (esc(w.get('preview', '')), esc(w.get('previewMp4', ''))))
-        tiles += ('<a class="%s" href="%s"%s>%s<span class="w-cap"><em>%s</em><h3>%s</h3>'
-                  '<span class="go">View Project %s</span></span></a>'
-                  % (cls, esc(w['href']), prev,
+        vid, go = work_video_attrs(w, esc)
+        tiles += ('<a class="%s" href="%s"%s%s>%s<span class="w-cap"><em>%s</em><h3>%s</h3>'
+                  '<span class="go">%s %s</span></span></a>'
+                  % (cls, esc(w['href']), prev, vid,
                      pic(w['image'], w['title'], 'loading="lazy" decoding="async" width="1500" height="940"'),
-                     esc(w['category']), esc(w['title']), R.AR))
+                     esc(w['category']), esc(w['title']), go, R.AR))
     sec['work'] = (
         '<section class="sec sec--dark" id="work"><div class="wrap">'
         '<div class="sec-head rv"><div class="titles"><p class="eyebrow on-dark fade">%s</p><h2>%s</h2></div>'
@@ -673,7 +695,10 @@ def org_schema(D):
              "url": SITE + "/media", "parentOrganization": {"@id": SITE + "/#klip"}},
             {"@type": "LocalBusiness", "@id": SITE + "/#klipstudio", "name": D['brand']['studio'],
              "url": SITE + "/studio", "telephone": "+1-954-541-3708",
-             "email": "info@theklipstudio.com", "image": SITE + "/img/studio-main.jpg",
+             "email": "info@theklipstudio.com",
+             # The image Google shows for the business. It was pointing at
+             # a stock photo of someone else's studio.
+             "image": SITE + "/img/klip-lobby-wide.jpg",
              "address": {"@type": "PostalAddress", "streetAddress": "2145 Davie Blvd, Suite 204",
                          "addressLocality": "Fort Lauderdale", "addressRegion": "FL",
                          "postalCode": "33312", "addressCountry": "US"},
