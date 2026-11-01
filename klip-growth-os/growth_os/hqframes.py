@@ -70,6 +70,7 @@ def sample_frames(tenant_id, video_id, n=SAMPLES, progress=lambda m: None, worke
 GAZE_MODEL = ("face_landmarker.task",
               "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task")
 _GAZE = []
+GAZE_ERR = []
 
 
 def _gaze_model():
@@ -87,8 +88,9 @@ def _gaze_model():
             opt = vision.FaceLandmarkerOptions(base_options=BaseOptions(model_asset_path=str(m)),
                                                output_face_blendshapes=True, num_faces=1)
             _GAZE.append((mp, vision.FaceLandmarker.create_from_options(opt)))
-        except Exception:
+        except Exception as e:
             _GAZE.append(None)
+            GAZE_ERR.append(f"{type(e).__name__}: {str(e)[:200]}")
     return _GAZE[0]
 
 
@@ -227,6 +229,7 @@ def build_hq(conn, tenant_id, asset_id, *, faces=None, progress=lambda m: None):
                            "expression": max(cm.EMOTIONS, key=lambda k: ex[k]), "energy": ex["energy"],
                            "quality": round(rank, 3), "from": name}
     meta = {"asset_id": asset_id, "built_at": utcnow(), "cast": meta_cast, "source": "hq video frames",
+            "gaze_check": _gaze_model() is not None, "gaze_error": GAZE_ERR[0] if GAZE_ERR else None,
             "frames_scanned": len(frames)}
     (out_dir / "cast.json").write_text(json.dumps(meta, indent=1))
     return meta
