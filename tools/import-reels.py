@@ -97,7 +97,7 @@ def encode(src, slug, w, h, dry):
           '-movflags', '+faststart', '-c:a', 'aac', '-b:a', '128k']),
         (os.path.join(OUT, slug + '.webm'),
          ['ffmpeg', '-y', '-i', src, '-vf', scale, '-c:v', 'libvpx-vp9', '-crf', '34',
-          '-b:v', '0', '-row-mt', '1', '-c:a', 'libopus', '-b:a', '96k']),
+          '-b:v', '0', '-row-mt', '1', '-cpu-used', '2', '-c:a', 'libopus', '-b:a', '96k']),
         # the card preview: silent, short, and small enough to autoplay
         (os.path.join(OUT, slug + '-loop.mp4'),
          ['ffmpeg', '-y', '-i', src, '-t', str(LOOP_SECONDS), '-an',
@@ -106,7 +106,7 @@ def encode(src, slug, w, h, dry):
         (os.path.join(OUT, slug + '-loop.webm'),
          ['ffmpeg', '-y', '-i', src, '-t', str(LOOP_SECONDS), '-an',
           '-vf', 'scale=640:-2', '-c:v', 'libvpx-vp9', '-crf', '38', '-b:v', '0',
-          '-row-mt', '1']),
+          '-row-mt', '1', '-cpu-used', '3']),
         (os.path.join(IMG, 'reel-%s.jpg' % slug),
          ['ffmpeg', '-y', '-ss', '1', '-i', src, '-frames:v', '1',
           '-vf', scale, '-q:v', '4']),
@@ -128,7 +128,16 @@ def encode(src, slug, w, h, dry):
     return made
 
 
-def add_to_work(slug, title, category, dry):
+def work_filters():
+    """The filter keys the Work page actually offers."""
+    d = json.load(open(PAGES, encoding='utf-8'))
+    for b in d['work']['blocks']:
+        if b.get('type') == 'portfolio':
+            return [f['key'] for f in (b.get('filters') or [])]
+    return []
+
+
+def add_to_work(slug, title, category, filt, dry):
     """Put the piece on the Work page, if it is not already there."""
     d = json.load(open(PAGES, encoding='utf-8'),
                   object_pairs_hook=collections.OrderedDict)
@@ -147,7 +156,10 @@ def add_to_work(slug, title, category, dry):
         ('image', 'img/reel-%s.jpg' % slug),
         ('title', title),
         ('sub', category),
-        ('category', re.sub(r'[^a-z0-9]+', '-', category.lower()).strip('-')),
+        # The filter key has to be one the page offers. Slugifying the label
+        # instead produced 'short-form-social', which matches no button, so
+        # the piece vanished under every filter except All.
+        ('category', filt),
         ('format', 'reel'),
         ('video', rel),
         ('videoWebm', 'video/reels/%s.webm' % slug),
@@ -165,7 +177,9 @@ def add_to_work(slug, title, category, dry):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--category', default='Short-Form Social',
-                    help='what kind of work these are (shown under the title)')
+                    help='the line shown under the title on the tile')
+    ap.add_argument('--filter', default='reels',
+                    help='which Work page filter these sit under')
     ap.add_argument('--dry-run', action='store_true')
     a = ap.parse_args()
 
@@ -174,6 +188,12 @@ def main():
         return 1
     os.makedirs(IN, exist_ok=True)
     os.makedirs(OUT, exist_ok=True)
+
+    keys = work_filters()
+    if keys and a.filter not in keys:
+        print('--filter %r is not one of the Work page filters: %s'
+              % (a.filter, ', '.join(keys)))
+        return 1
 
     files = sorted(f for f in os.listdir(IN)
                    if f.lower().endswith(('.mp4', '.mov', '.m4v', '.webm')))
@@ -203,7 +223,7 @@ def main():
             if what != 'kept':
                 print('    %-9s %-34s %6.1f MB'
                       % (what, os.path.basename(dest), size / 1048576))
-        if add_to_work(slug, title, a.category, a.dry_run):
+        if add_to_work(slug, title, a.category, a.filter, a.dry_run):
             added += 1
             print('    added to the Work page as %r' % title)
         else:
