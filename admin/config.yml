@@ -767,17 +767,34 @@ collections:
           label: Placeholder profile
           widget: boolean
           default: false
-          hint: On keeps the profile private whatever else is set. A profile goes public only when it is active, not a placeholder, and has both a headshot and a provider ID.
+          hint: >
+            On keeps the profile private whatever else is set. A profile
+            goes public once it is active, not a placeholder, and has a
+            name, a headshot and a bio. The SimplyBook provider ID is NOT
+            required - without it the button books a session instead of
+            that named photographer.
         - name: specialties
           label: Specialties
           widget: string
+          hint: >
+            Up to about 40 characters, separated by a middle dot, e.g.
+            "Headshots · Branding · Lifestyle". Shown in small caps under
+            the name.
         - name: bio
           label: Short bio
           widget: text
+          hint: >
+            80 to 180 characters - two to four lines on the card. Say what
+            they shoot and how it feels to be shot by them. No phone, email,
+            Instagram, personal website or outside pricing.
         - name: headshot
           label: Headshot
           widget: image
           required: false
+          hint: >
+            Portrait, 4:5 (e.g. 800x1000 or larger), under 500 KB. It is
+            cropped to a tall card, so keep the face in the upper half and
+            leave room around it.
         - name: portfolio
           label: Portfolio images
           widget: list
