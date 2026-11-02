@@ -282,12 +282,21 @@ def cards(b, D):
     for i in (b.get('items') or []):
         a = act(i)
         if portrait:
-            items += ('<a class="ind fade" href="%s"%s>%s<figcaption><b>%s</b>%s</figcaption></a>'
-                      % (esc(a['href']), a['attr'],
+            # A card with nowhere to go is not a link. The amenities on the
+            # Studio page are descriptions - the makeup room, the wardrobe
+            # wall, the audio board - and they were rendered as anchors
+            # with href="#", so clicking one looked deliberate and threw
+            # the visitor back to the top of the page. Six of them.
+            live = a['href'] and a['href'] != '#'
+            tag, attrs = ('a', ' href="%s"%s' % (esc(a['href']), a['attr'])) \
+                if live else ('div', '')
+            items += ('<%s class="ind fade"%s>%s<figcaption><b>%s</b>%s</figcaption></%s>'
+                      % (tag, attrs,
                          pic(i.get('image', ''), i.get('title', ''),
                              'loading="lazy" decoding="async" width="720" height="900"'),
                          esc(i.get('title', '')),
-                         '<span>%s</span>' % esc(i['sub']) if i.get('sub') else ''))
+                         '<span>%s</span>' % esc(i['sub']) if i.get('sub') else '',
+                         tag))
         else:
             items += ('<a class="room fade" href="%s"%s><div class="room-img">%s</div>'
                       '<h3>%s</h3>%s</a>'

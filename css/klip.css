@@ -725,7 +725,10 @@ body.cursor-link .cursor-ring{width:58px;height:58px;margin:-29px 0 0 -29px}
 .ind-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
 .ind{position:relative;overflow:hidden;aspect-ratio:4/5;background:#ddd;display:block;margin:0}
 .ind img{width:100%;height:100%;object-fit:cover;transition:transform .7s cubic-bezier(.2,.7,.2,1)}
-.ind:hover img{transform:scale(1.06)}
+/* Only a card that goes somewhere answers the cursor. An amenity card is
+   a description, not a link, and a picture that leans in under the mouse
+   promises a click that never happens. */
+a.ind:hover img{transform:scale(1.06)}
 .ind figcaption{position:absolute;inset:auto 0 0 0;padding:48px 14px 14px;color:#fff;
   background:linear-gradient(0deg,rgba(0,0,0,.9) 0%,rgba(0,0,0,.3) 60%,rgba(0,0,0,0) 100%)}
 .ind figcaption b{display:block;font-family:'Montserrat',sans-serif;font-size:13px;font-weight:800;letter-spacing:-.01em;line-height:1.2}
