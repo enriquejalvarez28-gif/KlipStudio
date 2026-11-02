@@ -829,9 +829,19 @@ def tiers(b, D):
         weight = weights[n] if n < len(weights) else ''
         if t.get('bestValue'):
             weight = 'k-card--featured'
-        price = ''
+        # "From" is added here rather than typed into the CMS, so every
+        # tier reads the same way and /admin holds a bare amount.
+        #
+        # The element is emitted even with no price, empty. The four cards
+        # share the grid's rows (see .tier-grid subgrid in klip.css) so the
+        # prices line up at one height, and that only holds while every
+        # card has the same number of rows. A card that dropped its price
+        # element would pull its own includes and button up a row.
         if t.get('price'):
-            price = '<p class="k-price">%s</p>' % esc(t['price'])
+            price = ('<p class="k-price"><span class="k-from">From</span>%s</p>'
+                     % esc(t['price']))
+        else:
+            price = '<p class="k-price"></p>'
         inc = ''.join('<li>%s</li>' % esc(i) for i in (t.get('includes') or [])[:6])
         btn_cls = 'btn--solid' if 'premium' in weight else 'btn--dark'
         cards += ('<article class="k-card tier fade %s">%s'

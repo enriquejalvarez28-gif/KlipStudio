@@ -1571,7 +1571,9 @@ figure.has-gallery{position:relative}
   border-left:1.5px solid var(--red);border-bottom:1.5px solid var(--red);
   transform:rotate(-45deg)}
 .tier .btn{margin-top:6px;justify-content:space-between}
-.tier-note{margin-top:16px;font-size:13.5px;color:#8a8a86}
+/* The restrictions note is a term of the price, not decoration, so it
+   has to be readable: #8a8a86 measured 3.1:1 on the section. */
+.tier-note{margin-top:16px;font-size:13.5px;color:#5f5d59}
 
 /* What we can handle / Need help with the show */
 .chk{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 26px;
@@ -1823,11 +1825,25 @@ figure.has-gallery{position:relative}
 .k-card p{font-size:14.5px;line-height:1.6;color:#55534f}
 
 /* a price used as a visual anchor (§13) */
-.k-price{font-family:'Montserrat',sans-serif;font-size:clamp(24px,2.3vw,32px);
-  font-weight:800;line-height:1;color:var(--ink)}
+.k-from{display:block;font-size:12px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:#5f5d59;margin-bottom:2px}
+.k-card--premium .k-from{color:#a8a6a2}
+/* The price was rendering at 14.5px. `.k-card p` above is one specificity
+   point heavier than a bare `.k-price`, so the generic body-copy size won
+   and the figure came out the same size as the sentence above it. The
+   selectors below carry enough weight to beat it, and to beat the
+   dark-section `p` colour rules further down the file. Keep them in step
+   if either of those rules is ever changed. */
+.k-price,
+.k-card p.k-price,
+.sec--band .k-card:not(.k-card--premium) p.k-price,
+.sec--dark .k-card:not(.k-card--premium) p.k-price,
+.sec--ink .k-card:not(.k-card--premium) p.k-price{
+  font-family:'Montserrat',sans-serif;font-size:clamp(30px,2.9vw,40px);
+  font-weight:800;line-height:1;letter-spacing:-.02em;color:var(--ink)}
 .k-price s{font-size:16px;font-weight:500;color:var(--gray-2);margin-right:8px}
-.k-card--premium .k-price{color:#fff}
-.k-price--red{color:var(--red)}
+.k-card--premium p.k-price{color:#fff}
+p.k-price--red{color:var(--red)}  /* heavier than the rules above */
 
 /* ------------------------------------------------------------------
    SPACING (§14). Sections with little content stop reserving the same
@@ -1887,6 +1903,31 @@ input:focus-visible,[tabindex]:focus-visible{
 @media (max-width:760px){
   .tier h3{padding-right:0}
   .tier .k-flag{position:static;align-self:flex-start}
+}
+
+/* The price has to sit at the same height in every card.
+   "Self-Service" is one line and "Premium Content Package" is three, and
+   the positioning line under it is one line or two, so the price used to
+   land anywhere from 191px to 239px down the card — visibly ragged across
+   the row.
+
+   A min-height on the name would need a different value at every width
+   (three lines at 1440, one line at 1000) and would leave dead space
+   wherever the names happen to fit. Subgrid instead lets the four cards
+   share the grid's rows, so number / name / positioning / price /
+   includes / button each take the height of the tallest card and line up
+   on their own — and keep lining up when the copy is edited in /admin.
+
+   This depends on every card having the same six rows, which is why
+   tiers() in render.py emits the price element even when it is empty. The
+   Best Value flag is absolutely positioned, so it takes no row. Below
+   761px the cards stack one per row and there is nothing to align, so the
+   plain flex layout stays. */
+@media (min-width:761px){
+  .tier-grid{grid-auto-rows:auto}
+  .tier-grid>.tier{display:grid;grid-template-rows:subgrid;grid-row:span 6;
+    row-gap:11px}
+  .tier-grid>.tier>.tier-inc{flex:none}
 }
 
 /* Three structured modules instead of one open checkmark field (§7). */
@@ -1985,6 +2026,44 @@ input:focus-visible,[tabindex]:focus-visible{
 .sec--dark .k-card:not(.k-card--premium) li,
 .sec--ink .k-card:not(.k-card--premium) p,
 .sec--ink .k-card:not(.k-card--premium) li{color:#55534f}
+/* Light cards in a dark section were showing near-white text.
+   The blanket rule further up colours every <p>, <li> and <span> inside a
+   dark section #d5d3cf, and the card override beneath it names p and li
+   but not span. So on a cream card in a dark band, anything wrapped in a
+   span came out #d5d3cf: the checked items in the Production, Content and
+   Repurposing lists (their text sits in a span), the small card numbers,
+   the FROM label and the button arrows. That is what looked faded — the
+   reveal animation was finishing correctly; the colour was wrong.
+
+   An unclassed span takes the colour of whatever it sits in. The number,
+   the flag, the FROM label and the arrow keep their own colours, restated
+   here only because a one-class selector loses to `.sec--band span`. */
+.sec--band .k-card span:not([class]),
+.sec--dark .k-card span:not([class]),
+.sec--image .k-card span:not([class]),
+.sec--ink .k-card span:not([class]){color:inherit}
+/* An arrow is part of its button or link and never has a colour of its
+   own. Without this it is a <span> like any other, so inside a dark
+   section the blanket rule above painted it #d5d3cf — on a white button
+   that is 1.5:1, a mark you can barely see. */
+.btn .ar,.link .ar,.k-card .btn .ar{color:inherit}
+.k-card .k-flag{color:#fff}
+/* --gray-2 is #9a9a9a: 2.2:1 on the cream card, a numeral you have to
+   hunt for. This is the same muted index one step darker, and clears
+   4.5:1 on both the cream and white cards. */
+.k-card .k-num{color:#5f5d59}
+.k-card--premium .k-num{color:var(--red)}
+.k-card .k-from{color:#5f5d59}
+.k-card--premium .k-from{color:#a8a6a2}
+
+/* The module checklists are the content of their card, not body copy, so
+   they keep near-ink weight rather than the #55534f the card override
+   gives a paragraph. Charcoal cards are excluded and keep #d5d3cf. */
+.mod-list li,
+.sec--band .k-card:not(.k-card--premium) .mod-list li,
+.sec--dark .k-card:not(.k-card--premium) .mod-list li,
+.sec--ink .k-card:not(.k-card--premium) .mod-list li{color:#2e2d2b}
+
 /* images and room photos must not be tinted by the section colour */
 .sec--band img,.sec--dark img,.sec--image img,.sec--ink img{color:initial}
 
@@ -2009,6 +2088,15 @@ input:focus-visible,[tabindex]:focus-visible{
 .sec--band .pg-first,.sec--dark .pg-first,
 .sec--band .faq,.sec--dark .faq,
 .sec--band .ins-card,.sec--dark .ins-card{color:var(--ink)}
+
+/* The pending-profiles note is a light panel too, and was missing from
+   the list above, so `.sec--band p` painted it white on its own white
+   background — the note explaining why no photographers are listed was
+   invisible on the photography page. */
+.sec--band .pg-pending,.sec--dark .pg-pending,
+.sec--image .pg-pending,.sec--ink .pg-pending{color:var(--ink)}
+.sec--band .pg-pending p,.sec--dark .pg-pending p,
+.sec--image .pg-pending p,.sec--ink .pg-pending p{color:#4a4a47}
 
 .sec--band .studio-copy h2,.sec--band .studio-copy h3,
 .sec--dark .studio-copy h2,.sec--dark .studio-copy h3,
