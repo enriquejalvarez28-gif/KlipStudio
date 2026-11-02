@@ -10,7 +10,7 @@ from growth_os import thumbs
 W, H = 1280, 720
 FACE_H = 285          # face box height on the canvas: big, like the reference
 EYE_Y = 300           # eyes on one line
-EDGE_X = 225          # face centre distance from the outer edge
+EDGE_X = 215          # face centre distance from the outer edge
 BLEND = (500, 780)    # where the two photos melt into each other (background only)
 
 
@@ -128,16 +128,25 @@ def _headline(d, canvas, headline, gold, top, bottom):
             cur.append(w)
         if cur:
             groups.append((g, cur))
-    max_w = 430
+    max_w = 400
+    GAP, PAD = 14, 12  # space between lines; padding inside the gold box
+
+    def metrics(f):
+        x0, y0, x1, y1 = f.getbbox("HÁGQ")
+        return y0, y1 - y0  # top offset, cap+descender height
+
     size = 140
     while size > 50:
         f = thumbs._font(size)
-        heights = [size * 1.08 + (24 if g else 0) for g, _ in groups]
-        if all(d.textlength(" ".join(ws), font=f) + (40 if g else 0) <= max_w for g, ws in groups) and sum(heights) <= bottom - top:
+        _, lh = metrics(f)
+        total = sum(lh + (2 * PAD if g else 0) for g, _ in groups) + GAP * (len(groups) - 1)
+        if all(d.textlength(" ".join(ws), font=f) + (40 if g else 0) <= max_w for g, ws in groups) and total <= bottom - top:
             break
         size -= 4
     f = thumbs._font(size)
-    y = top + (bottom - top - sum(size * 1.08 + (24 if g else 0) for g, _ in groups)) / 2
+    off, lh = metrics(f)
+    total = sum(lh + (2 * PAD if g else 0) for g, _ in groups) + GAP * (len(groups) - 1)
+    y = top + (bottom - top - total) / 2
     shadow = Image.new("L", (W, H), 0)
     sd = ImageDraw.Draw(shadow)
     items = []
@@ -146,13 +155,12 @@ def _headline(d, canvas, headline, gold, top, bottom):
         tw = d.textlength(txt, font=f)
         x = (W - tw) / 2
         if g:
-            box = [x - 20, y, x + tw + 20, y + size * 1.08 + 18]
-            items.append(("box", box, txt, x, y + 6))
-            y += size * 1.08 + 24
+            items.append(("box", [x - 20, y, x + tw + 20, y + lh + 2 * PAD], txt, x, y + PAD - off))
+            y += lh + 2 * PAD + GAP
         else:
-            sd.text((x + 4, y + 6), txt, font=f, fill=200)
-            items.append(("text", None, txt, x, y))
-            y += size * 1.08
+            sd.text((x + 4, y - off + 6), txt, font=f, fill=200)
+            items.append(("text", None, txt, x, y - off))
+            y += lh + GAP
     canvas.paste((0, 0, 0), (0, 0), shadow.filter(ImageFilter.GaussianBlur(8)))
     d = ImageDraw.Draw(canvas)
     for kind, box, txt, x, ty in items:
@@ -190,9 +198,9 @@ def render(cast_crops, headline, *, gold=None, out_path=None, frames=None, name_
         band = Image.new("L", (W, H), 0)
         bd = ImageDraw.Draw(band)
         for xx in range(W):
-            v = max(0.0, 1 - abs(xx - W / 2) / 260)
+            v = max(0.0, 1 - abs(xx - W / 2) / 300)
             bd.line([(xx, 0), (xx, H)], fill=int(255 * min(1.0, v * 1.4)))
-        calm = ImageEnhance.Brightness(canvas.filter(ImageFilter.GaussianBlur(9))).enhance(0.62)
+        calm = ImageEnhance.Brightness(canvas.filter(ImageFilter.GaussianBlur(16))).enhance(0.5)
         canvas = Image.composite(calm, canvas, band)
         d = ImageDraw.Draw(canvas)
         top, bottom = 118, H - (100 if name_tag else 40)
