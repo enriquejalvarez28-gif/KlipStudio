@@ -624,6 +624,26 @@ def ensure_optional_deps():
             f.write(f"{db.utcnow()} {spec}: {msg}\n")
 
 
+DRAFT_ONLY_JOBS = {"repackage_all", "analytics_sync", "autopilot_daily"}  # never publish anything
+
+
+def _run_once(db_path):
+    """Queue draft-only jobs listed in RUN_ONCE.txt next to the app (one kind per line), then remove the file."""
+    f = Path(__file__).resolve().parent.parent / "RUN_ONCE.txt"
+    if not f.exists():
+        return
+    try:
+        kinds = [k.strip() for k in f.read_text().splitlines() if k.strip() in DRAFT_ONLY_JOBS]
+        f.unlink()
+        c = db.connect(db_path)
+        for k in kinds:
+            scheduler.enqueue(c, k, tenant_id="ryj-media", trigger="manual")
+        c.commit()
+        c.close()
+    except Exception as e:
+        print(f"RUN_ONCE failed: {e}")
+
+
 def serve(port=8765, db_path=None, open_browser=False, with_scheduler=True, watch=True):
     url = f"http://127.0.0.1:{port}/"
     import sys
@@ -654,6 +674,7 @@ def serve(port=8765, db_path=None, open_browser=False, with_scheduler=True, watc
     if with_scheduler:
         sched = scheduler.Scheduler(REGISTRY, db_path)
         sched.start()
+        _run_once(db_path)
     print(f"Klip Growth OS running at {url}  (Ctrl+C to stop) · code {code_fingerprint()[:10]}")
     if watch:
         threading.Thread(target=_watch, args=(srv, sched, port, with_scheduler, db_path), daemon=True).start()
