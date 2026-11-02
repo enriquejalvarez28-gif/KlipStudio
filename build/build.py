@@ -498,12 +498,21 @@ def pod_card(c):
     if c.get('preview') or c.get('previewMp4'):
         prev = (' data-preview="%s" data-preview-mp4="%s"'
                 % (R.esc(c.get('preview', '')), R.esc(c.get('previewMp4', ''))))
-    return ('<a class="pod pod--%s fade" href="%s"%s%s><div class="pod-thumb">%s</div>'
+    # A clip is shot 9:16. The player has to be told so before it opens, or a
+    # vertical video plays as a thin strip inside a 16:9 black box — and the
+    # size hint has to match the card's shape, or the row jumps when the
+    # thumbnail lands. The Podcasts page already did both; the homepage,
+    # which is where these clips actually live, did neither.
+    orient = ' data-orient="portrait"' if kind == 'clip' else ''
+    return ('<a class="pod pod--%s fade" href="%s"%s%s%s><div class="pod-thumb">%s</div>'
             '<div class="pod-meta"><div><span class="label">%s</span><h3>%s</h3></div>%s</div></a>'
             % (R.esc(kind), R.esc(c.get('video') or 'podcasts.html'),
                ' data-video="%s"' % R.esc(c['video']) if c.get('video') else '', prev,
+               orient,
                R.pic(c['image'], '%s: %s' % (c.get('show', ''), c.get('title', '')),
-                     'loading="lazy" decoding="async" width="1000" height="700"'),
+                     'loading="lazy" decoding="async" '
+                     + ('width="1080" height="1920"' if kind == 'clip'
+                        else 'width="1000" height="700"')),
                R.esc(c.get('show', '')), R.esc(c.get('title', '')),
                '<span class="pod-time">%s</span>' % R.esc(c['time']) if c.get('time') else ''))
 

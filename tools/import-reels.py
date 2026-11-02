@@ -88,10 +88,27 @@ def slugify(name):
     return (s or 'reel')[:48]
 
 
+# Capitalising every word turns "no money for groceries" into "No Money For
+# Groceries", which reads like a headline generator. Small words stay down
+# unless they open the title or follow a full stop.
+SMALL = {'a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'from', 'in', 'is',
+         'nor', 'of', 'on', 'or', 'the', 'to', 'vs', 'with'}
+
+
 def titleize(name):
     s = re.sub(r'[_]+', ' ', os.path.splitext(name)[0])
     s = re.sub(r'\s+', ' ', s).strip()
-    return ' '.join(w if w.isupper() else w.capitalize() for w in s.split())
+    out, opens = [], True
+    for w in s.split():
+        if w.isupper():
+            pass                       # VP, RYJ - leave an acronym alone
+        elif opens or w.lower() not in SMALL:
+            w = w[:1].upper() + w[1:]
+        else:
+            w = w.lower()
+        out.append(w)
+        opens = w.endswith(('.', ':', '?', '!'))
+    return ' '.join(out)
 
 
 def encode(src, slug, w, h, dry):
@@ -184,10 +201,67 @@ def add_to_work(slug, title, category, filt, dry):
     return True
 
 
+def mmss(seconds):
+    s = int(round(seconds))
+    return '%d:%02d' % (s // 60, s % 60)
+
+
+def add_to_clips(slug, title, show, dur, dry):
+    """Put the piece in the Featured Clips rail, if it is not already there.
+
+    Clips live in two files: data/podcasts.json feeds the homepage rail and
+    the clips block in data/pages.json feeds the Podcasts page. A clip that
+    went into only one of them would be real work on one page and missing on
+    the other, so both are written or neither is.
+    """
+    rel = 'video/reels/%s.mp4' % slug
+    item = collections.OrderedDict([
+        ('image', 'img/reel-%s.jpg' % slug),
+        ('show', show),
+        ('title', title),
+        ('time', mmss(dur)),
+        ('video', rel),
+        ('kind', 'clip'),
+        ('preview', 'video/reels/%s-loop.webm' % slug
+         if os.path.exists(os.path.join(OUT, slug + '-loop.webm')) else ''),
+        ('previewMp4', 'video/reels/%s-loop.mp4' % slug),
+    ])
+
+    def lists():
+        """(path, data, items) for each file that holds the clip rail."""
+        pods = os.path.join(ROOT, 'data', 'podcasts.json')
+        d = json.load(open(pods, encoding='utf-8'),
+                      object_pairs_hook=collections.OrderedDict)
+        yield pods, d, d['podcasts'].setdefault('items', [])
+        p = json.load(open(PAGES, encoding='utf-8'),
+                      object_pairs_hook=collections.OrderedDict)
+        for b in p['podcasts']['blocks']:
+            if b.get('type') == 'clips':
+                yield PAGES, p, b.setdefault('items', [])
+                return
+        print('    ! no clips block on the Podcasts page')
+
+    wrote = False
+    for path, data, items in lists():
+        if any(i.get('video') == rel for i in items):
+            continue
+        items.append(collections.OrderedDict(item))
+        if not dry:
+            json.dump(data, open(path, 'w', encoding='utf-8'),
+                      indent=2, ensure_ascii=False)
+            open(path, 'a', encoding='utf-8').write('\n')
+        wrote = True
+    return wrote
+
+
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument('--target', default='work', choices=('work', 'clips'),
+                    help='work = the Work page grid; clips = the Featured '
+                         'Clips rail on the homepage and the Podcasts page')
     ap.add_argument('--category', default='Short-Form Social',
-                    help='the line shown under the title on the tile')
+                    help='the line shown under the title on the tile; with '
+                         '--target clips this is the show name')
     ap.add_argument('--filter', default='reels',
                     help='which Work page filter these sit under')
     ap.add_argument('--dry-run', action='store_true')
@@ -199,7 +273,7 @@ def main():
     os.makedirs(IN, exist_ok=True)
     os.makedirs(OUT, exist_ok=True)
 
-    keys = work_filters()
+    keys = work_filters() if a.target == 'work' else []
     if keys and a.filter not in keys:
         print('--filter %r is not one of the Work page filters: %s'
               % (a.filter, ', '.join(keys)))
@@ -251,11 +325,15 @@ def main():
                          os.path.getsize(mp4) / 1048576))
                 if not a.dry_run:
                     os.remove(webm)
-        if add_to_work(slug, title, a.category, a.filter, a.dry_run):
+        where = 'the Featured Clips rail' if a.target == 'clips' else 'the Work page'
+        done = (add_to_clips(slug, title, a.category, dur, a.dry_run)
+                if a.target == 'clips'
+                else add_to_work(slug, title, a.category, a.filter, a.dry_run))
+        if done:
             added += 1
-            print('    added to the Work page as %r' % title)
+            print('    added to %s as %r' % (where, title))
         else:
-            print('    already on the Work page')
+            print('    already on %s' % where)
 
     print('\n%d piece(s) added.' % added)
     if a.dry_run:

@@ -32,26 +32,6 @@
         "previewMp4": ""
       },
       {
-        "image": "img/klip-black-room-mics.jpg",
-        "show": "Business Talk",
-        "title": "Marketing Que Funciona",
-        "time": "1:15",
-        "video": "",
-        "kind": "clip",
-        "preview": "",
-        "previewMp4": ""
-      },
-      {
-        "image": "img/klip-black-room-purple-wide.jpg",
-        "show": "Health & Lifestyle",
-        "title": "Mindset y Bienestar",
-        "time": "1:42",
-        "video": "",
-        "kind": "clip",
-        "preview": "",
-        "previewMp4": ""
-      },
-      {
         "show": "Always Algo",
         "title": "Tasas y Mercado",
         "time": "0:58",
@@ -65,6 +45,26 @@
         "image": "img/clip-ryj-discipline.jpg",
         "kind": "clip",
         "video": "https://youtube.com/shorts/v5zBISNMH3M"
+      },
+      {
+        "image": "img/reel-she-had-no-money-for-groceries-now-she-s-a-vp.jpg",
+        "show": "Lunch with Leo",
+        "title": "She Had No Money for Groceries. Now She's a VP",
+        "time": "0:39",
+        "video": "video/reels/she-had-no-money-for-groceries-now-she-s-a-vp.mp4",
+        "kind": "clip",
+        "preview": "",
+        "previewMp4": "video/reels/she-had-no-money-for-groceries-now-she-s-a-vp-loop.mp4"
+      },
+      {
+        "image": "img/reel-she-hates-football-but-she-s-a-boxer-who-loves-s.jpg",
+        "show": "Ego vs Ego",
+        "title": "She Hates Football but She's a Boxer Who Loves Sports",
+        "time": "0:52",
+        "video": "video/reels/she-hates-football-but-she-s-a-boxer-who-loves-s.mp4",
+        "kind": "clip",
+        "preview": "",
+        "previewMp4": "video/reels/she-hates-football-but-she-s-a-boxer-who-loves-s-loop.mp4"
       }
     ]
   }

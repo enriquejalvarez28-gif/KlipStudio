@@ -47,10 +47,17 @@ for name in sorted(os.listdir(IMG)):
                 ).save(out_path, 'WEBP', quality=78, method=6)
                 made += 1
             entries.append([w, 'img/r/' + out_name])
-        # the full-size WebP closes the set
+        # The full-size WebP closes the set, and data/webp.json below is
+        # built from these. When one is missing the renderer falls back to a
+        # bare <img> and the photo loses its responsive widths too, so make
+        # it rather than wait for someone to notice.
         full = stem + '.webp'
-        if os.path.exists(os.path.join(IMG, full)):
-            entries.append([w0, 'img/' + full])
+        full_path = os.path.join(IMG, full)
+        if not os.path.exists(full_path) or \
+                os.path.getmtime(full_path) < os.path.getmtime(src):
+            im.convert('RGB').save(full_path, 'WEBP', quality=78, method=6)
+            made += 1
+        entries.append([w0, 'img/' + full])
         manifest['img/' + name] = entries
 
 with open(os.path.join(ROOT, 'data', 'srcset.json'), 'w', encoding='utf-8') as fh:
