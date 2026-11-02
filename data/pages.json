@@ -421,8 +421,8 @@
             "eyebrow": "With A KLIP Photographer",
             "title": "Book A Photographer",
             "text": "Choose a KLIP photographer or let us assign the first available. Studio, photographer and edited images in one booking.",
-            "image": "img/klip-white-wall-lights-wide.jpg",
-            "imageAlt": "Kanvas Room white cyclorama lit for a headshot session",
+            "image": "img/klip-photographer-shooting-wide.jpg",
+            "imageAlt": "A KLIP photographer shooting a seated portrait on the white wall",
             "cta": {
               "label": "Choose A Photographer",
               "photographers": true
@@ -462,8 +462,8 @@
             "eyebrow": "Bring Your Own",
             "title": "Rent The Photo Studio",
             "text": "Bring your own camera or photographer. Use the Kanvas room, white wall, backdrops and professional lighting.",
-            "image": "img/photo4.jpg",
-            "imageAlt": "Kanvas room white wall with professional lighting",
+            "image": "img/klip-white-wall-chair-and-stool.jpg",
+            "imageAlt": "The Kanvas white wall set with a chair and stool, ready to shoot",
             "cta": {
               "label": "Rent The Room",
               "booking": "photoStudioRental"
