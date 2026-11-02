@@ -1765,7 +1765,13 @@ collections:
         label: Booking key
         widget: string
         required: false
-        hint: Matches a key under Booking -> SimplyBook, e.g. photoStudioRental
+        hint: >
+          Which booking the button opens. One of: podcastRoom,
+          podcastSelfService, podcastTechnician, podcastFullService,
+          podcastPremium, blackRoom, greenRoom, kanvasRoom,
+          photoStudioRental, photographySessions, studioTour,
+          liveSelling, studioRentals. Anything else falls back to the
+          general booking page.
       - name: simplybookServiceId
         label: SimplyBook service ID
         widget: string

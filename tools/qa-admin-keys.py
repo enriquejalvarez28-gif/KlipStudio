@@ -57,9 +57,40 @@ def keys(o, hidden, out=None):
     return out
 
 
+class StrictLoader(yaml.SafeLoader):
+    """YAML that refuses a repeated key, the way Sveltia's parser does.
+
+    PyYAML keeps the last one and says nothing. Sveltia rejects the whole
+    file, and /admin then shows "The configuration file could not be
+    parsed" and nobody can edit the site. A second `hint:` added to a
+    field that already had one did exactly that, and every Python check
+    here passed while the editor was dead.
+    """
+
+
+def _no_duplicates(loader, node, deep=False):
+    out = {}
+    for k, v in node.value:
+        key = loader.construct_object(k, deep=deep)
+        if key in out:
+            raise ValueError('duplicate key %r on line %d — Sveltia refuses '
+                             'the whole config and /admin stops working'
+                             % (key, k.start_mark.line + 1))
+        out[key] = loader.construct_object(v, deep=deep)
+    return out
+
+
+StrictLoader.add_constructor(
+    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _no_duplicates)
+
+
 def main():
-    cfg = yaml.safe_load(open(os.path.join(ROOT, 'admin', 'config.yml'),
-                              encoding='utf-8'))
+    with open(os.path.join(ROOT, 'admin', 'config.yml'), encoding='utf-8') as fh:
+        try:
+            cfg = yaml.load(fh, Loader=StrictLoader)
+        except ValueError as e:
+            print('admin/config.yml: %s' % e)
+            return 1
     problems = []
     checked = 0
     for col in cfg['collections']:
