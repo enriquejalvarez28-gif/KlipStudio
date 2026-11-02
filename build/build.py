@@ -16,7 +16,19 @@ import json
 import os
 import re
 import sys
-from datetime import date
+from datetime import date, datetime, timezone
+
+
+def build_date():
+    """Today in UTC, for dates that go into built files.
+
+    CI builds in UTC and commits the result; a build run here, five hours
+    behind, writes yesterday into the sitemap and the video JSON-LD. Each
+    side then rebuilds and reverts the other, so the repository churns on
+    nothing. Local time still decides whether a special is live, since that
+    window is the studio's own working day.
+    """
+    return datetime.now(timezone.utc).date().isoformat()
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import insights as INS  # noqa: E402
@@ -738,7 +750,7 @@ def video_schema(D):
         out.append({"@type": "VideoObject", "name": c['title'],
                     "description": "%s — %s, produced at Klip Studio." % (c['show'], c['title']),
                     "thumbnailUrl": SITE + "/" + c['image'], "contentUrl": c['video'],
-                    "uploadDate": c.get('uploadDate') or date.today().isoformat(),
+                    "uploadDate": c.get('uploadDate') or build_date(),
                     "publisher": {"@id": SITE + "/#klip"}})
     return out
 
@@ -880,7 +892,7 @@ def build():
         ins_urls.append(a['_url'])
 
     # sitemap from the same lists, so it can never drift from the pages
-    today = date.today().isoformat()
+    today = build_date()
     urls = ''.join(
         '  <url><loc>%s%s</loc><lastmod>%s</lastmod><changefreq>%s</changefreq>'
         '<priority>%s</priority></url>\n'
