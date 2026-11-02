@@ -32,13 +32,6 @@
         "previewMp4": ""
       },
       {
-        "show": "Always Algo",
-        "title": "Tasas y Mercado",
-        "time": "0:58",
-        "image": "img/klip-podcast-room-clean-wide.jpg",
-        "kind": "clip"
-      },
-      {
         "show": "Respect Your Journey",
         "title": "Discipline Wins When Motivation Fades",
         "time": "",
@@ -65,6 +58,16 @@
         "kind": "clip",
         "preview": "",
         "previewMp4": "video/reels/she-hates-football-but-she-s-a-boxer-who-loves-s-loop.mp4"
+      },
+      {
+        "image": "img/reel-borra-tus-deudas.jpg",
+        "show": "Always Algo",
+        "title": "Borra tus deudas: elimina colecciones ilegales de tu crédito",
+        "time": "0:37",
+        "video": "video/reels/borra-tus-deudas.mp4",
+        "kind": "clip",
+        "preview": "",
+        "previewMp4": "video/reels/borra-tus-deudas-loop.mp4"
       }
     ]
   }

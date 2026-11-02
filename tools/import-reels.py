@@ -264,6 +264,10 @@ def main():
                          '--target clips this is the show name')
     ap.add_argument('--filter', default='reels',
                     help='which Work page filter these sit under')
+    ap.add_argument('--title',
+                    help='the title to use, instead of deriving it from the '
+                         'filename. Only with a single file: a filename makes '
+                         'a poor Spanish title, and cannot carry punctuation.')
     ap.add_argument('--dry-run', action='store_true')
     a = ap.parse_args()
 
@@ -293,7 +297,8 @@ def main():
             print('  ? %-42s not a video ffprobe can read — skipped' % f)
             continue
         w, h, dur = info
-        slug, title = slugify(f), titleize(f)
+        slug, title = slugify(f), (a.title if a.title and len(files) == 1
+                                   else titleize(f))
         shape = 'reel' if h > w else 'landscape'
         print('  %-42s %dx%d  %.0fs  %.1f MB  %s'
               % (f, w, h, dur, os.path.getsize(src) / 1048576, shape))
