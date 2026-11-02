@@ -986,8 +986,9 @@
       },
       {
         "type": "split",
-        "image": "img/klip-podcast-session.jpg",
-        "imageAlt": "A session being recorded in the Klip Room",
+        "image": "img/klip-team.jpg",
+        "imageAlt": "The KLIP team photographed on the studio's white wall",
+        "focal": "50% 0%",
         "eyebrow": "One Roof",
         "headline": [
           "Two Divisions.",

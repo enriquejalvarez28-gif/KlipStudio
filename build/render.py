@@ -248,10 +248,15 @@ def split(b, D):
     gal_btn = room_gallery_button(b['roomGallery'], D,
                                   b.get('roomGalleryLabel') or 'View Studio Photos') \
         if b.get('roomGallery') else ''
+    # A split figure is tall beside the copy on a desktop and a short wide
+    # strip above it on a phone, so one photograph is cropped two ways. A
+    # group shot centred by default loses every face on the phone crop;
+    # 'focal' moves the crop, exactly as it does on a page hero.
+    focal = (' style="object-position:%s"' % esc(b['focal'])) if b.get('focal') else ''
     fig = '<figure%s>%s%s</figure>' % (
         ' class="has-gallery"' if gal_btn else '',
         pic(b.get('image', ''), b.get('imageAlt', ''),
-            'loading="lazy" decoding="async" width="1200" height="800"'),
+            'loading="lazy" decoding="async" width="1200" height="800"' + focal),
         gal_btn.replace('view-photos--inline', '') if gal_btn else '')
     copy = '<div class="studio-copy">'
     if b.get('eyebrow'):
