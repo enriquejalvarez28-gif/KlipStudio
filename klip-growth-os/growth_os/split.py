@@ -274,7 +274,7 @@ def render3(cast_crops, headline, *, gold=None, out_path=None, frames=None, name
         fade = Image.new("L", (W, H), 0)
         fd = ImageDraw.Draw(fade)
         solid = min([c - 12 for c in caps if c < H] + [H + 1])  # burned-in captions: fully covered from here down
-        solid = min(solid, H - 60)
+        solid = max(min(solid, H - 60), TRIO_TEXT_TOP + 50)  # never a huge black band
         start = min(TRIO_TEXT_TOP - 110, solid - 230)
         for yy in range(int(start), H):
             v = 255 if yy >= solid else int(255 * max(0.0, (yy - start) / (solid - start)) ** 1.6)
