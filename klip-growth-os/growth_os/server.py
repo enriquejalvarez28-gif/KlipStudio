@@ -624,7 +624,7 @@ def ensure_optional_deps():
             f.write(f"{db.utcnow()} {spec}: {msg}\n")
 
 
-DRAFT_ONLY_JOBS = {"repackage_all", "analytics_sync", "autopilot_daily"}  # never publish anything
+DRAFT_ONLY_JOBS = {"repackage_all", "redraft_open", "analytics_sync", "autopilot_daily"}  # never publish anything
 
 
 def _run_once(db_path):

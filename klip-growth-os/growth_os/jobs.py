@@ -1,5 +1,7 @@
 """Scheduler job handlers. Each takes (conn, tenant_id|None, progress)."""
 
+import json
+
 from growth_os import analytics, autopilot, concepts, reports, trends, vault
 from growth_os.connectors import youtube_sync
 
@@ -58,6 +60,26 @@ def apply_approved(conn, tenant_id, progress):
     return {t: autopilot.apply_approved(conn, t, progress=progress) for t in _tenants(conn, tenant_id, include_demo=False)}
 
 
+def redraft_open(conn, tenant_id, progress):
+    """Rebuild every waiting draft with the current title/description rules (drafts only, nothing published)."""
+    out = {}
+    for t in _tenants(conn, tenant_id, include_demo=False):
+        ids = [r[0] for r in conn.execute("SELECT id FROM channel_changes WHERE tenant_id=? AND status='proposed'", (t,))]
+        done, errs = 0, []
+        for i, cid in enumerate(ids):
+            progress(int(100 * i / max(len(ids), 1)), f"redraft {i + 1}/{len(ids)}")
+            try:
+                r = conn.execute("SELECT proposal_json FROM channel_changes WHERE id=?", (cid,)).fetchone()
+                if json.loads(r[0]).get("format") == "long_form":
+                    continue  # long-form drafts were just rebuilt by repackage_all
+                autopilot.redraft(conn, t, cid)
+                done += 1
+            except Exception as e:
+                errs.append(f"{cid}: {str(e)[:100]}")
+        out[t] = {"redrafted": done, "errors": errs}
+    return out
+
+
 def repackage_all(conn, tenant_id, progress):
     return {t: autopilot.repackage_all(conn, t, progress=progress) for t in _tenants(conn, tenant_id, include_demo=False)}
 
@@ -82,6 +104,7 @@ REGISTRY = {
     "fill_missing": fill_missing,
     "clean_tags": clean_tags,
     "repackage_all": repackage_all,
+    "redraft_open": redraft_open,
     "apply_approved": apply_approved,
     "weekly_report": _report("weekly"),
     "monthly_report": _report("monthly"),
