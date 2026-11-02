@@ -654,6 +654,14 @@ def shell(title, desc, canonical, body, schema, page_key, extra_head='',
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Browsers restore the last scroll position when a page is reopened or
+     reloaded, so someone who left the page at the footer came back to the
+     footer. This has to run before first paint, which is why it is inline
+     and not in klip-site.js: that file is deferred and the restore has
+     already happened by the time it runs. A link to an anchor still works,
+     because the hash is applied after this. -->
+<script>try{var n=(performance.getEntriesByType&&performance.getEntriesByType('navigation')[0]||{}).type;
+history.scrollRestoration=(n==='back_forward')?'auto':'manual'}catch(e){}</script>
 <title>%s</title>
 <meta name="description" content="%s">
 <link rel="canonical" href="%s">%s
