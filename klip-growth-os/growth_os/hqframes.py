@@ -112,7 +112,8 @@ def gaze(cv2, img, f):
     d = {b.category_name: b.score for b in r.face_blendshapes[0]}
     return {"blink": max(d["eyeBlinkLeft"], d["eyeBlinkRight"]),
             "down": (d["eyeLookDownLeft"] + d["eyeLookDownRight"]) / 2,
-            "smile": (d["mouthSmileLeft"] + d["mouthSmileRight"]) / 2}
+            "smile": (d["mouthSmileLeft"] + d["mouthSmileRight"]) / 2,
+            "jaw": d.get("jawOpen", 0.0), "brow": d.get("browInnerUp", 0.0)}
 
 
 _EYES = []
@@ -199,9 +200,12 @@ def _pick(conn, tenant_id, asset_id, fx, cv2, cm, frames, progress, second=False
             if gz is None and not eyes_open(cv2, img, f):
                 continue
             strict = (f[2] >= MIN_FACE and sharp >= 0.45 and frontal >= 0.4
-                      and (gz is None or (gz["blink"] <= 0.45 and gz["down"] <= 0.5)))
+                      and (gz is None or (gz["blink"] <= 0.45 and gz["down"] <= 0.5 and gz.get("jaw", 0) <= 0.45
+                                          and gz.get("brow", 0) <= 0.6)))
             ex = fx.expression(img, f)
-            look = 1.0 if gz is None else (1 - gz["blink"]) * (1 - gz["down"]) * (0.8 + 0.4 * gz["smile"])
+            look = 1.0 if gz is None else ((1 - gz["blink"]) * (1 - gz["down"]) * (0.8 + 0.4 * gz["smile"])
+                                           * (1 - max(0.0, gz.get("jaw", 0) - 0.2))      # mouth wide open mid-word
+                                           * (1 - 0.8 * max(0.0, gz.get("brow", 0) - 0.35)))  # startled/raised brows
             rank = (size ** 0.5) * sharp * (frontal ** 1.5) * (0.7 + 0.6 * ex["energy"]) * float(f[14]) * look
             rank *= 1.0 if strict else 0.25
             c = (role, rank, str(p), f, round(score, 2), e, ex)

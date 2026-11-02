@@ -28,7 +28,7 @@ SEO_INSTRUCTIONS = (
     "stats, quotes or links. tags: 8-12 specific tags about THIS video's subject (no unrelated topics, no hashtags). "
     'Shape: {"first_lines":"","tags":[""]}'
 )
-PREP_STRATEGIES = ["search_driven", "curiosity", "hybrid_search_plus_curiosity"]
+PREP_STRATEGIES = ["hybrid_search_plus_curiosity", "curiosity", "search_driven"]
 
 
 # ── transcripts (owner drops the .srt/.vtt YouTube Studio offers for download) ──
@@ -185,7 +185,7 @@ def asset_pack(conn, tenant_id, asset_id, *, diagnosis="", runner=None, thumbnai
             raise LookupError("skip")
         payload = {"title": v["title"], "format": v["format"], "duration_min": round((v["duration_s"] or 0) / 60),
                    "search_terms": [s["term"] for s in d["search_terms"][:8]], "topic_keywords": kws[:10],
-                   "strategies": PREP_STRATEGIES, "diagnosis": diagnosis}
+                   "strategies": PREP_STRATEGIES, "diagnosis": diagnosis, "primary_keyword": keyword}
         if title_max:
             payload["max_chars"] = title_max
         from growth_os import thumbtext
