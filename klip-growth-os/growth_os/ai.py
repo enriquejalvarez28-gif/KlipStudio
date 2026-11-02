@@ -103,7 +103,7 @@ TITLE_INSTRUCTIONS = (
     "(3) be specific to THIS episode (guest's role or story, the sport, the stakes). Write like top sports podcasts: "
     "short punchy words, no filler ('Insights', 'Lessons', 'Discussion', 'Athlete Development' as padding), never start "
     "with the show name, no ALL CAPS words, no emojis, no made-up facts, names, numbers or quotes not in INPUT, no "
-    "clickbait the episode can't deliver. Add the guest name after ' | ' only if it fits. "
+    "clickbait the episode can't deliver. Never add a topic or keyword the episode (INPUT.title) isn't about, and never use the show name "Respect Your Journey" in a title. Add the guest name after ' | ' only if it fits. "
     "INPUT.thumbnail_text, when present, is the headline on the thumbnail this title will sit next to (it may come from "
     "OCR with missing spaces): never repeat its words, never contradict it, add what it doesn't say (who, the search "
     "phrase, the payoff) so title + thumbnail read as one message. For each give a one-sentence 'why'. Never state a "

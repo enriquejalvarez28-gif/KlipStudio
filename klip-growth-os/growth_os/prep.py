@@ -185,7 +185,8 @@ def asset_pack(conn, tenant_id, asset_id, *, diagnosis="", runner=None, thumbnai
             raise LookupError("skip")
         payload = {"title": v["title"], "format": v["format"], "duration_min": round((v["duration_s"] or 0) / 60),
                    "search_terms": [s["term"] for s in d["search_terms"][:8]], "topic_keywords": kws[:10],
-                   "strategies": PREP_STRATEGIES, "diagnosis": diagnosis, "primary_keyword": keyword}
+                   "strategies": PREP_STRATEGIES, "diagnosis": diagnosis,
+                   "primary_keyword": "" if kw_basis.startswith("first brand topic") else keyword}
         if title_max:
             payload["max_chars"] = title_max
         from growth_os import thumbtext

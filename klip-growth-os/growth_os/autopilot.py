@@ -601,7 +601,7 @@ def repackage_all(conn, tenant_id, *, runner=None, progress=lambda p, m: None):
             reason = "low_ctr" if not ok else "repackage"
             c = {"v": v, "reason": "low_ctr", "shorten": len(v["title"] or "") > LONG_TITLE, "missing": []}
             prop, chosen = _proposal(conn, tenant_id, c, runner=runner)  # low_ctr → thumbnail + title drafts
-            if ok and len(v["title"] or "") <= LONG_TITLE:
+            if (ok and len(v["title"] or "") <= LONG_TITLE) or (vpd_p or 0) >= 75:  # working / top views: keep
                 chosen["title"] = None  # the title is working: keep it
                 out["titles_kept"] += 1
             elif chosen.get("title"):
