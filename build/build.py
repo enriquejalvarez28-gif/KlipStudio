@@ -660,8 +660,23 @@ def shell(title, desc, canonical, body, schema, page_key, extra_head='',
      and not in klip-site.js: that file is deferred and the restore has
      already happened by the time it runs. A link to an anchor still works,
      because the hash is applied after this. -->
+<!-- The second half is for embedded viewers. When the page is shown inside
+     another page's frame, the frame keeps ITS scroll position across a
+     navigation, so a visitor who was at the footer sees the footer again
+     even though this document is at the top. Nothing above can reach that,
+     so on a fresh navigation the page also puts the host container back to
+     the top; cross-origin hosts refuse, which is why it is wrapped. It is
+     skipped on Back, when there is an anchor, and once the visitor has
+     touched the page, so it can never yank anyone away from where they
+     scrolled to. -->
 <script>try{var n=(performance.getEntriesByType&&performance.getEntriesByType('navigation')[0]||{}).type;
-history.scrollRestoration=(n==='back_forward')?'auto':'manual'}catch(e){}</script>
+history.scrollRestoration=(n==='back_forward')?'auto':'manual';
+if(n!=='back_forward'&&!location.hash){var t=0,u=function(){t=1};
+addEventListener('wheel',u,{once:true,passive:true});
+addEventListener('touchstart',u,{once:true,passive:true});
+addEventListener('keydown',u,{once:true});
+addEventListener('load',function(){if(t)return;scrollTo(0,0);
+try{if(window.parent!==window)window.parent.scrollTo(0,0)}catch(e){}},{once:true})}}catch(e){}</script>
 <title>%s</title>
 <meta name="description" content="%s">
 <link rel="canonical" href="%s">%s

@@ -828,12 +828,13 @@
             "previewMp4": "video/reels/when-is-acid-reflux-more-than-just-heartburn-loop.mp4"
           },
           {
-            "image": "img/klip-podcast-room-clean-wide.jpg",
+            "image": "img/work-branded-podcast-ryj.jpg",
             "title": "Branded Podcast Series",
             "sub": "Podcast · Multicam",
             "href": "podcasts.html",
             "category": "podcast",
-            "format": "landscape"
+            "format": "landscape",
+            "video": "https://youtu.be/fOy4tvSYPOc"
           },
           {
             "image": "img/work2.jpg",
