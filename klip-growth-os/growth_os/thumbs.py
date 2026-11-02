@@ -358,6 +358,11 @@ def _lineup(cast, orig, headline, gold, out_path, credential=""):
     tenant = next(iter(crops.values())).parent.parent.name
     frames = {r: DATA_DIR / "frames" / tenant / m["from"] for r, m in meta.items() if m.get("from")}
     from growth_os import split  # clean two-shot (owner's reference look, 2026-11-01)
+    if {"jamar", "enrique", "guest"} <= set(crops):  # always the three of us when the episode has all three
+        try:
+            return split.render3(crops, headline, gold=gold, out_path=out_path, frames=frames, name_tag=credential)
+        except ValueError:
+            pass
     return split.render(crops, headline, gold=gold, out_path=out_path, frames=frames, name_tag=credential)
 
 

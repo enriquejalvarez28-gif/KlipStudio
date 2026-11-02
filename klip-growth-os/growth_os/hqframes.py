@@ -176,27 +176,30 @@ def build_hq(conn, tenant_id, asset_id, *, faces=None, progress=lambda m: None):
     for p, _t in frames:
         img = cv2.imread(str(p))
         for f in fx.detect(img):
-            if f[2] < MIN_FACE:
+            # Strict shots win; a host with no strict shot still gets his best "relaxed" one (always 3 people).
+            if f[2] < 110:
                 continue
             size, sharp, yaw = face_quality(cv2, img, f)
-            if sharp < 0.45:
-                continue  # blurry: never a thumbnail photo
+            if sharp < 0.35:
+                continue
             e = fx.embed(img, f)
             role, score = fx.who(e)
             if role == "unsure":
                 continue
             frontal = facing_score(role, yaw)
-            if frontal < 0.4:
-                continue  # looking away from the others
+            if frontal < 0.3:
+                continue
             gz = gaze(cv2, img, f)
-            if gz is not None:
-                if gz["blink"] > 0.45 or gz["down"] > 0.5:
-                    continue  # eyes closed or looking down
-            elif not eyes_open(cv2, img, f):
-                continue  # mid-blink (fallback check)
+            if gz is not None and (gz["blink"] > 0.6 or gz["down"] > 0.65):
+                continue
+            if gz is None and not eyes_open(cv2, img, f):
+                continue
+            strict = (f[2] >= MIN_FACE and sharp >= 0.45 and frontal >= 0.4
+                      and (gz is None or (gz["blink"] <= 0.45 and gz["down"] <= 0.5)))
             ex = fx.expression(img, f)
             look = 1.0 if gz is None else (1 - gz["blink"]) * (1 - gz["down"]) * (0.8 + 0.4 * gz["smile"])
             rank = (size ** 0.5) * sharp * (frontal ** 1.5) * (0.7 + 0.6 * ex["energy"]) * float(f[14]) * look
+            rank *= 1.0 if strict else 0.25
             c = (role, rank, str(p), f, round(score, 2), e, ex)
             (unknown if role == "guest" else cands).append(c)
     # The guest = the biggest group of matching unknown faces (ignores a stray crew member or a TV in the back).

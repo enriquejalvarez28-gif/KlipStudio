@@ -37,18 +37,24 @@ def _locate(t, crop_path, frame_path):
     return img, (x, y, w, h, yaw, eye_y)
 
 
-def _panel(t, img, face, side):
+def _panel(t, img, face, side, face_h=None, eye_y=None, target_x=None, max_zoom=None):
     """The person's photo filling the canvas, face big at the outer edge (side -1 = left, +1 = right)."""
     cv2 = t.cv2
-    x, y, w, h, _, eye_y = face
-    s = FACE_H / h
+    x, y, w, h, _, src_eye = face
+    face_h, EYE = face_h or FACE_H, eye_y or EYE_Y
+    s = face_h / h
+    eye_y = src_eye
     cap = t.caption_top(img, y + h * 0.9, w * 0.6)  # burned-in captions under the chin: keep them out of frame
-    if cap is not None and EYE_Y + (cap - eye_y) * s < H:
-        s = max(s, (H - EYE_Y) / max(cap - eye_y - 4, 1))
+    if cap is not None and EYE + (cap - eye_y) * s < H:
+        s = max(s, (H - EYE) / max(cap - eye_y - 4, 1))
+        if max_zoom:
+            s = min(s, face_h / h * max_zoom)
+    _panel.cap_y = None if cap is None else EYE + (cap - eye_y) * s  # where captions land on the canvas
     big = cv2.resize(img, (int(img.shape[1] * s), int(img.shape[0] * s)), interpolation=cv2.INTER_LANCZOS4 if s > 1 else cv2.INTER_AREA)
     fx = (x + w / 2) * s
-    target_x = EDGE_X if side < 0 else W - EDGE_X
-    ox, oy = int(fx - target_x), int(eye_y * s - EYE_Y)
+    if target_x is None:
+        target_x = EDGE_X if side < 0 else W - EDGE_X
+    ox, oy = int(fx - target_x), int(eye_y * s - EYE)
     canvas = Image.new("RGB", (W, H), (20, 20, 20))
     src = Image.fromarray(cv2.cvtColor(big, cv2.COLOR_BGR2RGB))
     canvas.paste(src, (-ox, -oy))
@@ -104,7 +110,7 @@ def _choose(t, cast_crops, frames):
     return [(found[host], h_side), (found["guest"], -h_side)]
 
 
-def _headline(d, canvas, headline, gold, top, bottom):
+def _headline(d, canvas, headline, gold, top, bottom, col_w=400, max_size=140):
     """Stacked white lines with a soft shadow; the gold word(s) in a gold box with black text."""
     lines = thumbs.parse_headline(headline)
     words = [w for line in lines for w in line]
@@ -114,7 +120,7 @@ def _headline(d, canvas, headline, gold, top, bottom):
             runs[-1][1].append(w)
         else:
             runs.append((g, [w]))
-    probe = thumbs._font(125)
+    probe = thumbs._font(min(125, max_size - 10))
     groups = []  # white runs wrapped into short stacked lines (bigger type); gold runs stay one boxed line
     for g, ws in runs:
         if g:
@@ -122,20 +128,20 @@ def _headline(d, canvas, headline, gold, top, bottom):
             continue
         cur = []
         for w in ws:
-            if cur and d.textlength(" ".join(cur + [w]), font=probe) > 430:
+            if cur and d.textlength(" ".join(cur + [w]), font=probe) > col_w + 30:
                 groups.append((g, cur))
                 cur = []
             cur.append(w)
         if cur:
             groups.append((g, cur))
-    max_w = 400
+    max_w = col_w
     GAP, PAD = 14, 12  # space between lines; padding inside the gold box
 
     def metrics(f):
         x0, y0, x1, y1 = f.getbbox("HÁGQ")
         return y0, y1 - y0  # top offset, cap+descender height
 
-    size = 140
+    size = max_size
     while size > 50:
         f = thumbs._font(size)
         _, lh = metrics(f)
@@ -219,6 +225,78 @@ def render(cast_crops, headline, *, gold=None, out_path=None, frames=None, name_
             m = Image.new("L", lg.size, 0)
             ImageDraw.Draw(m).ellipse([2, 2, 94, 94], fill=255)
             canvas.paste(lg, (W - 118, 20) if people[0][1] < 0 and len(people) == 1 else ((W - 96) // 2, 14), m)
+        if out_path:
+            canvas.save(out_path, "JPEG", quality=94)
+        return canvas
+
+
+# ── Three people: Jamar | guest | Enrique (owner: "always the three of us"), same photo quality ──
+
+TRIO_X = (215, 640, 1065)
+TRIO_FACE_H, TRIO_EYE_Y = 225, 190
+TRIO_BLEND = ((335, 485), (795, 945))
+TRIO_TEXT_TOP = 430
+
+
+def render3(cast_crops, headline, *, gold=None, out_path=None, frames=None, name_tag="", **_):
+    from growth_os import lineup
+    with lineup._LOCK:
+        t = lineup._tools()
+        gold = gold or thumbs.brand_gold()
+        frames = frames or {}
+        found = {}
+        for r in ("jamar", "guest", "enrique"):
+            if r in cast_crops:
+                p = _locate(t, cast_crops[r], frames.get(r))
+                if p:
+                    found[r] = p
+        if len(found) < 3:
+            raise ValueError("need Jamar, Enrique and the guest")
+        panels, caps = [], []
+        for r, x in zip(("jamar", "guest", "enrique"), TRIO_X):
+            img, face = found[r]
+            panels.append(_grade(_panel(t, img, face, 0, face_h=TRIO_FACE_H, eye_y=TRIO_EYE_Y, target_x=x, max_zoom=1.06)))
+            if _panel.cap_y is not None:
+                caps.append(_panel.cap_y)
+        from PIL import ImageStat
+        ls = [ImageStat.Stat(p.convert("L")).mean[0] for p in panels]
+        avg = sum(ls) / 3
+        panels = [ImageEnhance.Brightness(p).enhance(max(0.85, min(1.2, avg / max(l, 1)))) for p, l in zip(panels, ls)]
+        canvas = panels[0]
+        for (a, b), p in zip(TRIO_BLEND, panels[1:]):
+            mask = Image.new("L", (W, H), 0)
+            md = ImageDraw.Draw(mask)
+            for xx in range(W):
+                v = 0 if xx < a else 255 if xx > b else int(255 * (xx - a) / (b - a))
+                md.line([(xx, 0), (xx, H)], fill=v)
+            canvas = Image.composite(p, canvas, mask)
+        # Soft dark fade at the bottom so the headline reads over shirts and mics.
+        fade = Image.new("L", (W, H), 0)
+        fd = ImageDraw.Draw(fade)
+        solid = min([c - 12 for c in caps if c < H] + [H + 1])  # burned-in captions: fully covered from here down
+        solid = min(solid, H - 60)
+        start = min(TRIO_TEXT_TOP - 110, solid - 230)
+        for yy in range(int(start), H):
+            v = 255 if yy >= solid else int(255 * max(0.0, (yy - start) / (solid - start)) ** 1.6)
+            fd.line([(0, yy), (W, yy)], fill=v)
+        canvas = Image.composite(Image.new("RGB", (W, H), (8, 8, 8)), canvas, fade)
+        d = ImageDraw.Draw(canvas)
+        canvas = _headline(d, canvas, headline, gold, TRIO_TEXT_TOP, H - 22, col_w=1120, max_size=128)
+        d = ImageDraw.Draw(canvas)
+        if name_tag:
+            nf = thumbs._font(30)
+            txt = name_tag.upper()
+            tw = d.textlength(txt, font=nf)
+            x0 = (W - tw) / 2 - 16
+            y0 = TRIO_TEXT_TOP - 58
+            d.rounded_rectangle([x0, y0, x0 + tw + 32, y0 + 44], radius=6, fill=gold)
+            d.text((x0 + 16, y0 + 4), txt, font=nf, fill=(12, 12, 12))
+        lg = thumbs._logo_from_original(None) if (thumbs.BRAND_DIR / "logo.jpg").exists() else None
+        if lg:
+            lg = lg.convert("RGB").resize((84, 84), Image.LANCZOS)
+            m = Image.new("L", lg.size, 0)
+            ImageDraw.Draw(m).ellipse([2, 2, 82, 82], fill=255)
+            canvas.paste(lg, (18, 16), m)
         if out_path:
             canvas.save(out_path, "JPEG", quality=94)
         return canvas
