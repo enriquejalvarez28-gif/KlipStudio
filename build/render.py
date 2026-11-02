@@ -714,11 +714,20 @@ def portfolio_urls(p):
 
 
 def photographers(b, D):
-    """Real photographer cards. A profile is public only when it is active,
-    not marked temp, and actually has a headshot and a provider id — the
-    three together are what "approved" means. Everything else stays private,
-    so placeholder names can live in the CMS without ever reaching a
-    visitor. First Available stays a small separate option beside them.
+    """Real photographer cards. A profile is public when it is active, not
+    marked temp, and carries the three things a visitor is choosing between:
+    a name, a headshot and a bio. That is what "approved" means, and it is
+    entirely in KLIP's hands — placeholder names can live in the CMS without
+    ever reaching a visitor.
+
+    The SimplyBook provider id is deliberately NOT part of that test. It
+    controls one thing: whether the button can open that photographer's own
+    calendar. A profile with no id still shows, and its button books a
+    photography session the normal way rather than claiming to hold a named
+    photographer KLIP cannot actually route to. So profiles can go live
+    before the booking ids exist, and sharpen when they arrive.
+
+    First Available stays a small separate option beside them.
 
     When nothing is approved yet the section does not simply collapse to a
     stray sentence: it says plainly that profiles are on the way and keeps
@@ -728,11 +737,17 @@ def photographers(b, D):
     P = (D.get('photographers') or {})
     people = [p for p in (P.get('items') or [])
               if p.get('active') and not p.get('temp')
-              and p.get('headshot') and p.get('providerId')]
+              and p.get('name') and p.get('headshot') and p.get('bio')]
 
     cards = ''
     for p in people:
         a = act({'booking': p.get('booking'), 'provider': p.get('providerId')})
+        # Only promise a named photographer when the booking can actually
+        # reach that photographer.
+        if p.get('providerId') and p.get('name'):
+            label = 'Book With %s' % p['name'].split()[0]
+        else:
+            label = 'Book A Session'
         shots = portfolio_urls(p)
         work = ''
         if shots:
@@ -750,8 +765,7 @@ def photographers(b, D):
                          'loading="lazy" decoding="async" width="800" height="1000"'),
                      esc(p.get('name', '')), esc(p.get('specialties', '')),
                      esc(p.get('bio', '')), esc(a['href']), a['attr'],
-                     esc('Book With %s' % p.get('name', '').split()[0]
-                         if p.get('name') else 'Book'), AR, work))
+                     esc(label), AR, work))
 
     fa = P.get('firstAvailable') or {}
     aside = ''
