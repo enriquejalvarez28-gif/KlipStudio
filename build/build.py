@@ -43,16 +43,22 @@ PARTS = ['brand', 'navigation', 'hero', 'sections', 'studio', 'photography',
          'booking', 'consultation', 'faq', 'specials', 'seo', 'podcast-page',
          'insights', 'media-services']
 
-LEGAL = [('privacy.html', 'privacy', '/privacy/'), ('terms.html', 'terms', '/terms/')]
+# The public URL of each page, used for canonicals, the sitemap and the
+# JSON-LD. No trailing slash: Cloudflare Pages serves /studio and answers
+# /studio/ with a 308 to it. Declaring the slashed form made every
+# canonical tag and every sitemap entry point at a redirect, which search
+# engines log as "page with redirect" and which weakens the canonical it
+# is supposed to assert. These must match what the host actually serves.
+LEGAL = [('privacy.html', 'privacy', '/privacy'), ('terms.html', 'terms', '/terms')]
 
 PAGES = [
     ('index.html', 'home', '/'),
-    ('media.html', 'media', '/media/'),
-    ('studio.html', 'studio', '/studio/'),
-    ('photography.html', 'photography', '/photography/'),
-    ('podcasts.html', 'podcasts', '/podcasts/'),
-    ('work.html', 'work', '/work/'),
-    ('about.html', 'about', '/about/'),
+    ('media.html', 'media', '/media'),
+    ('studio.html', 'studio', '/studio'),
+    ('photography.html', 'photography', '/photography'),
+    ('podcasts.html', 'podcasts', '/podcasts'),
+    ('work.html', 'work', '/work'),
+    ('about.html', 'about', '/about'),
 ]
 
 
@@ -864,11 +870,11 @@ def build():
     arts = INS.load_articles()
     ins_urls = []
 
-    hub_schema = [org_schema(D), breadcrumbs('Insights', '/insights/')]
+    hub_schema = [org_schema(D), breadcrumbs('Insights', '/insights')]
     t2, d2, share, noindex = seo_for(D, 'insights')
     I = D.get('insights') or {}
     html = shell(t2 or I.get('title', 'Insights | KLIP'),
-                 d2 or I.get('description', ''), SITE + '/insights/',
+                 d2 or I.get('description', ''), SITE + '/insights',
                  header(D, 'insights.html') + '\n<main>\n'
                  + INS.hub_main(D, arts) + '\n</main>\n' + footer(D, 'insights.html'),
                  json.dumps({"@context": "https://schema.org", "@graph": hub_schema},
@@ -878,7 +884,7 @@ def build():
     with open(os.path.join(ROOT, 'insights.html'), 'w', encoding='utf-8') as fh:
         fh.write(html)
     written.append(('insights.html', len(html)))
-    ins_urls.append('/insights/')
+    ins_urls.append('/insights')
 
     for a in arts:
         graph = [org_schema(D), INS.article_schema(a, SITE),

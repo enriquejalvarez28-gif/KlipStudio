@@ -120,7 +120,13 @@ def load_articles():
             continue
         a['slug'] = a.get('slug') or slugify(a['title'])
         a['_file'] = 'insights-%s.html' % a['slug']
-        a['_url'] = '/insights/%s/' % a['slug']
+        # The URL has to match the file the host actually serves. The page
+        # is written as insights-<slug>.html, which Cloudflare serves at
+        # /insights-<slug>; '/insights/<slug>/' is a directory that does
+        # not exist, so every article's canonical, its sitemap entry and
+        # its JSON-LD all pointed at a 404 - which tells a search engine
+        # the real page is not canonical and should not be indexed.
+        a['_url'] = '/insights-%s' % a['slug']
         out.append(a)
     out.sort(key=lambda x: (x.get('datePublished') or '', x['slug']), reverse=True)
     return out
