@@ -68,6 +68,17 @@ def main():
             continue
         for f in entries:
             if not f.get('file'):
+                # Every entry under `files:` must name one. A folder
+                # collection pasted in here instead of at the top level
+                # has no `file`, and Sveltia refuses to start at all:
+                # /admin shows a config error and nobody can edit
+                # anything. This check used to skip such an entry, which
+                # is exactly how a broken editor passed QA.
+                problems.append(('%s / %s' % (col.get('name'), f.get('name')),
+                                 ['NO "file:" — breaks /admin entirely'
+                                  + (' (looks like a folder collection '
+                                     'nested under files:)' if f.get('folder')
+                                     else '')]))
                 continue
             path = os.path.join(ROOT, f['file'])
             if not os.path.exists(path):

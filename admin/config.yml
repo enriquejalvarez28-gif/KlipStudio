@@ -2083,91 +2083,91 @@ collections:
           label: Show this service
           widget: boolean
           default: true
-  - name: insights
-    label: Insights (Blog)
-    label_singular: Article
-    folder: data/insights
-    create: true
-    slug: '{{fields.article.slug}}'
-    extension: json
-    format: json
-    summary: '{{fields.article.title}}'
+- name: insights
+  label: Insights (Blog)
+  label_singular: Article
+  folder: data/insights
+  create: true
+  slug: '{{fields.article.slug}}'
+  extension: json
+  format: json
+  summary: '{{fields.article.title}}'
+  fields:
+  - name: article
+    label: Article
+    widget: object
     fields:
-    - name: article
+    - name: published
+      label: Published
+      widget: boolean
+      default: false
+      hint: >-
+        While this is off the article has no page at all - it is not built,
+        not linked and not in the sitemap. Turn it on to publish.
+    - {name: featured, label: Feature at the top of Insights, widget: boolean, default: false}
+    - {name: title, label: Title, widget: string}
+    - name: slug
+      label: URL slug
+      widget: string
+      hint: 'Lowercase words with hyphens, e.g. how-to-prepare-for-a-headshot'
+    - name: category
+      label: Category
+      widget: select
+      options: ['Podcasting', 'Studio + Content Creation', 'Photography', 'Video + Reels', 'SEO + GEO / AI Search', 'Paid Media', 'Social Media', 'Branding + Websites', 'Creator / Live Commerce']
+    - name: author
+      label: Author
+      widget: string
+      hint: A real person. Every article gets a named author.
+    - name: reviewer
+      label: Reviewer
+      widget: string
+      required: false
+      hint: Optional. Left blank it is omitted from the page and the schema.
+    - name: datePublished
+      label: Published date
+      widget: datetime
+      format: YYYY-MM-DD
+      date_format: YYYY-MM-DD
+      time_format: false
+      picker_utc: true
+    - name: dateModified
+      label: Last updated
+      widget: datetime
+      required: false
+      format: YYYY-MM-DD
+      date_format: YYYY-MM-DD
+      time_format: false
+      picker_utc: true
+    - {name: image, label: Featured image, widget: image, required: false}
+    - {name: imageAlt, label: Image description, widget: string, required: false}
+    - name: excerpt
+      label: Excerpt
+      widget: text
+      hint: >-
+        One or two sentences. Shown on the Insights hub and used as the
+        search description when no meta description is set.
+    - name: body
       label: Article
+      widget: markdown
+      hint: >-
+        Write from KLIP's own experience. Use ## for section headings and
+        link to the service pages where it genuinely helps the reader.
+    - {name: relatedService, label: Related service page, widget: string, required: false}
+    - name: cta
+      label: Call to action
       widget: object
+      collapsed: true
+      required: false
+      hint: One CTA per article, not five.
       fields:
-      - name: published
-        label: Published
-        widget: boolean
-        default: false
-        hint: >-
-          While this is off the article has no page at all - it is not built,
-          not linked and not in the sitemap. Turn it on to publish.
-      - {name: featured, label: Feature at the top of Insights, widget: boolean, default: false}
-      - {name: title, label: Title, widget: string}
-      - name: slug
-        label: URL slug
-        widget: string
-        hint: 'Lowercase words with hyphens, e.g. how-to-prepare-for-a-headshot'
-      - name: category
-        label: Category
-        widget: select
-        options: ['Podcasting', 'Studio + Content Creation', 'Photography', 'Video + Reels', 'SEO + GEO / AI Search', 'Paid Media', 'Social Media', 'Branding + Websites', 'Creator / Live Commerce']
-      - name: author
-        label: Author
-        widget: string
-        hint: A real person. Every article gets a named author.
-      - name: reviewer
-        label: Reviewer
-        widget: string
-        required: false
-        hint: Optional. Left blank it is omitted from the page and the schema.
-      - name: datePublished
-        label: Published date
-        widget: datetime
-        format: YYYY-MM-DD
-        date_format: YYYY-MM-DD
-        time_format: false
-        picker_utc: true
-      - name: dateModified
-        label: Last updated
-        widget: datetime
-        required: false
-        format: YYYY-MM-DD
-        date_format: YYYY-MM-DD
-        time_format: false
-        picker_utc: true
-      - {name: image, label: Featured image, widget: image, required: false}
-      - {name: imageAlt, label: Image description, widget: string, required: false}
-      - name: excerpt
-        label: Excerpt
-        widget: text
-        hint: >-
-          One or two sentences. Shown on the Insights hub and used as the
-          search description when no meta description is set.
-      - name: body
-        label: Article
-        widget: markdown
-        hint: >-
-          Write from KLIP's own experience. Use ## for section headings and
-          link to the service pages where it genuinely helps the reader.
-      - {name: relatedService, label: Related service page, widget: string, required: false}
-      - name: cta
-        label: Call to action
-        widget: object
-        collapsed: true
-        required: false
-        hint: One CTA per article, not five.
-        fields:
-        - {name: label, label: Button label, widget: string, required: false}
-        - {name: href, label: Link, widget: string, required: false}
-        - {name: booking, label: Booking key, widget: string, required: false}
-      - {name: seoTitle, label: Browser title, widget: string, required: false}
-      - {name: metaDescription, label: Search description, widget: text, required: false}
-      - name: canonical
-        label: Canonical URL
-        widget: string
-        required: false
-        hint: Leave blank unless this article was published elsewhere first.
-      - {name: socialImage, label: Social share image, widget: image, required: false}
+      - {name: label, label: Button label, widget: string, required: false}
+      - {name: href, label: Link, widget: string, required: false}
+      - {name: booking, label: Booking key, widget: string, required: false}
+    - {name: seoTitle, label: Browser title, widget: string, required: false}
+    - {name: metaDescription, label: Search description, widget: text, required: false}
+    - name: canonical
+      label: Canonical URL
+      widget: string
+      required: false
+      hint: Leave blank unless this article was published elsewhere first.
+    - {name: socialImage, label: Social share image, widget: image, required: false}
