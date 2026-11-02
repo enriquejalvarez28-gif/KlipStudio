@@ -993,10 +993,17 @@ collections:
             label: Category ID
             widget: string
             required: false
+            hint: >
+              Opens this room's whole service list inside the site, so the
+              customer picks the option and the price. Prefer this over a
+              single Service ID when the room has more than one service.
           - name: serviceId
             label: Service ID
             widget: string
             required: false
+            hint: >
+              Jumps straight to one service. Leave blank when Category ID
+              is set, or the customer never sees the other options.
         - name: podcastRoom
           label: Klip Room
           widget: object
@@ -1004,10 +1011,21 @@ collections:
           - name: title
             label: Title
             widget: string
+          - name: categoryId
+            label: Category ID
+            widget: string
+            required: false
+            hint: >
+              Opens this room's whole service list inside the site, so the
+              customer picks the option and the price. Prefer this over a
+              single Service ID when the room has more than one service.
           - name: serviceId
             label: Service ID
             widget: string
             required: false
+            hint: >
+              Jumps straight to one service. Leave blank when Category ID
+              is set, or the customer never sees the other options.
         - name: blackRoom
           label: Kapture Room
           widget: object
@@ -1015,10 +1033,21 @@ collections:
           - name: title
             label: Title
             widget: string
+          - name: categoryId
+            label: Category ID
+            widget: string
+            required: false
+            hint: >
+              Opens this room's whole service list inside the site, so the
+              customer picks the option and the price. Prefer this over a
+              single Service ID when the room has more than one service.
           - name: serviceId
             label: Service ID
             widget: string
             required: false
+            hint: >
+              Jumps straight to one service. Leave blank when Category ID
+              is set, or the customer never sees the other options.
         - name: greenRoom
           label: Kreator Room
           widget: object
@@ -1026,10 +1055,21 @@ collections:
           - name: title
             label: Title
             widget: string
+          - name: categoryId
+            label: Category ID
+            widget: string
+            required: false
+            hint: >
+              Opens this room's whole service list inside the site, so the
+              customer picks the option and the price. Prefer this over a
+              single Service ID when the room has more than one service.
           - name: serviceId
             label: Service ID
             widget: string
             required: false
+            hint: >
+              Jumps straight to one service. Leave blank when Category ID
+              is set, or the customer never sees the other options.
         - name: kanvasRoom
           label: Kanvas Room
           widget: object
@@ -1037,10 +1077,21 @@ collections:
           - name: title
             label: Title
             widget: string
+          - name: categoryId
+            label: Category ID
+            widget: string
+            required: false
+            hint: >
+              Opens this room's whole service list inside the site, so the
+              customer picks the option and the price. Prefer this over a
+              single Service ID when the room has more than one service.
           - name: serviceId
             label: Service ID
             widget: string
             required: false
+            hint: >
+              Jumps straight to one service. Leave blank when Category ID
+              is set, or the customer never sees the other options.
         - name: liveSelling
           label: Live Selling
           widget: object
@@ -1048,10 +1099,21 @@ collections:
           - name: title
             label: Title
             widget: string
+          - name: categoryId
+            label: Category ID
+            widget: string
+            required: false
+            hint: >
+              Opens this room's whole service list inside the site, so the
+              customer picks the option and the price. Prefer this over a
+              single Service ID when the room has more than one service.
           - name: serviceId
             label: Service ID
             widget: string
             required: false
+            hint: >
+              Jumps straight to one service. Leave blank when Category ID
+              is set, or the customer never sees the other options.
         - name: photoStudioRental
           label: Photography Studio Rental
           widget: object
@@ -1059,10 +1121,21 @@ collections:
           - name: title
             label: Title
             widget: string
+          - name: categoryId
+            label: Category ID
+            widget: string
+            required: false
+            hint: >
+              Opens this room's whole service list inside the site, so the
+              customer picks the option and the price. Prefer this over a
+              single Service ID when the room has more than one service.
           - name: serviceId
             label: Service ID
             widget: string
             required: false
+            hint: >
+              Jumps straight to one service. Leave blank when Category ID
+              is set, or the customer never sees the other options.
         - name: photographySessions
           label: Photography Sessions
           widget: object
@@ -1081,10 +1154,21 @@ collections:
           - name: title
             label: Title
             widget: string
+          - name: categoryId
+            label: Category ID
+            widget: string
+            required: false
+            hint: >
+              Opens this room's whole service list inside the site, so the
+              customer picks the option and the price. Prefer this over a
+              single Service ID when the room has more than one service.
           - name: serviceId
             label: Service ID
             widget: string
             required: false
+            hint: >
+              Jumps straight to one service. Leave blank when Category ID
+              is set, or the customer never sees the other options.
       - name: aliases
         label: aliases
         widget: hidden
