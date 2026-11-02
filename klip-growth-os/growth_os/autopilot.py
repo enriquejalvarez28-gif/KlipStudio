@@ -294,10 +294,10 @@ def _snippet(call, video_id, quota=1):
 
 
 def _thumb_error(e):
-    body = json.dumps(e.body)[:300] if isinstance(e, HttpError) else str(e)
+    body = json.dumps(e.body)[:900] if isinstance(e, HttpError) else str(e)
     if isinstance(e, HttpError) and e.status == 403:
-        return ("YouTube refused the custom thumbnail. The channel may need phone verification: YouTube Studio → "
-                "Settings → Channel → Feature eligibility. " + body[:120])
+        return ("YouTube refused the custom thumbnail (403). Check YouTube Studio → Settings → Channel → Feature "
+                "eligibility → 'Intermediate features' is ON for this channel. YouTube said: " + body[:600])
     return body
 
 
@@ -363,7 +363,7 @@ def apply(conn, tenant_id, cid, *, transport=None, actor="owner"):
                 return sorted({str(t).strip().lower() for t in (x or [])})
             return " ".join(str(x or "").split())
         mismatch = []
-        for wait in (0, 3, 8):  # YouTube can take a few seconds to show the update
+        for wait in (0, 3, 8, 15, 30):  # YouTube can take a while to show the update
             if wait:
                 import time
                 time.sleep(wait)
@@ -375,7 +375,7 @@ def apply(conn, tenant_id, cid, *, transport=None, actor="owner"):
         err = (f"read-back mismatch on {', '.join(mismatch)}" if mismatch else "") + (thumb_err or "")
         now = utcnow()
         conn.execute("UPDATE channel_changes SET status=?, error=?, applied_at=?, verified_at=? WHERE id=?",
-                     (status, err[:500], now, now if status != "failed" else None, cid))
+                     (status, err[:1500], now, now if status != "failed" else None, cid))
         audit(conn, tenant_id, actor, "autopilot.apply", {"change": cid, "asset": vid, "changed": changed, "status": status})
         return {"id": cid, "status": status, "changed": changed, "error": err or None}
     except (HttpError, AutopilotError, youtube.ConnectorError) as e:
