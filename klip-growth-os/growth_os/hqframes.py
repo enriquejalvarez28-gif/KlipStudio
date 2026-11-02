@@ -199,14 +199,14 @@ def _pick(conn, tenant_id, asset_id, fx, cv2, cm, frames, progress, second=False
                 continue
             if gz is None and not eyes_open(cv2, img, f):
                 continue
-            strict = (f[2] >= MIN_FACE and sharp >= 0.45 and frontal >= 0.4
+            strict = (f[2] >= MIN_FACE and sharp >= 0.45 and frontal >= 0.4 and float(f[14]) >= 0.9  # hand/mic over face lowers this
                       and (gz is None or (gz["blink"] <= 0.45 and gz["down"] <= 0.5 and gz.get("jaw", 0) <= 0.45
                                           and gz.get("brow", 0) <= 0.6)))
             ex = fx.expression(img, f)
-            look = 1.0 if gz is None else ((1 - gz["blink"]) * (1 - gz["down"]) * (0.8 + 0.4 * gz["smile"])
+            look = 1.0 if gz is None else ((1 - gz["blink"]) * (1 - gz["down"]) * (0.7 + 0.7 * gz["smile"])
                                            * (1 - max(0.0, gz.get("jaw", 0) - 0.2))      # mouth wide open mid-word
                                            * (1 - 0.8 * max(0.0, gz.get("brow", 0) - 0.35)))  # startled/raised brows
-            rank = (size ** 0.5) * sharp * (frontal ** 1.5) * (0.7 + 0.6 * ex["energy"]) * float(f[14]) * look
+            rank = (size ** 0.5) * sharp * (frontal ** 1.5) * (0.7 + 0.6 * ex["energy"]) * float(f[14]) ** 3 * look
             rank *= 1.0 if strict else 0.25
             c = (role, rank, str(p), f, round(score, 2), e, ex)
             (unknown if role == "guest" else cands).append(c)
