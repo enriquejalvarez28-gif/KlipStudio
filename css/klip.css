@@ -193,8 +193,16 @@ section{position:relative}
 
 /* studio */
 .studio-split{display:grid;grid-template-columns:minmax(0,57fr) minmax(0,43fr);align-items:stretch;background:var(--white)}
-.studio-split figure{margin:0;min-height:300px;width:100%}
+.studio-split figure{margin:0;min-height:300px;width:100%;overflow:hidden}
 .studio-split img{width:100%;height:100%;object-fit:cover}
+/* A room figure and the gallery button inside it each declared their own
+   aspect-ratio - 3/2 on the figure against 4/3.1 on the button - so on a
+   phone the button came out 302px tall inside a 260px figure and painted
+   42px of photograph over the room number and its label. The figure owns
+   the shape; the button fills it. Absolute positioning is safe here: the
+   button is the figure's only child. The figure clips too, so nothing
+   added inside it later can reach the copy. */
+.studio-split .room-fig>.room-img{position:absolute;inset:0;aspect-ratio:auto;height:auto}
 .studio-copy{padding:clamp(30px,4vw,64px) clamp(26px,4vw,72px);display:flex;flex-direction:column;justify-content:center;gap:20px}
 .studio-copy .btn{align-self:flex-start;margin-top:8px}
 /* The rooms are a main reason to choose KLIP, so they get real size:
