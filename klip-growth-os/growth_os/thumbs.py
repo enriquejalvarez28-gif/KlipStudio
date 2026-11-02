@@ -357,7 +357,8 @@ def _lineup(cast, orig, headline, gold, out_path, credential=""):
     meta = json.loads((next(iter(crops.values())).parent / "cast.json").read_text())["cast"]
     tenant = next(iter(crops.values())).parent.parent.name
     frames = {r: DATA_DIR / "frames" / tenant / m["from"] for r, m in meta.items() if m.get("from")}
-    return lineup.render(crops, headline, gold=gold, out_path=out_path, backdrop_src=orig, frames=frames, name_tag=credential)
+    from growth_os import split  # clean two-shot (owner's reference look, 2026-11-01)
+    return split.render(crops, headline, gold=gold, out_path=out_path, frames=frames, name_tag=credential)
 
 
 def render(orig_path, headline, *, fmt="guest", credential="", host_paths=(), gold=None, out_path=None, cast=None):

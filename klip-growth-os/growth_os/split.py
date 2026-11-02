@@ -1,0 +1,203 @@
+"""Clean two-shot thumbnail (the look of top interview podcasts): two big, sharp, natural-colour photos straight
+from the episode frames, people at the outer edges facing in, the real studio behind them, a big stacked headline
+in the middle with the key word in an RYJ gold box. No cut-outs, no dark fades. Faces are never edited.
+"""
+
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter
+
+from growth_os import thumbs
+
+W, H = 1280, 720
+FACE_H = 300          # face box height on the canvas: big, like the reference
+EYE_Y = 300           # eyes on one line
+EDGE_X = 235          # face centre distance from the outer edge
+BLEND = (500, 780)    # where the two photos melt into each other (background only)
+
+
+def _locate(t, crop_path, frame_path):
+    """Source frame + face (x, y, w, h, yaw) of the person in their saved crop."""
+    cv2 = t.cv2
+    crop = cv2.imread(str(crop_path))
+    img, ox, oy = crop, 0, 0
+    if frame_path and frame_path.exists():
+        fr = cv2.imread(str(frame_path))
+        if fr is not None and fr.shape[0] >= crop.shape[0] and fr.shape[1] >= crop.shape[1]:
+            r = cv2.matchTemplate(cv2.cvtColor(fr, cv2.COLOR_BGR2GRAY), cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY), cv2.TM_CCOEFF_NORMED)
+            _, score, _, loc = cv2.minMaxLoc(r)
+            if score > 0.8:
+                img, (ox, oy) = fr, loc
+    cf = t.faces(crop)
+    if not cf:
+        return None
+    f = max(cf, key=lambda r: r[2] * r[3])
+    x, y, w, h = float(f[0]) + ox, float(f[1]) + oy, float(f[2]), float(f[3])
+    rex, lex, nx = float(f[4]) + ox, float(f[6]) + ox, float(f[8]) + ox
+    yaw = (nx - (rex + lex) / 2) / max(abs(lex - rex), 1.0)
+    eye_y = (float(f[5]) + float(f[7])) / 2 + oy
+    return img, (x, y, w, h, yaw, eye_y)
+
+
+def _panel(t, img, face, side):
+    """The person's photo filling the canvas, face big at the outer edge (side -1 = left, +1 = right)."""
+    cv2 = t.cv2
+    x, y, w, h, _, eye_y = face
+    s = FACE_H / h
+    cap = t.caption_top(img, y + h * 0.9, w * 0.6)  # burned-in captions under the chin: keep them out of frame
+    if cap is not None and EYE_Y + (cap - eye_y) * s < H:
+        s = max(s, (H - EYE_Y) / max(cap - eye_y - 4, 1))
+    big = cv2.resize(img, (int(img.shape[1] * s), int(img.shape[0] * s)), interpolation=cv2.INTER_LANCZOS4 if s > 1 else cv2.INTER_AREA)
+    fx = (x + w / 2) * s
+    target_x = EDGE_X if side < 0 else W - EDGE_X
+    ox, oy = int(fx - target_x), int(eye_y * s - EYE_Y)
+    canvas = Image.new("RGB", (W, H), (20, 20, 20))
+    src = Image.fromarray(cv2.cvtColor(big, cv2.COLOR_BGR2RGB))
+    canvas.paste(src, (-ox, -oy))
+    if -ox > 0 or -oy > 0 or src.width - ox < W or src.height - oy < H:  # frame edge reached: fill with a blurred copy
+        bg = src.resize((W, H)).filter(ImageFilter.GaussianBlur(30))
+        bg.paste(src, (-ox, -oy))
+        canvas = bg
+    return canvas
+
+
+def _grade(im):
+    """Crisp, bright, natural colour (same treatment for both photos)."""
+    im = ImageEnhance.Contrast(im).enhance(1.08)
+    im = ImageEnhance.Color(im).enhance(1.12)
+    return im.filter(ImageFilter.UnsharpMask(radius=1.6, percent=70, threshold=2))
+
+
+def _match(a, b):
+    """Bring two shots to the same brightness so they read as one photo."""
+    from PIL import ImageStat
+    la, lb = ImageStat.Stat(a.convert("L")).mean[0], ImageStat.Stat(b.convert("L")).mean[0]
+    t = (la + lb) / 2
+    return (ImageEnhance.Brightness(a).enhance(max(0.85, min(1.2, t / max(la, 1)))),
+            ImageEnhance.Brightness(b).enhance(max(0.85, min(1.2, t / max(lb, 1)))))
+
+
+def _choose(t, cast_crops, frames):
+    """Guest + one host, each on the side they face (looking in toward the other)."""
+    found = {}
+    for r in ("guest", "jamar", "enrique"):
+        if r in cast_crops:
+            p = _locate(t, cast_crops[r], frames.get(r))
+            if p:
+                found[r] = p
+    if "guest" not in found:
+        hosts = [r for r in ("jamar", "enrique") if r in found]
+        return [(found[r], -1 if i == 0 else 1) for i, r in enumerate(hosts[:2])]
+    gy = found["guest"][1][4]
+    g_side = -1 if gy > 0.12 else (1 if gy < -0.12 else 0)  # facing right → sits on the left
+    best = None
+    for r in ("jamar", "enrique"):
+        if r not in found:
+            continue
+        hy = found[r][1][4]
+        h_side = -1 if hy > 0.12 else (1 if hy < -0.12 else (-1 if r == "jamar" else 1))
+        fits = g_side == 0 or g_side == -h_side
+        score = (2 if fits else 0) + (1 if r == "jamar" else 0)
+        if best is None or score > best[0]:
+            best = (score, r, h_side)
+    if best is None:
+        return [(found["guest"], 1)]
+    _, host, h_side = best
+    return [(found[host], h_side), (found["guest"], -h_side)]
+
+
+def _headline(d, canvas, headline, gold, top, bottom):
+    """Stacked white lines with a soft shadow; the gold word(s) in a gold box with black text."""
+    lines = thumbs.parse_headline(headline)
+    words = [w for line in lines for w in line]
+    runs = []  # consecutive words with the same colour
+    for w, g in words:
+        if runs and runs[-1][0] == g:
+            runs[-1][1].append(w)
+        else:
+            runs.append((g, [w]))
+    probe = thumbs._font(110)
+    groups = []  # white runs re-wrapped into balanced lines; gold runs stay one boxed line
+    for g, ws in runs:
+        if g or d.textlength(" ".join(ws), font=probe) <= 640:
+            groups.append((g, ws))
+        else:
+            k = min(range(1, len(ws)), key=lambda i: max(d.textlength(" ".join(ws[:i]), font=probe),
+                                                            d.textlength(" ".join(ws[i:]), font=probe)))
+            groups += [(g, ws[:k]), (g, ws[k:])]
+    max_w = BLEND[1] - BLEND[0] + 200
+    size = 128
+    while size > 50:
+        f = thumbs._font(size)
+        heights = [size * 1.08 + (24 if g else 0) for g, _ in groups]
+        if all(d.textlength(" ".join(ws), font=f) + (40 if g else 0) <= max_w for g, ws in groups) and sum(heights) <= bottom - top:
+            break
+        size -= 4
+    f = thumbs._font(size)
+    y = top + (bottom - top - sum(size * 1.08 + (24 if g else 0) for g, _ in groups)) / 2
+    shadow = Image.new("L", (W, H), 0)
+    sd = ImageDraw.Draw(shadow)
+    items = []
+    for g, ws in groups:
+        txt = " ".join(ws)
+        tw = d.textlength(txt, font=f)
+        x = (W - tw) / 2
+        if g:
+            box = [x - 20, y, x + tw + 20, y + size * 1.08 + 18]
+            items.append(("box", box, txt, x, y + 6))
+            y += size * 1.08 + 24
+        else:
+            sd.text((x + 4, y + 6), txt, font=f, fill=200)
+            items.append(("text", None, txt, x, y))
+            y += size * 1.08
+    canvas.paste((0, 0, 0), (0, 0), shadow.filter(ImageFilter.GaussianBlur(8)))
+    d = ImageDraw.Draw(canvas)
+    for kind, box, txt, x, ty in items:
+        if kind == "box":
+            d.rectangle(box, fill=gold)
+            d.text((x, ty), txt, font=f, fill=(12, 12, 12))
+        else:
+            d.text((x, ty), txt, font=f, fill=(255, 255, 255), stroke_width=2, stroke_fill=(20, 20, 20))
+    return canvas
+
+
+def render(cast_crops, headline, *, gold=None, out_path=None, frames=None, name_tag="", **_):
+    from growth_os import lineup
+    with lineup._LOCK:
+        t = lineup._tools()
+        gold = gold or thumbs.brand_gold()
+        people = _choose(t, cast_crops, frames or {})
+        if not people:
+            raise ValueError("no usable photos for this episode")
+        panels = [(_grade(_panel(t, img, face, side)), side) for (img, face), side in people]
+        if len(panels) == 2:
+            a, b = _match(panels[0][0], panels[1][0])
+            panels = [(a, panels[0][1]), (b, panels[1][1])]
+            left = next(p for p, s in panels if s < 0) if any(s < 0 for _, s in panels) else panels[0][0]
+            right = next(p for p, s in panels if s > 0) if any(s > 0 for _, s in panels) else panels[1][0]
+            mask = Image.new("L", (W, H), 0)
+            md = ImageDraw.Draw(mask)
+            for xx in range(W):
+                v = 0 if xx < BLEND[0] else 255 if xx > BLEND[1] else int(255 * (xx - BLEND[0]) / (BLEND[1] - BLEND[0]))
+                md.line([(xx, 0), (xx, H)], fill=v)
+            canvas = Image.composite(right, left, mask)
+        else:
+            canvas = panels[0][0]
+        d = ImageDraw.Draw(canvas)
+        top, bottom = 118, H - (100 if name_tag else 40)
+        canvas = _headline(d, canvas, headline, gold, top, bottom)
+        d = ImageDraw.Draw(canvas)
+        if name_tag:
+            nf = thumbs._font(32)
+            txt = name_tag.upper()
+            tw = d.textlength(txt, font=nf)
+            x0 = (W - tw) / 2 - 16
+            d.rounded_rectangle([x0, H - 86, x0 + tw + 32, H - 38], radius=6, fill=(12, 12, 12))
+            d.text((x0 + 16, H - 82), txt, font=nf, fill=gold)
+        lg = thumbs._logo_from_original(None) if (thumbs.BRAND_DIR / "logo.jpg").exists() else None
+        if lg:
+            lg = lg.convert("RGB").resize((96, 96), Image.LANCZOS)
+            m = Image.new("L", lg.size, 0)
+            ImageDraw.Draw(m).ellipse([2, 2, 94, 94], fill=255)
+            canvas.paste(lg, (W - 118, 20) if people[0][1] < 0 and len(people) == 1 else ((W - 96) // 2, 14), m)
+        if out_path:
+            canvas.save(out_path, "JPEG", quality=94)
+        return canvas
