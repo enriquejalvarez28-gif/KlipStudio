@@ -22,11 +22,11 @@ def stream_url(video_id):
     return info["url"], float(info.get("duration") or 0)
 
 
-def sample_frames(tenant_id, video_id, n=SAMPLES, progress=lambda m: None, workers=6):
+def sample_frames(tenant_id, video_id, n=SAMPLES, progress=lambda m: None, workers=6, folder="hq"):
     """Save ~n frames spread over the episode (5%–95%); resumable cache on disk. Returns [(path, seconds)]."""
     import threading
     import cv2
-    d = DATA_DIR / "frames" / tenant_id / "hq" / video_id
+    d = DATA_DIR / "frames" / tenant_id / folder / video_id
     d.mkdir(parents=True, exist_ok=True)
     done_marker = d / "done.json"
     if done_marker.exists() and len(list(d.glob("*.jpg"))) >= n * 0.6:
@@ -171,6 +171,10 @@ def build_hq(conn, tenant_id, asset_id, *, faces=None, progress=lambda m: None):
     fx = faces or cm._Faces()
     cv2 = fx.cv2
     frames = sample_frames(tenant_id, asset_id, progress=progress)
+    return _pick(conn, tenant_id, asset_id, fx, cv2, cm, frames, progress)
+
+
+def _pick(conn, tenant_id, asset_id, fx, cv2, cm, frames, progress, second=False):
     cands = []  # (role, rank, path, face, score, embedding, expression)
     unknown = []
     for p, _t in frames:
@@ -217,6 +221,12 @@ def build_hq(conn, tenant_id, asset_id, *, faces=None, progress=lambda m: None):
     for c in cands:
         if c[1] > best.get(c[0], (None, 0))[1]:
             best[c[0]] = c
+    if not second and not {"jamar", "enrique"} <= set(best):  # a host is missing: scan the episode more densely
+        try:
+            more = sample_frames(tenant_id, asset_id, n=144, progress=progress, folder="hq2")
+            return _pick(conn, tenant_id, asset_id, fx, cv2, cm, frames + more, progress, second=True)
+        except Exception:
+            pass
     if not best:
         raise RuntimeError("no sharp, camera-facing shots found in the video")
     out_dir = DATA_DIR / "cast" / tenant_id / asset_id
