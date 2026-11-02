@@ -8,9 +8,9 @@ from PIL import Image, ImageDraw, ImageEnhance, ImageFilter
 from growth_os import thumbs
 
 W, H = 1280, 720
-FACE_H = 300          # face box height on the canvas: big, like the reference
+FACE_H = 285          # face box height on the canvas: big, like the reference
 EYE_Y = 300           # eyes on one line
-EDGE_X = 235          # face centre distance from the outer edge
+EDGE_X = 225          # face centre distance from the outer edge
 BLEND = (500, 780)    # where the two photos melt into each other (background only)
 
 
@@ -114,17 +114,22 @@ def _headline(d, canvas, headline, gold, top, bottom):
             runs[-1][1].append(w)
         else:
             runs.append((g, [w]))
-    probe = thumbs._font(110)
-    groups = []  # white runs re-wrapped into balanced lines; gold runs stay one boxed line
+    probe = thumbs._font(125)
+    groups = []  # white runs wrapped into short stacked lines (bigger type); gold runs stay one boxed line
     for g, ws in runs:
-        if g or d.textlength(" ".join(ws), font=probe) <= 640:
+        if g:
             groups.append((g, ws))
-        else:
-            k = min(range(1, len(ws)), key=lambda i: max(d.textlength(" ".join(ws[:i]), font=probe),
-                                                            d.textlength(" ".join(ws[i:]), font=probe)))
-            groups += [(g, ws[:k]), (g, ws[k:])]
-    max_w = BLEND[1] - BLEND[0] + 200
-    size = 128
+            continue
+        cur = []
+        for w in ws:
+            if cur and d.textlength(" ".join(cur + [w]), font=probe) > 430:
+                groups.append((g, cur))
+                cur = []
+            cur.append(w)
+        if cur:
+            groups.append((g, cur))
+    max_w = 430
+    size = 140
     while size > 50:
         f = thumbs._font(size)
         heights = [size * 1.08 + (24 if g else 0) for g, _ in groups]
@@ -155,7 +160,7 @@ def _headline(d, canvas, headline, gold, top, bottom):
             d.rectangle(box, fill=gold)
             d.text((x, ty), txt, font=f, fill=(12, 12, 12))
         else:
-            d.text((x, ty), txt, font=f, fill=(255, 255, 255), stroke_width=2, stroke_fill=(20, 20, 20))
+            d.text((x, ty), txt, font=f, fill=(255, 255, 255), stroke_width=5, stroke_fill=(10, 10, 10))
     return canvas
 
 
@@ -181,6 +186,14 @@ def render(cast_crops, headline, *, gold=None, out_path=None, frames=None, name_
             canvas = Image.composite(right, left, mask)
         else:
             canvas = panels[0][0]
+        # Calm the busy studio wall behind the headline (centre column only; faces untouched).
+        band = Image.new("L", (W, H), 0)
+        bd = ImageDraw.Draw(band)
+        for xx in range(W):
+            v = max(0.0, 1 - abs(xx - W / 2) / 260)
+            bd.line([(xx, 0), (xx, H)], fill=int(255 * min(1.0, v * 1.4)))
+        calm = ImageEnhance.Brightness(canvas.filter(ImageFilter.GaussianBlur(9))).enhance(0.62)
+        canvas = Image.composite(calm, canvas, band)
         d = ImageDraw.Draw(canvas)
         top, bottom = 118, H - (100 if name_tag else 40)
         canvas = _headline(d, canvas, headline, gold, top, bottom)
