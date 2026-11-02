@@ -53,6 +53,26 @@
         "serviceId": "",
         "title": "Studio Tour",
         "categoryId": "7"
+      },
+      "podcastSelfService": {
+        "title": "Klip Room — Self-Service",
+        "categoryId": "1",
+        "serviceId": "12"
+      },
+      "podcastTechnician": {
+        "title": "Klip Room — With Technician",
+        "categoryId": "1",
+        "serviceId": "23"
+      },
+      "podcastFullService": {
+        "title": "Klip Room — Full-Service",
+        "categoryId": "1",
+        "serviceId": "25"
+      },
+      "podcastPremium": {
+        "title": "Klip Room — Premium",
+        "categoryId": "1",
+        "serviceId": "20"
       }
     },
     "aliases": {

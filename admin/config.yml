@@ -1043,6 +1043,94 @@ collections:
             hint: >
               Jumps straight to one service. Leave blank when Category ID
               is set, or the customer never sees the other options.
+        - name: podcastSelfService
+          label: Podcast — Self-Service ($179)
+          widget: object
+          fields:
+          - name: title
+            label: Title
+            widget: string
+          - name: categoryId
+            label: Category ID
+            widget: string
+            required: false
+            hint: >
+              Opens this room's whole service list inside the site, so the
+              customer picks the option and the price. Prefer this over a
+              single Service ID when the room has more than one service.
+          - name: serviceId
+            label: Service ID
+            widget: string
+            required: false
+            hint: >
+              Jumps straight to one service. Leave blank when Category ID
+              is set, or the customer never sees the other options.
+        - name: podcastTechnician
+          label: Podcast — With Technician ($239)
+          widget: object
+          fields:
+          - name: title
+            label: Title
+            widget: string
+          - name: categoryId
+            label: Category ID
+            widget: string
+            required: false
+            hint: >
+              Opens this room's whole service list inside the site, so the
+              customer picks the option and the price. Prefer this over a
+              single Service ID when the room has more than one service.
+          - name: serviceId
+            label: Service ID
+            widget: string
+            required: false
+            hint: >
+              Jumps straight to one service. Leave blank when Category ID
+              is set, or the customer never sees the other options.
+        - name: podcastFullService
+          label: Podcast — Full-Service ($299)
+          widget: object
+          fields:
+          - name: title
+            label: Title
+            widget: string
+          - name: categoryId
+            label: Category ID
+            widget: string
+            required: false
+            hint: >
+              Opens this room's whole service list inside the site, so the
+              customer picks the option and the price. Prefer this over a
+              single Service ID when the room has more than one service.
+          - name: serviceId
+            label: Service ID
+            widget: string
+            required: false
+            hint: >
+              Jumps straight to one service. Leave blank when Category ID
+              is set, or the customer never sees the other options.
+        - name: podcastPremium
+          label: Podcast — Premium ($399)
+          widget: object
+          fields:
+          - name: title
+            label: Title
+            widget: string
+          - name: categoryId
+            label: Category ID
+            widget: string
+            required: false
+            hint: >
+              Opens this room's whole service list inside the site, so the
+              customer picks the option and the price. Prefer this over a
+              single Service ID when the room has more than one service.
+          - name: serviceId
+            label: Service ID
+            widget: string
+            required: false
+            hint: >
+              Jumps straight to one service. Leave blank when Category ID
+              is set, or the customer never sees the other options.
         - name: blackRoom
           label: Kapture Room
           widget: object

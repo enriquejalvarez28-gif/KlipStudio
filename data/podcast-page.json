@@ -8,19 +8,20 @@
         "Pick Your Help"
       ],
       "body": "From the room on its own to a finished episode with clips. Pick the level of help you want and book it.",
-      "note": "Live prices, availability and add-ons are confirmed at checkout.",
+      "note": "Prices are per hour and shown as they are charged at checkout. Restrictions apply: room capacity, what each package includes and any add-ons are confirmed in the booking before you pay.",
       "items": [
         {
           "name": "Self-Service",
           "positioning": "For experienced creators who want the room and equipment.",
           "includes": [
+            "1 to 2 people only",
             "The room for your booked time",
             "Cameras, audio and lighting configured before you arrive",
             "Teleprompter where the service includes it",
             "Your raw files delivered after the session"
           ],
-          "price": "",
-          "booking": "podcastRoom",
+          "price": "$179",
+          "booking": "podcastSelfService",
           "cta": "Book Room",
           "active": true,
           "bestValue": false
@@ -29,12 +30,13 @@
           "name": "With Technician",
           "positioning": "For clients who want someone operating the session.",
           "includes": [
+            "Required for 3 or more people",
             "Everything in Self-Service",
             "A KLIP technician running the session",
             "Camera switching and audio monitored live"
           ],
-          "price": "",
-          "booking": "",
+          "price": "$239",
+          "booking": "podcastTechnician",
           "cta": "Book Room",
           "active": true,
           "bestValue": false
@@ -43,13 +45,14 @@
           "name": "Full-Service Podcast",
           "positioning": "For clients who want to record and receive a finished episode.",
           "includes": [
+            "Up to 3 people",
             "Recording with a technician",
             "Multicam episode edit",
             "Mastered audio",
             "Branding elements where the package includes them"
           ],
-          "price": "",
-          "booking": "",
+          "price": "$299",
+          "booking": "podcastFullService",
           "cta": "Book Room",
           "active": true,
           "bestValue": true
@@ -58,13 +61,14 @@
           "name": "Premium Content Package",
           "positioning": "For clients who want the episode plus social assets.",
           "includes": [
+            "Up to 3 people",
             "4K or premium recording where applicable",
             "Episode edit",
             "Short clips, captions and thumbnails where the package includes them"
           ],
-          "price": "",
-          "booking": "",
-          "cta": "Let's Talk",
+          "price": "$399",
+          "booking": "podcastPremium",
+          "cta": "Book Room",
           "active": true,
           "bestValue": false
         }
