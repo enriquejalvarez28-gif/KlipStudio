@@ -2,9 +2,30 @@ KLIP WEBSITE — WHAT IS LEFT
 Verified against the live site on 2026-11-03, not from memory.
 Everything marked /admin is a form field, no code.
 
-THE ONE THING STOPPING LAUNCH
------------------------------
-A. THE DOMAIN STILL POINTS AT WIX
+DONE ON 2026-11-03
+------------------
+A. DOMAIN MOVED TO CLOUDFLARE  (done)
+   theklipstudio.com now answers from jillian.ns.cloudflare.com and
+   yisroel.ns.cloudflare.com. All 16 records were mirrored into
+   Cloudflare BEFORE the switch -- the five Google MX, SPF, DKIM,
+   DMARC, the GHL/Mailgun mail subtree, and the Wix web records, so
+   the old site kept serving and no mail was interrupted.
+   The Mailgun CNAME was set to DNS only; proxying it would have
+   broken sending.
+   REMAINING: Cloudflare is verifying the nameservers (1-2 hrs). Once
+   the zone shows Active, add theklipstudio.com and www as custom
+   domains on the Pages project. That one step swaps the site from
+   Wix to the new one.
+
+B. LEAD CAPTURE  (done)
+   Make webhook "KLIP Website Leads" feeds the scenario
+   "KLIP - Website Lead Alert", which emails info@theklipstudio.com.
+   Tested end to end: the hook answers {"ok":true} with HTTP 200.
+   LEAD_WEBHOOK_URL is stored in Cloudflare as an encrypted Secret.
+
+OLD NOTE, KEPT FOR HISTORY
+--------------------------
+A0. THE DOMAIN STILL POINTED AT WIX
    theklipstudio.com serves the old Wix site today. The new site is
    built, deployed and working at klipstudio.pages.dev. Nothing else
    blocks going live.
@@ -20,7 +41,7 @@ A. THE DOMAIN STILL POINTS AT WIX
 
 BEFORE THE FIRST REAL VISITOR
 -----------------------------
-B. LEAD CAPTURE RETURNS AN ERROR
+B0. LEAD CAPTURE RETURNED AN ERROR
    The visibility scanner itself works — /api/visibility answers and
    the scores render. But when someone then submits their name and
    email, functions/api/lead.js has no LEAD_WEBHOOK_URL, so it answers
