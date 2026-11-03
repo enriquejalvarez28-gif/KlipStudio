@@ -60,6 +60,10 @@ def apply_approved(conn, tenant_id, progress):
     return {t: autopilot.apply_approved(conn, t, progress=progress) for t in _tenants(conn, tenant_id, include_demo=False)}
 
 
+def retry_thumbnails(conn, tenant_id, progress):
+    return {t: autopilot.retry_thumbnails(conn, t, progress=progress) for t in _tenants(conn, tenant_id, include_demo=False)}
+
+
 def redraft_open(conn, tenant_id, progress):
     """Rebuild every waiting draft with the current title/description rules (drafts only, nothing published)."""
     out = {}
@@ -105,6 +109,7 @@ REGISTRY = {
     "clean_tags": clean_tags,
     "repackage_all": repackage_all,
     "redraft_open": redraft_open,
+    "retry_thumbnails": retry_thumbnails,
     "apply_approved": apply_approved,
     "weekly_report": _report("weekly"),
     "monthly_report": _report("monthly"),

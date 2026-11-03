@@ -638,3 +638,30 @@ def apply_approved(conn, tenant_id, *, actor="owner", progress=lambda p, m: None
         except Exception as e:
             out["failed"].append(f"{cid}: {str(e)[:150]}")
     return out
+
+
+def retry_thumbnails(conn, tenant_id, *, actor="owner", transport=None, progress=lambda p, m: None):
+    """Retry ONLY the thumbnail upload of changes the owner already approved (status partial/failed). Records
+    YouTube's full answer so a refusal can be diagnosed."""
+    rows = conn.execute("""SELECT * FROM channel_changes WHERE tenant_id=? AND status IN ('partial','failed') AND auto=0
+                           AND decided_at>=? ORDER BY decided_at""", (tenant_id, THUMBS_FROM)).fetchall()
+    rows = [r for r in rows if json.loads(r["chosen_json"] or "{}").get("thumbnail")]
+    if not rows:
+        return {"retried": 0}
+    a, http, call = _session(conn, tenant_id, transport)
+    out = {"retried": len(rows), "ok": [], "refused": []}
+    for i, r in enumerate(rows):
+        progress(int(100 * i / len(rows)), f"thumbnail {i + 1}/{len(rows)}")
+        ch = json.loads(r["chosen_json"])
+        p = DATA_DIR / "previews" / tenant_id / r["asset_id"] / ch["thumbnail"]
+        try:
+            call("POST", UPLOAD_URL, params={"videoId": r["asset_id"], "uploadType": "media"}, data=p.read_bytes(),
+                 content_type="image/jpeg", quota_units=50, log_name="youtube.thumbnails.set")
+            conn.execute("UPDATE channel_changes SET status='verified', error='', verified_at=? WHERE id=?", (utcnow(), r["id"]))
+            out["ok"].append(r["asset_id"])
+            audit(conn, tenant_id, actor, "autopilot.thumbnail_retry", {"change": r["id"], "asset": r["asset_id"], "ok": True})
+        except (HttpError, OSError) as e:
+            body = json.dumps(e.body) if isinstance(e, HttpError) else str(e)
+            conn.execute("UPDATE channel_changes SET error=? WHERE id=?", (("thumbnail retry refused: " + body)[:1500], r["id"]))
+            out["refused"].append({"asset": r["asset_id"], "status": getattr(e, "status", None), "body": body[:800]})
+    return out
