@@ -669,9 +669,18 @@ body.cursor-link .cursor-ring{width:58px;height:58px;margin:-29px 0 0 -29px}
 .mdl-body{flex:1 1 auto;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch}
 .mdl-frame{width:100%;height:min(72vh,760px);border:0;display:block;background:#fff}
 /* host for the official SimplyBook / Calendly widgets: one scroll area,
-   never a second scrollbar, never a sideways scroll */
-.mdl-widget{width:100%;min-height:min(72vh,760px);background:#fff;overflow-x:hidden}
-.mdl-widget iframe{width:100%!important;min-width:0!important;height:min(72vh,760px);border:0;display:block}
+   never a second scrollbar, never a sideways scroll.
+
+   The iframe gets NO fixed height. SimplyBook measures its own content
+   and posts the height it needs; klip-site.js applies it, and .mdl-body
+   above does the scrolling. Pinning this to 72vh is what hid the fourth
+   Klip Room package: the service list is about 1400px tall with four
+   cards in a three-across grid, so the Premium one wrapped to a second
+   row below the frame and looked, to anyone who did not think to scroll
+   inside the booking window, like it did not exist. min-height only
+   keeps the box from collapsing before the first measurement lands. */
+.mdl-widget{width:100%;min-height:420px;background:#fff;overflow-x:hidden}
+.mdl-widget iframe{width:100%!important;min-width:0!important;min-height:420px;border:0;display:block}
 .mdl-foot{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;justify-content:space-between;
   padding:14px clamp(16px,2.4vw,28px);border-top:1px solid var(--line);font-size:12.5px;color:var(--gray)}
 .mdl-foot a{text-decoration:underline;text-underline-offset:3px}

@@ -694,6 +694,36 @@
          has been filled in. It renders inside the KLIP modal — same
          chrome, same header, no redirect. Returns false if unavailable
          so the caller can embed the booking page instead. */
+      /* SimplyBook measures its own content and posts the height it
+         wants. Without this the iframe keeps whatever height CSS gave
+         it, and anything past one screen is invisible unless the
+         visitor guesses to scroll inside the frame — which is how the
+         fourth Klip Room package came to look missing.
+
+         Only messages from the configured SimplyBook host are trusted,
+         and only the one number is read from them; nothing in the
+         message is executed or written to the page. */
+      var sbSized=false;
+      addEventListener('message', function(e){
+        var w=B.widget||{};
+        if(!w.company || e.origin!=='https://'+w.company+'.simplybook.me') return;
+        var d=e.data;
+        if(typeof d==='string'){ try{ d=JSON.parse(d); }catch(x){ return; } }
+        if(!d || typeof d!=='object') return;
+        var host=document.getElementById('sb-widget');
+        var f=host && host.querySelector('iframe');
+        if(!f) return;
+        if(d.event==='updateWidgetSize' && d.height>0){
+          f.style.height=Math.max(420, Math.round(d.height))+'px';
+          sbSized=true;
+        }
+        /* each step starts at its own top, not halfway down the last one */
+        if(d.event==='stepChanged'){
+          var b=document.getElementById('booking-body');
+          if(b) b.scrollTop=0;
+        }
+      });
+
       var sbScript=null;
       function simplybookWidget(host, key, provider){
         var w=B.widget||{};
@@ -743,7 +773,17 @@
         }
         /* preferred: the official SimplyBook widget inside this modal */
         body.innerHTML='<div id="sb-widget" class="mdl-widget"></div>';
+        sbSized=false;
         if(simplybookWidget(document.getElementById('sb-widget'), key, provider)){
+          /* If the height message never arrives, give the frame enough
+             room for the longest step rather than one screen, so a
+             service can never be hidden below the fold again. */
+          setTimeout(function(){
+            if(sbSized || openEl!==mBooking) return;
+            var h=document.getElementById('sb-widget');
+            var f=h && h.querySelector('iframe');
+            if(f) f.style.height='1500px';
+          }, 4000);
           track('booking_modal_opened',{key:key,provider:provider||'',mode:'widget'});
           return;
         }
