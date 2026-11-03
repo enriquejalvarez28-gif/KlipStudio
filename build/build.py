@@ -12,11 +12,36 @@ JavaScript.
 Editing stays where it was: /admin writes the JSON, this build turns it into
 pages. Run it after any content change (Cloudflare Pages runs it on deploy).
 """
+import hashlib
 import json
 import os
 import re
 import sys
 from datetime import date, datetime, timezone
+
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_STAMPS = {}
+
+
+def asset(path):
+    """A stylesheet or script URL with a short hash of its contents.
+
+    Cloudflare serves css and js with max-age=14400, so a phone that
+    loaded the site keeps those files for four hours. The HTML is always
+    revalidated, which is what made this dangerous rather than merely
+    slow: a fix went live, the HTML updated, and the browser kept
+    pairing it with the previous stylesheet. A visitor saw the scan
+    report's white slabs for hours after they were fixed, and no amount
+    of redeploying reached them.
+
+    The hash changes only when the file does, so unchanged assets still
+    cache for the full four hours and a changed one is a new URL that
+    every browser fetches immediately.
+    """
+    if path not in _STAMPS:
+        with open(os.path.join(ROOT_DIR, path), 'rb') as fh:
+            _STAMPS[path] = hashlib.md5(fh.read()).hexdigest()[:10]
+    return '%s?v=%s' % (path, _STAMPS[path])
 
 
 def build_date():
@@ -655,7 +680,7 @@ def site_head(D):
 
 def shell(title, desc, canonical, body, schema, page_key, extra_head='',
           config='{}', share='', noindex=False, site_head=''):
-    return """<!doctype html>
+    return ("""<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -705,7 +730,7 @@ try{if(window.parent!==window)window.parent.scrollTo(0,0)}catch(e){}},{once:true
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/klip.css">
+<link rel="stylesheet" href="{CSS_HREF}">
 %s
 <script type="application/ld+json">
 %s
@@ -714,14 +739,16 @@ try{if(window.parent!==window)window.parent.scrollTo(0,0)}catch(e){}},{once:true
 <body class="js-motion" data-page="%s">
 %s
 <script type="application/json" id="klip-config">%s</script>
-<script src="js/klip-site.js" defer></script>
+<script src="{JS_HREF}" defer></script>
 </body>
 </html>
 """ % (R.esc(title), R.esc(desc), canonical,
        '\n<meta name="robots" content="noindex,nofollow">' if noindex else '',
        R.esc(title), R.esc(desc), canonical, R.esc(share),
        R.esc(title), R.esc(desc), R.esc(share), site_head,
-       extra_head, schema, page_key, body, config)
+       extra_head, schema, page_key, body, config)).replace(
+        '{CSS_HREF}', asset('css/klip.css')).replace(
+        '{JS_HREF}', asset('js/klip-site.js'))
 
 
 def org_schema(D):
