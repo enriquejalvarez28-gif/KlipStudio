@@ -62,10 +62,13 @@ h2 .dot--q{width:auto;height:auto;border-radius:0;background:none;text-indent:0;
 }
 
 /* ---------- buttons ---------- */
+/* The buttons carry the whole business, so they are sized to be read
+   and hit, not to be tasteful about it: a larger label and a taller tap
+   target on every screen. */
 .btn{
   display:inline-flex;align-items:center;gap:22px;justify-content:space-between;
-  font-family:'Montserrat',sans-serif;font-size:12px;font-weight:700;letter-spacing:.14em;
-  text-transform:uppercase;padding:16px 22px;border:1px solid transparent;
+  font-family:'Montserrat',sans-serif;font-size:13.5px;font-weight:700;letter-spacing:.13em;
+  text-transform:uppercase;padding:19px 28px;border:1px solid transparent;
   transition:background .25s ease,color .25s ease,border-color .25s ease,transform .25s ease;
   white-space:nowrap;
 }
@@ -352,7 +355,7 @@ section{position:relative}
   .services{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
   .service{padding:20px 16px 24px}
   .pod-grid{
-    grid-auto-flow:column;grid-auto-columns:91vw;grid-template-columns:none;
+    grid-auto-flow:column;grid-auto-columns:84vw;grid-template-columns:none;
     overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;
     margin:0 calc(var(--gutter)*-1);padding:0 var(--gutter) 6px;
   }
@@ -367,7 +370,7 @@ section{position:relative}
   .studio-split--room .photo-actions .btn{flex:1 1 100%;justify-content:space-between}
   /* one large room at a time — a thumbnail sells nothing */
   .rooms{
-    grid-auto-flow:column;grid-auto-columns:91vw;grid-template-columns:none;
+    grid-auto-flow:column;grid-auto-columns:84vw;grid-template-columns:none;
     overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;
     margin:0 calc(var(--gutter)*-1);padding:0 var(--gutter) 6px;
   }
@@ -992,12 +995,16 @@ a.ind:hover img{transform:scale(1.06)}
    Carousel position dots. Only shown when a rail actually overflows —
    the script hides them on desktop where the same markup is a grid.
 ------------------------------------------------------------------ */
-.rail-dots{display:flex;justify-content:center;gap:7px;margin:12px 0 0}
+/* The dots are the only "there is more than one" signal left when a
+   phone has Reduce Motion on, because the rail then does not advance by
+   itself. At 7px and 18% black they were close to invisible, so a
+   visitor saw one room and assumed that was the offer. */
+.rail-dots{display:flex;justify-content:center;gap:9px;margin:14px 0 0}
 .rail-dots[hidden]{display:none}
-.rail-dot{width:7px;height:7px;padding:0;border:0;border-radius:50%;
-  background:rgba(0,0,0,.18);transition:background .25s ease,transform .25s ease;cursor:pointer}
-.rail-dot.is-on{background:var(--red);transform:scale(1.25)}
-.sec--dark .rail-dot,.sec--ink .rail-dot{background:rgba(255,255,255,.26)}
+.rail-dot{width:9px;height:9px;padding:0;border:0;border-radius:50%;
+  background:rgba(0,0,0,.32);transition:background .25s ease,transform .25s ease;cursor:pointer}
+.rail-dot.is-on{background:var(--red);transform:scale(1.45)}
+.sec--dark .rail-dot,.sec--ink .rail-dot{background:rgba(255,255,255,.42)}
 .sec--dark .rail-dot.is-on,.sec--ink .rail-dot.is-on{background:#fff}
 
 /* ------------------------------------------------------------------
@@ -2202,6 +2209,19 @@ input:focus-visible,[tabindex]:focus-visible{
 .ins-grid--lead .ins-body p{color:#d5d3cf}
 .ins-grid--lead .ins-meta{color:#b9b7b3}
 .ins-grid--lead .ins-cat{color:#ff5a68}
+
+/* On a phone the lead article stops being an overlay.
+   The text sits on the picture absolutely, which works while the
+   picture is wide enough to be tall. At 390px the image is 151px high
+   and the headline plus standfirst need 300px, so the copy escaped
+   upward out of its own card and printed over the photo and the page
+   above it. Below 760px the card is just a picture with words under
+   it — no overlap whatever the headline length. */
+@media (max-width:760px){
+  .ins-grid--lead .ins-card{background:var(--char)}
+  .ins-grid--lead .ins-body{position:static;max-width:none;padding:20px}
+  .ins-grid--lead .ins-img::after{background:none}
+}
 .ins-filters{border-bottom:var(--rule) solid var(--line);padding-bottom:16px}
 
 /* §12 About / FAQ — strong accordion rows on warm paper, not thin white
