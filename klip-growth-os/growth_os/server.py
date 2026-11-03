@@ -638,6 +638,13 @@ def _run_once(db_path):
         f.unlink()
         c = db.connect(db_path)
         for k in kinds:
+            if k == "retry_thumbnails":  # quick (5 uploads): run now and keep the answer next to the app
+                try:
+                    res = REGISTRY[k](c, "ryj-media", lambda p, m: None)
+                except Exception as e:
+                    res = {"error": str(e)[:500]}
+                (Path(__file__).resolve().parent.parent / "RETRY_RESULT.json").write_text(json.dumps(res, indent=1))
+                continue
             scheduler.enqueue(c, k, tenant_id="ryj-media", trigger="manual")
         c.commit()
         c.close()
@@ -673,9 +680,9 @@ def serve(port=8765, db_path=None, open_browser=False, with_scheduler=True, watc
     srv.db_path = db_path
     sched = None
     if with_scheduler:
+        _run_once(db_path)  # before the scheduler starts, so an urgent retry isn't stuck behind a long job
         sched = scheduler.Scheduler(REGISTRY, db_path)
         sched.start()
-        _run_once(db_path)
     print(f"Klip Growth OS running at {url}  (Ctrl+C to stop) · code {code_fingerprint()[:10]}")
     if watch:
         threading.Thread(target=_watch, args=(srv, sched, port, with_scheduler, db_path), daemon=True).start()
