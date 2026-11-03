@@ -21,8 +21,8 @@
     ],
     "emptyNote": "The first articles are being written. Check back shortly.",
     "cta": {
-      "label": "Let's Talk",
-      "consult": "1"
+      "label": "Book The Studio",
+      "booking": "studioRentals"
     }
   }
 }

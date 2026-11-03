@@ -1946,6 +1946,7 @@ collections:
         fields:
         - {name: label, label: Label, widget: string}
         - {name: consult, label: Consultation topic, widget: string, required: false}
+        - {name: booking, label: Booking key, widget: string, required: false, hint: "A booking key such as studioRentals or podcastRoom opens the booking window instead of the consultation panel. Leave empty to use the consultation topic above."}
   - name: podcastPackages
     label: Podcast packages
     file: data/podcast-page.json
