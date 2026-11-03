@@ -721,6 +721,9 @@ try{if(window.parent!==window)window.parent.scrollTo(0,0)}catch(e){}},{once:true
 <meta property="og:description" content="%s">
 <meta property="og:url" content="%s">
 <meta property="og:image" content="%s">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Klip Studio podcast room, set with chairs, microphones and lighting">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="%s">
 <meta name="twitter:description" content="%s">
