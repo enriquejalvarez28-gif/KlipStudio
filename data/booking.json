@@ -12,7 +12,7 @@
     },
     "config": {
       "studioRentals": {
-        "categoryId": "",
+        "categoryId": "1",
         "serviceId": "",
         "title": "Studio Rentals"
       },

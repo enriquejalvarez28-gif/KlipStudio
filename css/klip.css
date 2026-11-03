@@ -599,7 +599,11 @@ body.cursor-link .cursor-ring{width:58px;height:58px;margin:-29px 0 0 -29px}
 .score b{display:block;font-family:'Montserrat',sans-serif;font-size:10.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#bdbdbd}
 .score .num{font-family:'Montserrat',sans-serif;font-size:clamp(26px,2.6vw,38px);font-weight:800;letter-spacing:-.02em;margin:10px 0 4px;display:flex;align-items:baseline;gap:8px}
 .score .num i{font-style:normal;font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#bdbdbd}
-.bar{height:3px;background:rgba(255,255,255,.2);margin-top:12px}
+/* The meter is a <span>. Without display:block it stays inline, height
+   is ignored on it, and the <i> fill inside — display:block, height:100%
+   — resolves against an auto height and grows to the full column, so the
+   scan result painted four solid white slabs over its own findings. */
+.bar{display:block;height:3px;background:rgba(255,255,255,.2);margin-top:12px}
 .bar i{display:block;height:100%;background:#fff;width:0;transition:width .9s cubic-bezier(.2,.7,.2,1)}
 .bar.warn i{background:var(--red)}
 .findings{list-style:none;margin:clamp(24px,3vw,38px) 0 0;padding:0}
@@ -655,11 +659,14 @@ body.cursor-link .cursor-ring{width:58px;height:58px;margin:-29px 0 0 -29px}
 
 
 /* ============ MODALS: booking / consultation / photographers ============ */
-.mdl{position:fixed;inset:0;z-index:110;display:none;align-items:center;justify-content:center;padding:clamp(12px,3vw,40px);
+.mdl{position:fixed;inset:0;z-index:110;display:none;align-items:center;justify-content:center;padding:clamp(8px,1.6vw,22px);
   background:rgba(6,6,6,.9)}
 .mdl.is-open{display:flex}
-.mdl-box{position:relative;background:var(--white);width:min(980px,100%);max-height:min(88vh,920px);display:flex;flex-direction:column}
-.mdl-box--wide{width:min(1100px,100%)}
+/* Booking is the thing this site exists to do, so the window gets as
+   much of the screen as the frame around it can spare. A short window
+   is what made a whole package look like it did not exist. */
+.mdl-box{position:relative;background:var(--white);width:min(980px,100%);max-height:96vh;display:flex;flex-direction:column}
+.mdl-box--wide{width:min(1320px,100%)}
 .mdl-top{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:18px clamp(16px,2.4vw,28px);
   border-bottom:1px solid var(--line);flex:0 0 auto}
 .mdl-top h2{font-size:clamp(15px,1.4vw,19px);letter-spacing:-.01em;text-transform:uppercase}
@@ -1381,7 +1388,7 @@ figure.has-gallery{position:relative}
   opacity:0;transition:opacity .26s ease}
 .sp.is-open{opacity:1}
 .sp[hidden]{display:none}
-.sp-box{position:relative;width:min(100%,600px);max-height:86vh;overflow:auto;
+.sp-box{position:relative;width:min(100%,600px);max-height:92vh;overflow:auto;
   background:var(--white);display:grid;grid-template-columns:minmax(0,1fr);
   transform:translateY(14px);transition:transform .3s cubic-bezier(.16,1,.3,1)}
 .sp.is-open .sp-box{transform:none}
@@ -1389,7 +1396,11 @@ figure.has-gallery{position:relative}
   border:0;background:rgba(255,255,255,.9);color:var(--ink);font-size:25px;
   line-height:1;cursor:pointer;transition:background .25s ease,color .25s ease}
 .sp-close:hover{background:var(--red);color:#fff}
-.sp-img{aspect-ratio:16/9;overflow:hidden}
+/* The picture gives up height before the offer does. At 16/9 on a short
+   laptop it took over half the box and pushed BOOK THE SPECIAL past the
+   bottom edge, where it was sliced in half — an offer nobody could
+   accept. The copy and the button now always fit without scrolling. */
+.sp-img{aspect-ratio:16/9;max-height:34vh;overflow:hidden}
 .sp-img img{width:100%;height:100%;object-fit:cover}
 .sp-copy{display:flex;flex-direction:column;gap:12px;padding:26px 26px 28px}
 .sp-badge{align-self:flex-start;font-family:'Montserrat',sans-serif;font-size:10px;
