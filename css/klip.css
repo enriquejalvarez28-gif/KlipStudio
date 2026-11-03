@@ -1478,9 +1478,11 @@ figure.has-gallery{position:relative}
 }
 
 @media (max-width:760px){
-  /* 94-96% of usable width, 4-6% next-card peek. The rail is full-bleed,
-     so the card is measured against the viewport, not the gutter. */
-  .rooms{grid-auto-columns:95vw;gap:9px}
+  /* A 5% peek is not a peek. With Reduce Motion on, the rail does not
+     advance by itself, so the sliver of the next room at the edge is
+     the signal that there are four of them — it has to be visible at a
+     glance, not found. */
+  .rooms{grid-auto-columns:86vw;gap:9px}
   .rooms .room-img--gal,.rooms .room-img{aspect-ratio:3/2}
   .room-text{padding:15px 15px 17px;gap:6px}
   .room-acts{padding-top:12px;gap:10px}
