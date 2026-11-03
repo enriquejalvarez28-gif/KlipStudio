@@ -625,7 +625,7 @@ def ensure_optional_deps():
 
 
 DRAFT_ONLY_JOBS = {"repackage_all", "redraft_open", "analytics_sync", "autopilot_daily",
-                   "retry_thumbnails"}  # retry_thumbnails only re-sends uploads the owner already approved  # never publish anything
+                   "retry_thumbnails", "shorts_covers"}  # retry_thumbnails only re-sends uploads the owner already approved  # never publish anything
 
 
 def _run_once(db_path):

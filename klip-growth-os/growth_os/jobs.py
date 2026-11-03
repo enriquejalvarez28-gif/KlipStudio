@@ -60,6 +60,33 @@ def apply_approved(conn, tenant_id, progress):
     return {t: autopilot.apply_approved(conn, t, progress=progress) for t in _tenants(conn, tenant_id, include_demo=False)}
 
 
+def shorts_covers(conn, tenant_id, progress):
+    """Best guest frame per public Short (timestamp + preview) for picking the cover in the YouTube app. No publishing."""
+    from pathlib import Path
+    from growth_os import hqframes
+    out_dir = Path(__file__).resolve().parent.parent.parent / "RYJ-shorts-covers"
+    res = {}
+    for t in _tenants(conn, tenant_id, include_demo=False):
+        rows = conn.execute("SELECT asset_id, title FROM assets WHERE tenant_id=? AND format!='long_form'", (t,)).fetchall()
+        done, missing = [], []
+        for i, (a, title) in enumerate(rows):
+            if (autopilot._latest(conn, t, a, "privacy") or "public") != "public":
+                continue
+            progress(int(100 * i / max(len(rows), 1)), f"{i + 1}/{len(rows)} {title[:30]}")
+            try:
+                r = hqframes.short_cover(conn, t, a, out_dir, title)
+                (done if r else missing).append(r or title)
+            except Exception as e:
+                missing.append(f"{title[:40]}: {str(e)[:80]}")
+        lines = [f"{d['title']}  ->  pick the frame at {d['at_seconds'] // 60}:{d['at_seconds'] % 60:02d}" for d in done]
+        (out_dir / "_HOW TO SET THE COVERS.txt").write_text(
+            "YouTube app > Your videos > open the Short > Edit (pencil) > Cover/Thumbnail > slide to the time below.\n\n"
+            + "\n".join(lines) + ("\n\nNo clear guest frame found: " + "; ".join(map(str, missing)) if missing else ""),
+            encoding="utf-8")
+        res[t] = {"covers": len(done), "missing": missing}
+    return res
+
+
 def retry_thumbnails(conn, tenant_id, progress):
     return {t: autopilot.retry_thumbnails(conn, t, progress=progress) for t in _tenants(conn, tenant_id, include_demo=False)}
 
@@ -110,6 +137,7 @@ REGISTRY = {
     "repackage_all": repackage_all,
     "redraft_open": redraft_open,
     "retry_thumbnails": retry_thumbnails,
+    "shorts_covers": shorts_covers,
     "apply_approved": apply_approved,
     "weekly_report": _report("weekly"),
     "monthly_report": _report("monthly"),

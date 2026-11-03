@@ -250,3 +250,39 @@ def _pick(conn, tenant_id, asset_id, fx, cv2, cm, frames, progress, second=False
             "frames_scanned": len(frames)}
     (out_dir / "cast.json").write_text(json.dumps(meta, indent=1))
     return meta
+
+
+# ── Shorts covers: YouTube only lets you pick a Short's cover from its own frames in the YouTube app, so we find the
+#    best guest frame (sharp, eyes open, looking at the camera, smiling) and report its timestamp + a preview. ──
+
+def short_cover(conn, tenant_id, asset_id, out_dir, label, progress=lambda m: None):
+    from growth_os import cast as cm
+    fx = cm._Faces()
+    cv2 = fx.cv2
+    frames = sample_frames(tenant_id, asset_id, n=30, progress=progress, folder="hq_shorts")
+    best = None
+    for p, t in frames:
+        img = cv2.imread(str(p))
+        for f in fx.detect(img):
+            if f[2] < 90:
+                continue
+            size, sharp, yaw = face_quality(cv2, img, f)
+            if sharp < 0.4 or abs(yaw) > 0.3:
+                continue
+            role, _ = fx.who(fx.embed(img, f))
+            if role in ("jamar", "enrique", "unsure"):
+                continue  # the cover is the guest
+            gz = gaze(cv2, img, f)
+            if gz is not None and (gz["blink"] > 0.45 or gz["down"] > 0.5 or gz.get("brow", 0) > 0.6):
+                continue
+            look = 1.0 if gz is None else (1 - gz["blink"]) * (1 - gz["down"]) * (0.7 + 0.7 * gz["smile"])
+            rank = (size ** 0.5) * sharp * (1 - abs(yaw)) * float(f[14]) ** 3 * look
+            if best is None or rank > best[0]:
+                best = (rank, p, t)
+    if best is None:
+        return None
+    out_dir.mkdir(parents=True, exist_ok=True)
+    safe = "".join(ch for ch in label if ch.isalnum() or ch in " -_")[:60].strip()
+    dst = out_dir / f"{safe} @ {best[2] // 60}m{best[2] % 60:02d}s.jpg"
+    dst.write_bytes(best[1].read_bytes())
+    return {"asset_id": asset_id, "title": label, "at_seconds": best[2], "preview": dst.name}
