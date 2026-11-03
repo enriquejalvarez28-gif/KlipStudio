@@ -12,7 +12,8 @@ from growth_os.db import DATA_DIR, utcnow
 
 SAMPLES = 72
 MIN_FACE = 150          # px in a 1080p frame; smaller = wide shot, not thumbnail quality
-FORMAT = "bv*[vcodec^=avc1][height<=1080]/bv*[height<=1080]/best[height<=1080]"
+FORMAT = ("bv*[vcodec^=avc1][height<=1920][width<=1920]/bv*[height<=1920][width<=1920]"  # 1080p landscape AND 1080x1920 Shorts
+          "/best[height<=1920][width<=1920]")
 
 
 def stream_url(video_id):
@@ -259,19 +260,19 @@ def short_cover(conn, tenant_id, asset_id, out_dir, label, progress=lambda m: No
     from growth_os import cast as cm
     fx = cm._Faces()
     cv2 = fx.cv2
-    frames = sample_frames(tenant_id, asset_id, n=30, progress=progress, folder="hq_shorts")
+    frames = sample_frames(tenant_id, asset_id, n=30, progress=progress, folder="hq_shorts_hd")
     best = None
     for p, t in frames:
         img = cv2.imread(str(p))
         for f in fx.detect(img):
-            if f[2] < 90:
+            if f[2] < 140:
                 continue
             size, sharp, yaw = face_quality(cv2, img, f)
             if sharp < 0.4 or abs(yaw) > 0.3:
                 continue
-            role, _ = fx.who(fx.embed(img, f))
-            if role in ("jamar", "enrique", "unsure"):
-                continue  # the cover is the guest
+            role, score = fx.who(fx.embed(img, f))
+            if role in ("jamar", "enrique") and score >= 0.75:
+                continue  # clearly a host: the cover is the guest (a relative who looks alike scores lower)
             gz = gaze(cv2, img, f)
             if gz is not None and (gz["blink"] > 0.45 or gz["down"] > 0.5 or gz.get("brow", 0) > 0.6):
                 continue

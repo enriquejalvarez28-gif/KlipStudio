@@ -64,7 +64,7 @@ def shorts_covers(conn, tenant_id, progress):
     """Best guest frame per public Short (timestamp + preview) for picking the cover in the YouTube app. No publishing."""
     from pathlib import Path
     from growth_os import hqframes
-    out_dir = Path(__file__).resolve().parent.parent.parent / "RYJ-shorts-covers"
+    out_dir = Path(__file__).resolve().parent.parent.parent / "RYJ-shorts-covers-HD"
     res = {}
     for t in _tenants(conn, tenant_id, include_demo=False):
         rows = conn.execute("SELECT asset_id, title FROM assets WHERE tenant_id=? AND format!='long_form'", (t,)).fetchall()
