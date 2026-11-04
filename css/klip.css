@@ -2374,6 +2374,17 @@ a.btn[data-booking] .ar{color:#fff}
 a.btn[data-booking]::before{display:none}
 a.btn[data-booking]:hover,a.btn[data-booking]:focus-visible{
   background:#c20818;border-color:#c20818;color:#fff}
-/* the room card's Book sits inline beside View Photos, so it gets the
-   colour and the readable label without the full-width padding */
-a.btn[data-booking].room-book{padding:15px 18px;font-size:12.5px}
+/* the room card's Book is handled in full further down, where it takes
+   the whole width of the card */
+
+/* The room card's Book takes the whole width, on every screen.
+   It sat at flex:0 0 auto beside View Photos and Explore Room, so in a
+   673px card it came out 165px — the exact width of the secondary
+   Explore Room next to it — with about 190px of the row left empty.
+   The action that takes the booking looked like the least important
+   thing in the card. The phone already gave it its own full-width row;
+   desktop now does the same, so the two secondary actions share the
+   line above and Book owns the one below. */
+a.btn[data-booking].room-book,
+.room-actions .room-book{flex:1 1 100%;margin-left:0;min-height:54px;
+  padding:17px 22px;font-size:13.5px;justify-content:space-between}
