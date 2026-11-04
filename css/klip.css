@@ -2140,6 +2140,18 @@ input:focus-visible,[tabindex]:focus-visible{
 .sec--band .pg-pending p,.sec--dark .pg-pending p,
 .sec--image .pg-pending p,.sec--ink .pg-pending p{color:#4a4a47}
 
+/* Same leak, same fix. .note-panel is a white card, but it lands in
+   whichever section mode assign_modes gives it, and a dark mode's own
+   text colour ties .note-panel p on specificity and wins on order.
+   The custom-packages band came out at 1.49:1 — near-black grey on a
+   dark band showing through. Assert the card's own colours. */
+.sec--band .note-panel,.sec--dark .note-panel,
+.sec--image .note-panel,.sec--ink .note-panel{color:var(--ink)}
+.sec--band .note-panel h3,.sec--dark .note-panel h3,
+.sec--image .note-panel h3,.sec--ink .note-panel h3{color:var(--ink)}
+.sec--band .note-panel p,.sec--dark .note-panel p,
+.sec--image .note-panel p,.sec--ink .note-panel p{color:#4a4a47}
+
 .sec--band .studio-copy h2,.sec--band .studio-copy h3,
 .sec--dark .studio-copy h2,.sec--dark .studio-copy h3,
 .sec--image .studio-copy h2,.sec--image .studio-copy h3,
