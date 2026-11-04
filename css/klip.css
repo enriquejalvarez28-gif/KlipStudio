@@ -2345,3 +2345,35 @@ input:focus-visible,[tabindex]:focus-visible{
   .svc-cards>.svc-card:nth-child(4n+2):not(.k-card--premium){
     border-color:var(--ink);border-width:2px}
 }
+
+/* ------------------------------------------------------------------
+   THE BOOKING ACTION, EVERYWHERE
+
+   The hierarchy was upside down. On the phone home page the hero's
+   Book The Studio was a ghost button — transparent with a hairline
+   border, the weakest treatment on the site — while Grow Your Business
+   sat next to it as a solid white block. Book Room on each room card
+   was 11px, the smallest label anywhere, on the one control that takes
+   money.
+
+   Every control that opens the booking window carries data-booking, so
+   these are styled by what they DO rather than by which template
+   happened to emit them: no call site to keep in sync, and a new
+   booking button is right by default.
+
+   Red is not sprayed around. It means one thing on this site — start a
+   booking. Explore Room, View Photos, Tour The Studio, Let's Talk and
+   Grow Your Business keep their existing weights, and that restraint
+   is the whole reason the red reads as "this one". White on #e40e20
+   measures 4.79:1, so no brand colour had to be bent to get there.
+   ------------------------------------------------------------------ */
+a.btn[data-booking]{background:var(--red);color:#fff;border-color:var(--red);
+  font-size:13.5px}
+a.btn[data-booking] .ar{color:#fff}
+/* the hover sweep paints red; on a red button that is nothing at all */
+a.btn[data-booking]::before{display:none}
+a.btn[data-booking]:hover,a.btn[data-booking]:focus-visible{
+  background:#c20818;border-color:#c20818;color:#fff}
+/* the room card's Book sits inline beside View Photos, so it gets the
+   colour and the readable label without the full-width padding */
+a.btn[data-booking].room-book{padding:15px 18px;font-size:12.5px}

@@ -184,7 +184,22 @@
       }
 
       if(REDUCE){ dead=true; dots(); return; }   /* manual only, dots stay */
-      dots(); start();
+      dots();
+
+      /* Advance only while someone can actually see it.
+         Starting on page load meant the rail stepped through the rooms
+         while it was still below the fold, so a visitor who scrolled
+         down after twenty seconds arrived at Kapture or Kreator and
+         never saw Klip Room — the room most of them came for. A
+         carousel running with nobody watching is just a carousel that
+         hides its own first card. */
+      if(!('IntersectionObserver' in window)){ start(); return; }
+      new IntersectionObserver(function(en){
+        en.forEach(function(x){
+          if(dead) return;
+          if(x.isIntersecting) start(); else stop();
+        });
+      }, {threshold:0.35}).observe(rail);
     }
     carousel(document.querySelector('.rooms'));
     carousel(document.getElementById('pod-grid'));
