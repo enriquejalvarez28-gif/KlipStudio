@@ -732,9 +732,11 @@
           f.style.height=Math.max(420, Math.round(d.height))+'px';
           sbSized=true;
         }
-        /* each step starts at its own top, not halfway down the last one */
+        /* each step starts at its own top, not halfway down the last one.
+           The widget lives in the booking modal or the consultation one,
+           so scroll whichever body actually contains it. */
         if(d.event==='stepChanged'){
-          var b=document.getElementById('booking-body');
+          var b=host.closest('.mdl-body');
           if(b) b.scrollTop=0;
         }
       });
@@ -857,6 +859,25 @@
         document.getElementById('consult-title').textContent=CN.title||'Book a call';
         var body=document.getElementById('consult-body');
         open(mConsult);
+        /* The marketing call is a real SimplyBook service, so it books
+           through the same widget as every room — same modal, same
+           chrome, no redirect. Calendly stays ahead of it for any topic
+           that has its own event link, and the contact card below is
+           what shows when neither is configured. */
+        if(!calendlyUrlFor(topic) && (B.config||{})[CN.bookingKey||'']){
+          body.innerHTML='<div id="sb-widget" class="mdl-widget"></div>';
+          sbSized=false;
+          if(simplybookWidget(document.getElementById('sb-widget'), CN.bookingKey)){
+            setTimeout(function(){
+              if(sbSized || openEl!==mConsult) return;
+              var h=document.getElementById('sb-widget');
+              var f=h && h.querySelector('iframe');
+              if(f) f.style.height='1500px';
+            }, 4000);
+            track('consultation_modal_opened',{topic:topic||'',mode:'simplybook'});
+            return;
+          }
+        }
         if(!calendlyUrlFor(topic)){
           body.innerHTML='<div class="mdl-state">'+
             '<p>'+esc(CN.intro||'')+'</p>'+

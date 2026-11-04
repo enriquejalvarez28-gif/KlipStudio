@@ -73,6 +73,11 @@
         "title": "Klip Room — Premium",
         "categoryId": "1",
         "serviceId": "20"
+      },
+      "marketingCall": {
+        "title": "Book a marketing call",
+        "categoryId": "8",
+        "serviceId": "44"
       }
     },
     "aliases": {

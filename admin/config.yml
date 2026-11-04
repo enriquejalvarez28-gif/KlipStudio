@@ -1131,6 +1131,27 @@ collections:
             hint: >
               Jumps straight to one service. Leave blank when Category ID
               is set, or the customer never sees the other options.
+        - name: marketingCall
+          label: Marketing Call (free, 15 min)
+          widget: object
+          hint: >
+            What the LET'S TALK buttons book. Service 44 in the FREE
+            CONSULTATION category.
+          fields:
+          - name: title
+            label: Title
+            widget: string
+          - name: categoryId
+            label: Category ID
+            widget: string
+            required: false
+          - name: serviceId
+            label: Service ID
+            widget: string
+            required: false
+            hint: >
+              Jumps straight to the marketing call. Leave this set so
+              LET'S TALK opens that one service, not the whole list.
         - name: blackRoom
           label: Kapture Room
           widget: object
@@ -1290,6 +1311,13 @@ collections:
         label: Main scheduling link
         widget: string
         required: false
+      - name: bookingKey
+        label: SimplyBook service key
+        widget: string
+        required: false
+        hint: >
+          Used when no Calendly link is set. "marketingCall" books the
+          free 15-minute call through SimplyBook, inside the site.
       - name: title
         label: Window title
         widget: string
