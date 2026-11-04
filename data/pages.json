@@ -111,6 +111,9 @@
         "variant": "jump"
       },
       {
+        "type": "visibility"
+      },
+      {
         "type": "serviceDepth"
       },
       {
@@ -138,9 +141,6 @@
             "text": "Plain-language reporting on what moved and what we are changing next."
           }
         ]
-      },
-      {
-        "type": "visibility"
       },
       {
         "type": "cta",
