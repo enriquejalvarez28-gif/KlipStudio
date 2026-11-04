@@ -642,13 +642,13 @@
       },
       {
         "type": "notePanel",
-        "id": "custom-packages",
+        "id": "bundle-600",
         "offered": true,
-        "title": "Recording every week?",
-        "text": "Studio time, editing and clips bundled into a custom package or a monthly plan — priced around how often you actually record.",
+        "title": "Four sessions, $600",
+        "text": "Four one-hour self-direct sessions in the Klip Room for $600 instead of $716. Paid up front, sessions expire 30 days from purchase. First time at Klip? Add the $25 setup and walkthrough on your first booking. Offer ends November 30.",
         "cta": {
-          "label": "Book a free 15-minute call",
-          "consult": "1"
+          "label": "Buy the 4-session bundle",
+          "href": "https://theklipstudio.simplybook.me/v2/packages/"
         }
       },
       {
@@ -663,6 +663,17 @@
         "only": [
           "klip-room"
         ]
+      },
+      {
+        "type": "notePanel",
+        "id": "custom-packages",
+        "offered": true,
+        "title": "Recording every week?",
+        "text": "Studio time, editing and clips bundled into a custom package or a monthly plan — priced around how often you actually record.",
+        "cta": {
+          "label": "Book a free 15-minute call",
+          "consult": "1"
+        }
       },
       {
         "type": "clips",

@@ -661,10 +661,21 @@ body.cursor-link .cursor-ring{width:58px;height:58px;margin:-29px 0 0 -29px}
 
 .w-span2{grid-column:span 2}
 
-/* podcast cards on a light section */
-.sec--paper .pod{color:var(--ink)}
-.sec--paper .pod-meta .label{color:var(--gray)}
-.sec--paper .pod-time{color:var(--gray)}
+/* Podcast cards on a light section. This covered sec--paper only, so
+   the same cards on sec--warm and sec--grid kept the white title they
+   inherit from a dark section and rendered white on near-white — the
+   episode names under the thumbnails were invisible on Home and on
+   Podcasts. Light modes are paper, warm and grid; band, dark, image
+   and ink keep the white treatment. */
+.sec--paper .pod,.sec--warm .pod,.sec--grid .pod{color:var(--ink)}
+.sec--paper .pod-meta h3,.sec--warm .pod-meta h3,
+.sec--grid .pod-meta h3{color:var(--ink)}
+.sec--paper .pod-meta .label,.sec--warm .pod-meta .label,
+.sec--grid .pod-meta .label{color:var(--gray)}
+.sec--paper .pod-time,.sec--warm .pod-time,
+.sec--grid .pod-time{color:var(--gray)}
+.sec--paper .rail-label,.sec--warm .rail-label,
+.sec--grid .rail-label{color:var(--gray)}
 .sec--paper .circ{border-color:#cfcecb;color:var(--ink)}
 .sec--paper .circ:hover{background:var(--ink);color:#fff;border-color:var(--ink)}
 .sec--paper .pod-thumb{background:#e6e5e2}
