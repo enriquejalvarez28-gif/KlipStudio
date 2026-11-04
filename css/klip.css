@@ -1586,6 +1586,15 @@ figure.has-gallery{position:relative}
   .work-grid.work-grid--all .w{grid-row:auto}
   .work-grid.work-grid--all .w--reel{grid-column:span 1;aspect-ratio:9/16}
   .work-grid.work-grid--all .w--landscape{grid-column:span 2;aspect-ratio:16/9}
+  /* A 1-column 9:16 reel and a 2-column 16:9 project are 510 and 329
+     tall in the same row, so any row holding both ended on 181px of
+     empty floor — it happened twice on this page. The ratios are
+     fixed by the rule above, so the fix is which cards share a row:
+     reels group into fours and projects into pairs, both of which
+     fill the four columns at one height. Source order still drives
+     the markup, so the phone layout below is unaffected. */
+  .work-grid.work-grid--all .w--reel{order:1}
+  .work-grid.work-grid--all .w--landscape{order:2}
 }
 @media (min-width:761px) and (max-width:1024px){
   .work-grid--all{grid-template-columns:repeat(2,minmax(0,1fr))}
