@@ -206,7 +206,12 @@ def footer(D, here):
         '<button class="sp-close" id="sp-close" aria-label="Close offer">&times;</button>'
         '</div></div>\n'
         '<footer class="site-footer" id="site-footer"><div class="wrap">'
-        '<div class="foot-top"><a href="#top" aria-label="Home">'
+        # The footer logo is labelled Home and has to go there. It
+        # pointed at #top, so on every page but the home page it only
+        # scrolled to the top of the page you were already on: a logo
+        # that says Home, that a visitor clicks to get home, and that
+        # appears to do nothing at all.
+        '<div class="foot-top"><a href="/" aria-label="KLIP home">'
         '<img class="logo" src="%s" alt="%s" width="150" height="56"></a>'
         '<nav class="foot-nav" aria-label="Footer">%s</nav>'
         '<div class="socials">%s</div></div>'

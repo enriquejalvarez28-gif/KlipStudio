@@ -2,6 +2,11 @@
   "nav": {
     "links": [
       {
+        "label": "Home",
+        "href": "index.html",
+        "mobileOnly": true
+      },
+      {
         "label": "Media",
         "href": "media.html"
       },
