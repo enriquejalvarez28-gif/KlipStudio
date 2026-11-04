@@ -2162,25 +2162,34 @@ input:focus-visible,[tabindex]:focus-visible{
 .sec--image .note-panel p,.sec--ink .note-panel p{color:#4a4a47}
 
 /* The recurring-client offer has to stop the scroll, so it is the one
-   note panel that is a solid slab rather than a quiet white card. The
-   red is deepened from --red to clear 4.5:1 with white text; --red
-   itself sits at about 4.2:1 and would fail on the body copy. The
-   #id wins over every .sec--* rule above without !important. */
-#custom-packages{padding:clamp(34px,4.5vw,64px) 0}
+   note panel that is a full-bleed ink band rather than a white card.
+   A red slab shouted and fought the brand, which is built on
+   restraint: paper, ink, and one red mark. It stops the scroll by
+   contrast, not volume. #id wins over .sec--* without !important. */
+#custom-packages,
+.sec--band#custom-packages{background:var(--ink);border:0;
+  padding:clamp(52px,6.5vw,104px) 0}
 #custom-packages .note-panel,
 .sec--band #custom-packages .note-panel{
-  background:#c20818;border-color:#c20818;color:#fff;
-  padding:clamp(28px,3.4vw,46px) clamp(24px,3vw,44px);gap:34px}
+  background:transparent;border:0;padding:0;
+  gap:clamp(26px,4vw,64px);align-items:center}
 #custom-packages .note-panel h3,
 .sec--band #custom-packages .note-panel h3{
-  color:#fff;font-size:clamp(23px,2.5vw,36px);line-height:1.1}
+  color:#fff;font-family:'Montserrat',sans-serif;font-weight:800;
+  font-size:clamp(29px,4.1vw,56px);line-height:1.02;
+  letter-spacing:-.015em;text-transform:uppercase}
+/* the one red mark, matching the dot the page headlines already use */
+#custom-packages .note-panel h3::after{
+  content:"";display:inline-block;width:.15em;height:.15em;border-radius:50%;
+  background:var(--red);margin-left:.12em}
 #custom-packages .note-panel p,
 .sec--band #custom-packages .note-panel p{
-  color:#fff;font-size:clamp(15px,1.3vw,17.5px);margin-top:12px;max-width:54ch}
+  color:#cfcdc9;font-size:clamp(14.5px,1.2vw,16.5px);
+  line-height:1.55;margin-top:16px;max-width:44ch}
 #custom-packages .note-panel .btn{
   background:#fff;color:#1d1d1c;border-color:#fff;
-  padding:19px 26px;font-size:13px;white-space:nowrap}
-#custom-packages .note-panel .btn:hover{background:#1d1d1c;color:#fff;border-color:#1d1d1c}
+  padding:20px 28px;font-size:12.5px;white-space:nowrap}
+#custom-packages .note-panel .btn:hover{background:var(--red);color:#fff;border-color:var(--red)}
 @media (max-width:760px){
   #custom-packages .note-panel{gap:20px}
   #custom-packages .note-panel .btn{width:100%}
