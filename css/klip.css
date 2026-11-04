@@ -1535,8 +1535,15 @@ figure.has-gallery{position:relative}
 /* Homepage podcast preview: compact and centred. The Podcasts page keeps
    the full-width presentation — that is where the content lives. */
 @media (min-width:761px){
-  .pod-grid--home.pod-n2{grid-template-columns:repeat(2,minmax(0,430px));
+  /* 430px was "compact and centred", but in a 1360px band two cards at
+     430 leave roughly 480px of empty floor and read as small and
+     marooned rather than composed. They now carry the band.
+     pod-n3 is here so that the moment a third episode is published the
+     row becomes three across on its own — the count drives the layout,
+     nobody has to remember to change a column rule. */
+  .pod-grid--home.pod-n2{grid-template-columns:repeat(2,minmax(0,620px));
     justify-content:center}
+  .pod-grid--home.pod-n3{grid-template-columns:repeat(3,minmax(0,1fr))}
   .pod-clips--home.pod-n2{grid-template-columns:repeat(2,minmax(0,210px));
     justify-content:center}
   .pod-grid--home .pod-meta h3{font-size:15px}
@@ -1721,6 +1728,12 @@ figure.has-gallery{position:relative}
 ================================================================== */
 .room-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
   margin-top:auto;padding-top:14px}
+/* View Photos and Explore Room split the line evenly. At their natural
+   widths they came to 204 and 164 in a 639px row and left 261px of it
+   empty, so the card ended on a ragged edge above a full-width Book
+   Room. Equal halves give the card one clean column. */
+.room-actions .vp-btn,.room-actions>a:not(.room-book){flex:1 1 0;
+  justify-content:center}
 .vp-btn{display:inline-flex;align-items:center;gap:9px;cursor:pointer;
   padding:13px 16px;min-height:46px;border:1px solid var(--ink);background:none;
   color:var(--ink);font-family:'Montserrat',sans-serif;font-size:11px;
