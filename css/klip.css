@@ -1787,6 +1787,10 @@ figure.has-gallery{position:relative}
     font-size:10.5px;letter-spacing:.1em;gap:7px}
   .vp-btn svg{width:15px;height:15px}
   .vp-btn--lg{flex:1 1 100%;min-height:56px}
+  /* no phone override for .room-actions children here: the unified
+     block later in the file wins on source order, and on a phone every
+     control is already its own full-width row, so nothing needs to be
+     squeezed to fit two-up */
   .room-book{flex:1 1 100%;margin-left:0;min-height:56px;width:100%}
 }
 
@@ -2184,8 +2188,8 @@ input:focus-visible,[tabindex]:focus-visible{
   background:var(--red);margin-left:.12em}
 #custom-packages .note-panel p,
 .sec--band #custom-packages .note-panel p{
-  color:#cfcdc9;font-size:clamp(14.5px,1.2vw,16.5px);
-  line-height:1.55;margin-top:16px;max-width:44ch}
+  color:#d9d7d3;font-size:clamp(16px,1.5vw,21px);
+  line-height:1.5;margin-top:18px;max-width:40ch;letter-spacing:.002em}
 #custom-packages .note-panel .btn{
   background:#fff;color:#1d1d1c;border-color:#fff;
   padding:20px 28px;font-size:12.5px;white-space:nowrap}
@@ -2456,3 +2460,25 @@ a.btn[data-booking]:hover,a.btn[data-booking]:focus-visible{
 a.btn[data-booking].room-book,
 .room-actions .room-book{flex:1 1 100%;margin-left:0;min-height:54px;
   padding:17px 22px;font-size:13.5px;justify-content:space-between}
+
+/* One control, three looks. The buttons in a room card were built by
+   two different renderers and had drifted apart: on Studio, View
+   Photos came out 157x68 at 11.5px beside a Book Room of 134x61 at
+   13.5px, and the label wrapped to two lines, which is where the
+   extra 7px of height came from. Height, type size and tracking are
+   now set once for every child of .room-actions, and the label is
+   held on one line so nothing can grow a second row again. */
+.room-actions>a,.room-actions>button,
+.room-actions .vp-btn,.room-actions .vp-btn--lg,
+.room-actions .room-book,.room-actions a.btn[data-booking]{
+  min-height:56px;font-size:12px;letter-spacing:.12em;
+  padding:16px 18px;white-space:nowrap}
+.room-actions .vp-btn{gap:8px}
+.room-actions .vp-btn svg{width:15px;height:15px}
+/* The room column on Studio and Podcasts is about 300px. Two one-line
+   labels cannot divide that evenly — they came out 196 beside 94 —
+   so in those cards each control takes the whole row and the pair is
+   identical. The home grid is twice as wide and still splits. */
+.room-actions .vp-btn--lg,
+.room-actions .vp-btn--lg~a,
+.room-actions .vp-btn--lg~button{flex:1 1 100%}
