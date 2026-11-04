@@ -30,7 +30,7 @@
           "name": "With Technician",
           "positioning": "For clients who want someone operating the session.",
           "includes": [
-            "Required for 3 or more people",
+            "2 to 3 people",
             "Everything in Self-Service",
             "A KLIP technician running the session",
             "Camera switching and audio monitored live"
@@ -45,7 +45,7 @@
           "name": "Full-Service Podcast",
           "positioning": "For clients who want to record and receive a finished episode.",
           "includes": [
-            "Up to 3 people",
+            "2 to 3 people",
             "Recording with a technician",
             "Multicam episode edit",
             "Mastered audio",
@@ -61,7 +61,7 @@
           "name": "Premium Content Package",
           "positioning": "For clients who want the episode plus social assets.",
           "includes": [
-            "Up to 3 people",
+            "2 to 3 people",
             "4K or premium recording where applicable",
             "Episode edit",
             "Short clips, captions and thumbnails where the package includes them"
