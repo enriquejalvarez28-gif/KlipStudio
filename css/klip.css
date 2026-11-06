@@ -2502,3 +2502,50 @@ a.btn[data-booking].room-book,
 .room-actions .vp-btn--lg,
 .room-actions .vp-btn--lg~a,
 .room-actions .vp-btn--lg~button{flex:1 1 100%}
+
+/* ------------------------------------------------------------------
+   Google reviews. Built in the site's own language rather than with
+   Google's embeddable widget, which drags in its own fonts, blues and
+   card chrome and always reads as pasted on. Here it is paper, ink,
+   Montserrat and the one red mark, so it sits in the page like the
+   Insights and Work blocks do. The stars are red because that is the
+   only accent this site has; gold would be the widget's colour, not
+   KLIP's.
+------------------------------------------------------------------ */
+.rv-sec .rv-score{display:flex;align-items:baseline;flex-wrap:wrap;
+  gap:14px 18px;margin:0 0 clamp(26px,3vw,40px)}
+.rv-stars{color:var(--red);font-size:19px;letter-spacing:.14em;line-height:1}
+.rv-num{font-size:clamp(15px,1.3vw,17px);color:#4a4a47;margin:0}
+.rv-num strong{color:var(--ink);font-weight:800;font-size:1.18em}
+.rv-link{margin-left:auto;white-space:nowrap}
+.rv-grid{display:grid;gap:clamp(14px,1.6vw,22px);
+  grid-template-columns:repeat(3,minmax(0,1fr))}
+.rv-card{margin:0;background:var(--white);border:1px solid #e6e4e0;
+  border-radius:2px;padding:clamp(22px,2.4vw,32px);
+  display:flex;flex-direction:column;gap:18px}
+.rv-card blockquote{margin:0;font-size:clamp(15px,1.25vw,17px);
+  line-height:1.6;color:#2e2d2b}
+.rv-card blockquote::before{content:"";display:block;width:26px;height:3px;
+  background:var(--red);margin:0 0 16px}
+.rv-card figcaption{margin-top:auto;font-size:11.5px;letter-spacing:.12em;
+  text-transform:uppercase;font-weight:700;color:#5f5d59}
+/* the dark section modes assign_modes may hand this block */
+.sec--band .rv-num,.sec--dark .rv-num,.sec--ink .rv-num{color:#cfcdc9}
+.sec--band .rv-num strong,.sec--dark .rv-num strong,
+.sec--ink .rv-num strong{color:#fff}
+@media (max-width:1024px){
+  .rv-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rv-link{margin-left:0;flex:1 1 100%}
+}
+@media (max-width:760px){
+  .rv-grid{grid-template-columns:minmax(0,1fr)}
+  .rv-score{gap:10px 14px}
+}
+/* the dark modes set their own text colour at the same specificity as
+   .rv-stars and win on order, which greyed the stars out */
+.sec--band .rv-stars,.sec--dark .rv-stars,
+.sec--ink .rv-stars,.sec--image .rv-stars{color:var(--red)}
+.sec--band .rv-card blockquote,.sec--dark .rv-card blockquote,
+.sec--ink .rv-card blockquote,.sec--image .rv-card blockquote{color:#2e2d2b}
+.sec--band .rv-card figcaption,.sec--dark .rv-card figcaption,
+.sec--ink .rv-card figcaption,.sec--image .rv-card figcaption{color:#5f5d59}

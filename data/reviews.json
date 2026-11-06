@@ -1,0 +1,27 @@
+{
+  "reviews": {
+    "eyebrow": "Google Reviews",
+    "headline": [
+      "Rated 5.0 By The People",
+      "Who Book The Room"
+    ],
+    "rating": "5.0",
+    "count": "16",
+    "linkLabel": "Read all reviews on Google",
+    "linkUrl": "https://www.google.com/maps/search/?api=1&query=The%20Klip%20Studio%202145%20Davie%20Blvd%20%23204%20Fort%20Lauderdale",
+    "items": [
+      {
+        "quote": "The studio was clean, bright, and well equipped. Booking was easy and the staff were friendly and helpful. It had everything I needed for a smooth shoot. I'll definitely be back and highly recommend it.",
+        "name": "Reginald Harris"
+      },
+      {
+        "quote": "What an amazing setup! The attention to detail is spot on. They take care of you from start to finish. Top level of professionalism!",
+        "name": "Jeffrey Wasserman"
+      },
+      {
+        "quote": "Excellent space and quality. Super fast delivery can't wait to go back.",
+        "name": "Alex Valencia"
+      }
+    ]
+  }
+}

@@ -914,6 +914,37 @@ def checklist(b, D):
                head, wrap_cls, mods, cta))
 
 
+def reviews(b, D):
+    """Real Google reviews. The rating, the count, the names and the words
+    are transcribed from the live Google listing and edited in /admin —
+    nothing here is written for the site, because an invented review is
+    the one piece of copy that can cost a real business its standing."""
+    src = D.get('reviews') or {}
+    items = src.get('items') or []
+    if not items:
+        return ''
+    stars = '<span class="rv-stars" aria-hidden="true">%s</span>' % ('&#9733;' * 5)
+    cards_html = ''.join(
+        '<figure class="rv-card"><blockquote>%s</blockquote>'
+        '<figcaption>%s</figcaption></figure>'
+        % (esc(i.get('quote', '')), esc(i.get('name', '')))
+        for i in items)
+    link = ''
+    if src.get('linkUrl'):
+        link = ('<a class="link rv-link" href="%s" target="_blank" rel="noopener">'
+                '%s<span class="ar">&#8594;</span></a>'
+                % (esc(src['linkUrl']), esc(src.get('linkLabel', 'Read the reviews'))))
+    return ('<section class="sec sec--paper rv-sec" id="reviews"><div class="wrap">'
+            '%s'
+            '<div class="rv-score">%s<p class="rv-num"><strong>%s</strong> from %s '
+            'Google reviews</p>%s</div>'
+            '<div class="rv-grid">%s</div>'
+            '</div></section>'
+            % (head_block(src),
+               stars, esc(src.get('rating', '')), esc(src.get('count', '')),
+               link, cards_html))
+
+
 def note_panel(b, D):
     """A single optional offer, such as host support. Hidden until offered."""
     src = (D.get('podcastPage') or {}).get(b.get('source') or '', {}) \
@@ -1016,7 +1047,7 @@ BLOCKS = {'pagehero': pagehero, 'editorial': editorial, 'split': split, 'cards':
           'clips': clips, 'visibility': visibility, 'cta': cta,
           'faq': faq, 'duo': duo, 'photographers': photographers,
           'tiers': tiers, 'checklist': checklist, 'notePanel': note_panel,
-          'serviceDepth': service_depth}
+          'serviceDepth': service_depth, 'reviews': reviews}
 
 
 def render_blocks(blocks, D):

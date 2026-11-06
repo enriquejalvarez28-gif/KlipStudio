@@ -66,7 +66,7 @@ SITE = 'https://theklipstudio.com'
 PARTS = ['brand', 'navigation', 'hero', 'sections', 'studio', 'photography',
          'photographers', 'podcasts', 'clients', 'location', 'visibility',
          'booking', 'consultation', 'faq', 'specials', 'seo', 'podcast-page',
-         'insights', 'media-services']
+         'insights', 'media-services', 'reviews']
 
 # The public URL of each page, used for canonicals, the sitemap and the
 # JSON-LD. No trailing slash: Cloudflare Pages serves /studio and answers
@@ -246,6 +246,7 @@ HOME_ORDER = [
     'top',          # hero
     'doors',        # what KLIP is, and the four ways in - media included
     'studio',       # the rooms: the thing a visitor can actually book
+    'reviews',      # the proof, right after the price
     'podcasts',     # the reason most of them are here
     'services',     # the media side, one block
     'visibility',   # the free check, a real lead source
@@ -513,6 +514,10 @@ def home_main(D):
            headline(A['headline']), esc(A['body']), btn(A.get('cta'), 'btn--dark')))
 
     sec['contact'] = R.cta({}, D)
+    # Sits after the rooms on purpose: the visitor has just seen what a
+    # session costs, which is the moment the question becomes "are these
+    # people real". Renders nothing if data/reviews.json has no items.
+    sec['reviews'] = R.reviews({}, D)
 
     # The four doors, straight under the hero: what KLIP is and where to go,
     # inside one phone screen. This is also where the media side is stated,

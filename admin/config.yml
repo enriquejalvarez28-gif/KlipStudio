@@ -1628,6 +1628,51 @@ collections:
           name: item
           label: Category
           widget: string
+  - name: reviews
+    label: Google Reviews
+    file: data/reviews.json
+    fields:
+    - name: reviews
+      label: Google Reviews
+      widget: object
+      hint: >
+        Real reviews only. Copy the rating, the count, the words and the
+        name straight from the Google listing. Never write a review here.
+      fields:
+      - name: eyebrow
+        label: Eyebrow
+        widget: string
+      - name: headline
+        label: Headline
+        widget: list
+        field:
+          name: line
+          label: Line
+          widget: string
+      - name: rating
+        label: Rating
+        widget: string
+        hint: As Google shows it, e.g. 5.0
+      - name: count
+        label: Number of reviews
+        widget: string
+      - name: linkLabel
+        label: Link label
+        widget: string
+      - name: linkUrl
+        label: Link to the Google listing
+        widget: string
+      - name: items
+        label: Reviews
+        widget: list
+        fields:
+        - name: quote
+          label: Review
+          widget: text
+          hint: The reviewer's own words, copied exactly.
+        - name: name
+          label: Reviewer name
+          widget: string
   - name: visibility
     label: Visibility Check
     file: data/visibility.json
