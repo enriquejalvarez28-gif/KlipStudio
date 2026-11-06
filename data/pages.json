@@ -642,10 +642,10 @@
       },
       {
         "type": "notePanel",
-        "id": "bundle-600",
+        "id": "bundle-offer",
         "offered": true,
-        "title": "Four sessions, $600",
-        "text": "Four one-hour self-direct sessions in the Klip Room for $600 instead of $716. Paid up front, sessions expire 30 days from purchase. First time at Klip? Add the $25 setup and walkthrough on your first booking. Offer ends November 30.",
+        "title": "Four sessions, $625",
+        "text": "Four one-hour self-direct sessions in the Klip Room, plus your first-session setup and walkthrough. Booked separately that is $741, so you save $116. Sessions expire 30 days from purchase. Offer ends November 30.",
         "cta": {
           "label": "Buy the 4-session bundle",
           "href": "https://theklipstudio.simplybook.me/v2/packages/"
