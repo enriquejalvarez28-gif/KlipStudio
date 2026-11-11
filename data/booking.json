@@ -30,9 +30,9 @@
     },
     "config": {
       "studioRentals": {
-        "categoryId": "1",
+        "categoryId": "",
         "serviceId": "",
-        "title": "Studio Rentals"
+        "title": "Book the Studio"
       },
       "podcastRoom": {
         "serviceId": "",
